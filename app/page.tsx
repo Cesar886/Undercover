@@ -56,14 +56,20 @@ export default function Home() {
   const isInitialLoad = loading && posts.length === 0;
 
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-5">
+    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="space-y-2">
-        <CategoryFilter active={category} onChange={setCategory} />
-        <SortFilter active={sort} onChange={setSort} />
+      {/* Filter card */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-4 pt-3 pb-2 overflow-x-auto scrollbar-hide">
+          <CategoryFilter active={category} onChange={setCategory} />
+        </div>
+        <div className="px-4 border-t border-gray-100">
+          <SortFilter active={sort} onChange={setSort} />
+        </div>
       </div>
 
+      {/* Feed */}
       <div className="space-y-3">
         {isInitialLoad ? (
           <>
@@ -83,10 +89,13 @@ export default function Home() {
             />
           ))
         )}
+
         {!loading && posts.length === 0 && (
-          <p className="text-gray-400 text-sm text-center py-8">
-            No hay posts todavía. ¡Sé el primero en quemar!
-          </p>
+          <div className="bg-white border border-gray-200 rounded-2xl py-14 text-center shadow-sm">
+            <p className="text-2xl mb-2">🔥</p>
+            <p className="text-gray-500 text-sm font-medium">Nada por aquí todavía</p>
+            <p className="text-gray-400 text-xs mt-1">Sé el primero en quemar algo</p>
+          </div>
         )}
       </div>
 
@@ -95,7 +104,7 @@ export default function Home() {
           onClick={loadMore}
           className="w-full py-3 text-gray-400 hover:text-gray-600 text-sm transition-colors"
         >
-          Cargar más...
+          Cargar más
         </button>
       )}
 

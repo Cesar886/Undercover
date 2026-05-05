@@ -15,15 +15,15 @@ interface SortFilterProps {
 
 export function SortFilter({ active, onChange }: SortFilterProps) {
   return (
-    <div className="flex gap-1.5">
+    <div className="flex gap-5">
       {SORTS.map((s) => (
         <button
           key={s.value}
           onClick={() => onChange(s.value)}
-          className={`text-xs px-3 py-1 rounded-full transition-colors ${
+          className={`pb-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
             active === s.value
-              ? 'bg-gray-900 text-white'
-              : 'text-gray-400 hover:text-gray-600'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           {s.label}
