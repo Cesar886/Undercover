@@ -36,21 +36,21 @@ export default async function PostPage({ params }: Props) {
     <main className="max-w-[600px] mx-auto px-4 pt-4 pb-6 space-y-5">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+        className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm transition-colors"
       >
         <ArrowLeft size={15} />
         Volver al feed
       </Link>
 
-      <article className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+      <article className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-500 text-xs">{post.anon_id}</span>
+            <span className="text-gray-500 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>
-          <span className="text-zinc-700 text-xs">{timeAgo}</span>
+          <span className="text-gray-400 text-xs">{timeAgo}</span>
         </div>
-        <p className="text-zinc-100 leading-relaxed break-words">{post.content}</p>
+        <p className="text-gray-800 leading-relaxed break-words">{post.content}</p>
         <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} />
       </article>
 

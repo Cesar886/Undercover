@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { PostCategory } from '@/types';
 
 const CATEGORIES: { value: PostCategory; label: string; activeClass: string }[] = [
-  { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500/15 border-orange-500 text-orange-500' },
-  { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500/15 border-pink-500 text-pink-500' },
-  { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600/15 border-purple-600 text-purple-600' },
-  { value: 'rumores',     label: 'Rumores',     activeClass: 'bg-blue-500/15 border-blue-500 text-blue-500' },
+  { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500/10 border-orange-500 text-orange-600' },
+  { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500/10 border-pink-500 text-pink-600' },
+  { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600/10 border-purple-600 text-purple-700' },
+  { value: 'rumores',     label: 'Rumores',     activeClass: 'bg-blue-500/10 border-blue-500 text-blue-600' },
 ];
 
 const MAX_CHARS = 500;
@@ -50,17 +50,17 @@ export function PostForm({ onPostCreated }: PostFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-[#111111] border border-[#222222] rounded-xl p-4 space-y-3"
+      className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 shadow-sm"
     >
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
         placeholder="¿Qué está pasando en la U?"
         rows={3}
-        className="w-full bg-zinc-900 text-[#F5F5F5] placeholder-[#404040] rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-[#F4622A]"
+        className="w-full bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 border border-gray-200"
       />
       <div className="flex items-center justify-between">
-        <span className={`text-xs ${remaining < 50 ? 'text-amber-400' : 'text-zinc-600'}`}>
+        <span className={`text-xs ${remaining < 50 ? 'text-amber-500' : 'text-gray-400'}`}>
           {remaining} restantes
         </span>
       </div>
@@ -73,7 +73,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               category === c.value
                 ? c.activeClass
-                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
             }`}
           >
             {c.label}
@@ -83,11 +83,11 @@ export function PostForm({ onPostCreated }: PostFormProps) {
       <button
         type="submit"
         disabled={loading || !content.trim()}
-        className="w-full bg-[#F4622A] hover:bg-orange-600 disabled:opacity-40 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
       >
         {loading ? 'Publicando...' : 'Soltar'}
       </button>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-red-500 text-xs">{error}</p>}
     </form>
   );
 }

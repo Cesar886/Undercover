@@ -24,7 +24,7 @@ export function CategoryFilter({ active, onChange }: CategoryFilterProps) {
           className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-full border transition-colors ${
             active === f.value
               ? f.activeClass
-              : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-600'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
           }`}
         >
           {f.label}

@@ -52,12 +52,12 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtons
   }
 
   const upClass = voted === 'up'
-    ? 'bg-orange-500/15 border-orange-500 text-orange-400'
-    : 'border-zinc-700 text-zinc-400 hover:border-orange-500/50 hover:text-orange-400';
+    ? 'bg-orange-50 border-orange-400 text-orange-500'
+    : 'border-gray-200 text-gray-400 hover:border-orange-300 hover:text-orange-500';
 
   const downClass = voted === 'down'
-    ? 'bg-blue-500/15 border-blue-500 text-blue-400'
-    : 'border-zinc-700 text-zinc-400 hover:border-blue-500/50 hover:text-blue-400';
+    ? 'bg-blue-50 border-blue-400 text-blue-500'
+    : 'border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500';
 
   return (
     <div className="flex items-center gap-2">

@@ -32,23 +32,23 @@ export function PostCard({ post, onReport, onVoted, style, className }: PostCard
   return (
     <article
       style={style}
-      className={`group relative bg-[#111111] border border-[#222222] rounded-xl overflow-hidden hover:border-zinc-700 hover:bg-[#161616] transition-colors ${className ?? ''}`}
+      className={`group relative bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all ${className ?? ''}`}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar[post.category]}`} />
       <div className="pl-4 pr-4 pt-3 pb-3 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] text-zinc-400 font-medium">{initials}</span>
+            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-[10px] text-gray-500 font-medium">{initials}</span>
             </div>
-            <span className="text-zinc-500 text-xs">{post.anon_id}</span>
+            <span className="text-gray-500 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>
-          <span className="text-zinc-600 text-xs">{timeAgo}</span>
+          <span className="text-gray-400 text-xs">{timeAgo}</span>
         </div>
 
         <Link href={`/posts/${post.id}`} className="block">
-          <p className="text-[#F5F5F5] text-[15px] leading-relaxed break-words hover:text-zinc-300 transition-colors">
+          <p className="text-gray-800 text-[15px] leading-relaxed break-words hover:text-gray-600 transition-colors">
             {post.content}
           </p>
         </Link>
@@ -58,14 +58,14 @@ export function PostCard({ post, onReport, onVoted, style, className }: PostCard
           <div className="flex items-center gap-3">
             <Link
               href={`/posts/${post.id}`}
-              className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+              className="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-xs transition-colors"
             >
               <MessageCircle size={13} />
               <span>{post.comment_count ?? 0}</span>
             </Link>
             <button
               onClick={() => onReport(post.id)}
-              className="text-zinc-700 hover:text-red-400 transition-colors"
+              className="text-gray-300 hover:text-red-400 transition-colors"
               title="Reportar"
               aria-label="Reportar post"
             >
