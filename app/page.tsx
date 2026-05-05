@@ -3,6 +3,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { PostForm } from '@/components/PostForm';
 import { PostCard } from '@/components/PostCard';
 import { CategoryFilter } from '@/components/CategoryFilter';
+import { PostSkeleton } from '@/components/PostSkeleton';
+import { Toast } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
 import { Post, PostCategory } from '@/types';
 
 export default function Home() {
@@ -11,6 +14,7 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const { message, showToast } = useToast();
 
   const fetchPosts = useCallback(
     async (cat: PostCategory | 'all', pg: number, replace: boolean) => {
@@ -41,11 +45,13 @@ export default function Home() {
   function handlePostCreated() {
     setPage(1);
     fetchPosts(category, 1, true);
+    showToast('Post publicado');
   }
 
   async function handleReport(postId: string) {
     await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+    showToast('Post reportado');
   }
 
   function loadMore() {
@@ -54,25 +60,38 @@ export default function Home() {
     fetchPosts(category, next, false);
   }
 
+  const isInitialLoad = loading && posts.length === 0;
+
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-5">
-      <header>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
-          <span className="text-[#D85A30]">Quemados</span>UM
-        </h1>
-        <p className="text-zinc-500 text-xs mt-1">La voz anónima de la universidad</p>
-      </header>
-
       <PostForm onPostCreated={handlePostCreated} />
       <CategoryFilter active={category} onChange={handleCategoryChange} />
 
       <div className="space-y-3">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} onReport={handleReport} />
-        ))}
+        {isInitialLoad ? (
+          <>
+            <PostSkeleton />
+            <PostSkeleton />
+            <PostSkeleton />
+          </>
+        ) : (
+          posts.map((post, index) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onReport={handleReport}
+              onVoted={() => showToast('Voto guardado')}
+              style={{
+                animationDelay: `${index * 60}ms`,
+                animationFillMode: 'forwards',
+              }}
+              className="opacity-0 animate-fade-slide-in"
+            />
+          ))
+        )}
         {!loading && posts.length === 0 && (
           <p className="text-zinc-600 text-sm text-center py-8">
-            No hay posts todavía. ¡Sé el primero en quemar! 🔥
+            No hay posts todavía. ¡Sé el primero en quemar!
           </p>
         )}
       </div>
@@ -85,9 +104,11 @@ export default function Home() {
           Cargar más...
         </button>
       )}
-      {loading && (
+      {loading && posts.length > 0 && (
         <p className="text-center text-zinc-600 text-sm py-4">Cargando...</p>
       )}
+
+      <Toast message={message} />
     </main>
   );
 }

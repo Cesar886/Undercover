@@ -33,7 +33,7 @@ export default async function PostPage({ params }: Props) {
   });
 
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-5">
+    <main className="max-w-[600px] mx-auto px-4 pt-4 pb-6 space-y-5">
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
