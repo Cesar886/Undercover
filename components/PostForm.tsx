@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { PostCategory } from '@/types';
+import { createPost } from '@/lib/localStore';
 
 const CATEGORIES: { value: PostCategory; label: string; activeClass: string }[] = [
   { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500/10 border-orange-500 text-orange-600' },
@@ -16,33 +17,21 @@ interface PostFormProps {
 }
 
 export function PostForm({ onPostCreated }: PostFormProps) {
-  const [content, setContent] = useState('');
+  const [content, setContent]   = useState('');
   const [category, setCategory] = useState<PostCategory>('quemones');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const text = content.trim();
+    if (!text || loading) return;
     setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, category }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? 'Error al publicar');
-        return;
-      }
+    setTimeout(() => {
+      createPost(text, category);
       setContent('');
-      onPostCreated();
-    } catch {
-      setError('Error al conectar con el servidor');
-    } finally {
       setLoading(false);
-    }
+      onPostCreated();
+    }, 150);
   }
 
   const remaining = MAX_CHARS - content.length;
@@ -87,7 +76,6 @@ export function PostForm({ onPostCreated }: PostFormProps) {
       >
         {loading ? 'Publicando...' : 'Soltar'}
       </button>
-      {error && <p className="text-red-500 text-xs">{error}</p>}
     </form>
   );
 }

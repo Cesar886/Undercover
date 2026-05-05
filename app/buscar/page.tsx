@@ -6,31 +6,26 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Post } from '@/types';
+import { queryPosts, hidePost } from '@/lib/localStore';
 
 export default function BuscarPage() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery]       = useState('');
   const [submitted, setSubmitted] = useState('');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [posts, setPosts]       = useState<Post[]>([]);
+  const [loading, setLoading]   = useState(false);
   const [searched, setSearched] = useState(false);
-  const { message, showToast } = useToast();
+  const { message, showToast }  = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
     if (!submitted) return;
     setLoading(true);
-    setSearched(false);
-    fetch(`/api/posts?q=${encodeURIComponent(submitted)}&sort=recent`)
-      .then((r) => r.json())
-      .then((data) => {
-        setPosts(data.posts ?? []);
-        setSearched(true);
-      })
-      .finally(() => setLoading(false));
+    const { posts: results } = queryPosts({ q: submitted, sort: 'recent', page: 1 });
+    setPosts(results);
+    setSearched(true);
+    setLoading(false);
   }, [submitted]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -40,8 +35,8 @@ export default function BuscarPage() {
     setSubmitted(q);
   }
 
-  async function handleReport(postId: string) {
-    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
+  function handleReport(postId: string) {
+    hidePost(postId);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     showToast('Post reportado');
   }
@@ -59,13 +54,7 @@ export default function BuscarPage() {
         />
       </form>
 
-      {loading && (
-        <div className="space-y-3">
-          <PostSkeleton />
-          <PostSkeleton />
-          <PostSkeleton />
-        </div>
-      )}
+      {loading && <div className="space-y-3"><PostSkeleton /><PostSkeleton /></div>}
 
       {!loading && searched && posts.length === 0 && (
         <p className="text-gray-400 text-sm text-center py-10">
@@ -94,9 +83,7 @@ export default function BuscarPage() {
       )}
 
       {!loading && !searched && (
-        <p className="text-gray-300 text-sm text-center py-10">
-          Escribe algo y presiona Enter
-        </p>
+        <p className="text-gray-300 text-sm text-center py-10">Escribe algo y presiona Enter</p>
       )}
 
       <Toast message={message} />

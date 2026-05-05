@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { castVote } from '@/lib/localStore';
 
 interface VoteButtonsProps {
   postId: string;
@@ -11,7 +12,7 @@ interface VoteButtonsProps {
 
 export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtonsProps) {
   const [counts, setCounts] = useState({ upvotes, downvotes });
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+  const [voted, setVoted]   = useState<'up' | 'down' | null>(null);
   const [bounce, setBounce] = useState(false);
 
   useEffect(() => {
@@ -20,35 +21,24 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtons
         localStorage.getItem('voted_posts_v2') ?? '{}'
       );
       if (stored[postId]) setVoted(stored[postId]);
-    } catch {
-      // localStorage unavailable
-    }
+    } catch {}
   }, [postId]);
 
-  async function handleVote(voteType: 'up' | 'down') {
+  function handleVote(voteType: 'up' | 'down') {
     if (voted) return;
+    const updated = castVote(postId, voteType);
+    setCounts(updated);
+    setVoted(voteType);
+    setBounce(true);
+    setTimeout(() => setBounce(false), 300);
     try {
-      const res = await fetch(`/api/posts/${postId}/vote`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vote_type: voteType }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCounts(data.votes);
-        setVoted(voteType);
-        setBounce(true);
-        setTimeout(() => setBounce(false), 300);
-        const stored: Record<string, 'up' | 'down'> = JSON.parse(
-          localStorage.getItem('voted_posts_v2') ?? '{}'
-        );
-        stored[postId] = voteType;
-        localStorage.setItem('voted_posts_v2', JSON.stringify(stored));
-        onVoted?.();
-      }
-    } catch {
-      // network error — silently fail
-    }
+      const stored: Record<string, 'up' | 'down'> = JSON.parse(
+        localStorage.getItem('voted_posts_v2') ?? '{}'
+      );
+      stored[postId] = voteType;
+      localStorage.setItem('voted_posts_v2', JSON.stringify(stored));
+    } catch {}
+    onVoted?.();
   }
 
   const upClass = voted === 'up'

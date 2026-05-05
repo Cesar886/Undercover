@@ -1,19 +1,16 @@
-import { notFound } from 'next/navigation';
+'use client';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft } from 'lucide-react';
-import { query } from '@/lib/db';
 import { Post, PostCategory } from '@/types';
 import { CategoryPill } from '@/components/CategoryPill';
 import { VoteButtons } from '@/components/VoteButtons';
 import { LocalComments } from '@/components/LocalComments';
-
-export const dynamic = 'force-dynamic';
-
-interface Props {
-  params: { id: string };
-}
+import { PostSkeleton } from '@/components/PostSkeleton';
+import { getPost } from '@/lib/localStore';
 
 const accentBar: Record<PostCategory, string> = {
   quemones:    'bg-orange-500',
@@ -22,21 +19,38 @@ const accentBar: Record<PostCategory, string> = {
   rumores:     'bg-blue-500',
 };
 
-export default async function PostPage({ params }: Props) {
-  const postResult = await query(
-    'SELECT * FROM posts WHERE id = $1 AND is_hidden = false',
-    [params.id]
-  );
+export default function PostPage() {
+  const { id } = useParams<{ id: string }>();
+  const [post, setPost] = useState<Post | null | undefined>(undefined);
 
-  if (postResult.rows.length === 0) notFound();
+  useEffect(() => {
+    setPost(getPost(id));
+  }, [id]);
 
-  const post: Post = postResult.rows[0];
+  if (post === undefined) {
+    return (
+      <main className="max-w-[600px] mx-auto px-4 pt-4 pb-10 space-y-4">
+        <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
+        <PostSkeleton />
+      </main>
+    );
+  }
+
+  if (post === null) {
+    return (
+      <main className="max-w-[600px] mx-auto px-4 pt-4 pb-10 text-center py-20 space-y-3">
+        <p className="text-gray-400 text-sm">Post no encontrado.</p>
+        <Link href="/" className="text-orange-500 text-sm hover:text-orange-600 transition-colors">
+          Volver al feed
+        </Link>
+      </main>
+    );
+  }
 
   const timeAgo = formatDistanceToNow(new Date(post.created_at), {
     addSuffix: true,
     locale: es,
   });
-
   const initials = post.anon_id.slice(0, 2).toUpperCase();
 
   return (
@@ -49,7 +63,6 @@ export default async function PostPage({ params }: Props) {
         Volver al feed
       </Link>
 
-      {/* Post */}
       <article className="relative bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar[post.category]}`} />
         <div className="pl-5 pr-4 pt-4 pb-4 space-y-3">
@@ -63,16 +76,11 @@ export default async function PostPage({ params }: Props) {
             </div>
             <span className="text-gray-400 text-xs">{timeAgo}</span>
           </div>
-
-          <p className="text-gray-800 text-[16px] leading-relaxed break-words">
-            {post.content}
-          </p>
-
+          <p className="text-gray-800 text-[16px] leading-relaxed break-words">{post.content}</p>
           <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} />
         </div>
       </article>
 
-      {/* Comments */}
       <LocalComments postId={post.id} />
     </main>
   );

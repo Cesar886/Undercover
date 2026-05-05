@@ -8,29 +8,24 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Post, PostCategory } from '@/types';
+import { queryPosts, hidePost } from '@/lib/localStore';
 
 export default function Home() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts]       = useState<Post[]>([]);
   const [category, setCategory] = useState<PostCategory | 'all'>('all');
-  const [sort, setSort] = useState<SortOption>('recent');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const { message, showToast } = useToast();
+  const [sort, setSort]         = useState<SortOption>('recent');
+  const [page, setPage]         = useState(1);
+  const [hasMore, setHasMore]   = useState(true);
+  const [loading, setLoading]   = useState(true);
+  const { message, showToast }  = useToast();
 
   const fetchPosts = useCallback(
-    async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
+    (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
       setLoading(true);
-      try {
-        const qs = new URLSearchParams({ page: String(pg), sort: s });
-        if (cat !== 'all') qs.set('category', cat);
-        const res = await fetch(`/api/posts?${qs}`);
-        const data = await res.json();
-        setPosts((prev) => (replace ? data.posts : [...prev, ...data.posts]));
-        setHasMore(data.posts.length === 10);
-      } finally {
-        setLoading(false);
-      }
+      const { posts: fetched, hasMore: more } = queryPosts({ category: cat, sort: s, page: pg });
+      setPosts((prev) => (replace ? fetched : [...prev, ...fetched]));
+      setHasMore(more);
+      setLoading(false);
     },
     []
   );
@@ -40,22 +35,14 @@ export default function Home() {
     fetchPosts(category, sort, 1, true);
   }, [category, sort, fetchPosts]);
 
-  function handleCategoryChange(val: PostCategory | 'all') {
-    setCategory(val);
-  }
-
-  function handleSortChange(val: SortOption) {
-    setSort(val);
-  }
-
   function handlePostCreated() {
     setPage(1);
     fetchPosts(category, sort, 1, true);
     showToast('Post publicado');
   }
 
-  async function handleReport(postId: string) {
-    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
+  function handleReport(postId: string) {
+    hidePost(postId);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     showToast('Post reportado');
   }
@@ -73,10 +60,8 @@ export default function Home() {
       <PostForm onPostCreated={handlePostCreated} />
 
       <div className="space-y-2">
-        <CategoryFilter active={category} onChange={handleCategoryChange} />
-        <div className="flex items-center justify-between">
-          <SortFilter active={sort} onChange={handleSortChange} />
-        </div>
+        <CategoryFilter active={category} onChange={setCategory} />
+        <SortFilter active={sort} onChange={setSort} />
       </div>
 
       <div className="space-y-3">
@@ -93,10 +78,7 @@ export default function Home() {
               post={post}
               onReport={handleReport}
               onVoted={() => showToast('Voto guardado')}
-              style={{
-                animationDelay: `${index * 60}ms`,
-                animationFillMode: 'forwards',
-              }}
+              style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
               className="opacity-0 animate-fade-slide-in"
             />
           ))
@@ -115,9 +97,6 @@ export default function Home() {
         >
           Cargar más...
         </button>
-      )}
-      {loading && posts.length > 0 && (
-        <p className="text-center text-gray-400 text-sm py-4">Cargando...</p>
       )}
 
       <Toast message={message} />

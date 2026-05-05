@@ -2,37 +2,27 @@
 import { useState, useEffect } from 'react';
 import { Bookmark } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
-import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Post } from '@/types';
+import { getAllPosts, hidePost } from '@/lib/localStore';
 
-const KEY = 'bookmarked_posts';
+const BOOKMARKS_KEY = 'bookmarked_posts';
 
 export default function GuardadosPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts]      = useState<Post[]>([]);
   const { message, showToast } = useToast();
 
   useEffect(() => {
-    let ids: string[] = [];
     try {
-      ids = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+      const ids: string[] = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) ?? '[]');
+      const all = getAllPosts();
+      setPosts(all.filter((p) => ids.includes(p.id) && !p.is_hidden));
     } catch {}
-
-    if (ids.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    fetch(`/api/posts/batch?ids=${ids.join(',')}`)
-      .then((r) => r.json())
-      .then((data) => setPosts(data.posts ?? []))
-      .finally(() => setLoading(false));
   }, []);
 
-  async function handleReport(postId: string) {
-    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
+  function handleReport(postId: string) {
+    hidePost(postId);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     showToast('Post reportado');
   }
@@ -44,14 +34,7 @@ export default function GuardadosPage() {
         <h1 className="text-gray-900 font-semibold text-sm">Guardados</h1>
       </div>
 
-      {loading && (
-        <div className="space-y-3">
-          <PostSkeleton />
-          <PostSkeleton />
-        </div>
-      )}
-
-      {!loading && posts.length === 0 && (
+      {posts.length === 0 ? (
         <p className="text-gray-400 text-sm text-center py-10">
           No tienes posts guardados todavía.
           <br />
@@ -59,9 +42,7 @@ export default function GuardadosPage() {
             Usa el ícono <Bookmark size={11} className="inline" /> en cada post para guardarlos aquí.
           </span>
         </p>
-      )}
-
-      {!loading && posts.length > 0 && (
+      ) : (
         <div className="space-y-3">
           {posts.map((post, index) => (
             <PostCard
