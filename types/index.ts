@@ -1,4 +1,4 @@
-export type PostCategory = 'chisme' | 'opinion' | 'queja' | 'confesion' | 'pregunta';
+export type PostCategory = 'quemones' | 'infieles' | 'confesiones' | 'rumores';
 export type VoteType = 'up' | 'down';
 
 export interface Post {

@@ -26,11 +26,11 @@ describe('GET /api/posts', () => {
 
   it('filters by category when provided', async () => {
     mockQuery.mockResolvedValue({ rows: [] });
-    const req = new NextRequest('http://localhost/api/posts?category=chisme&page=2');
+    const req = new NextRequest('http://localhost/api/posts?category=quemones&page=2');
     await GET(req);
     const [sql, params] = mockQuery.mock.calls[0];
     expect(sql).toContain('$1');
-    expect(params).toContain('chisme');
+    expect(params).toContain('quemones');
     expect(params).toContain(10); // offset for page 2
   });
 });
@@ -40,7 +40,7 @@ describe('POST /api/posts', () => {
     const req = new NextRequest('http://localhost/api/posts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content: '', category: 'opinion' }),
+      body: JSON.stringify({ content: '', category: 'rumores' }),
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -56,24 +56,34 @@ describe('POST /api/posts', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 for old category values', async () => {
+    const req = new NextRequest('http://localhost/api/posts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: 'hello', category: 'chisme' }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
   it('returns 429 when rate limit exceeded', async () => {
     mockRateLimit.mockReturnValueOnce(false);
     const req = new NextRequest('http://localhost/api/posts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content: 'hello', category: 'opinion' }),
+      body: JSON.stringify({ content: 'hello', category: 'rumores' }),
     });
     const res = await POST(req);
     expect(res.status).toBe(429);
   });
 
   it('returns 201 and created post on success', async () => {
-    const fakePost = { id: 'uuid', anon_id: 'Anónimo #1234', content: 'hello', category: 'opinion' };
+    const fakePost = { id: 'uuid', anon_id: 'Anónimo #1234', content: 'hello', category: 'quemones' };
     mockQuery.mockResolvedValue({ rows: [fakePost] });
     const req = new NextRequest('http://localhost/api/posts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content: 'hello', category: 'opinion' }),
+      body: JSON.stringify({ content: 'hello', category: 'quemones' }),
     });
     const res = await POST(req);
     expect(res.status).toBe(201);

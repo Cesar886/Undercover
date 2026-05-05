@@ -5,7 +5,7 @@ import { generateAnonId } from '@/lib/hash';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { PostCategory } from '@/types';
 
-const VALID_CATEGORIES: PostCategory[] = ['chisme', 'opinion', 'queja', 'confesion', 'pregunta'];
+const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones', 'rumores'];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
