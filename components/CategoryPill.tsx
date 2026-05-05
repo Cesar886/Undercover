@@ -1,11 +1,10 @@
 import { PostCategory } from '@/types';
 
 const config: Record<PostCategory, { label: string; className: string }> = {
-  chisme:    { label: 'Chisme',    className: 'bg-pink-900/60 text-pink-300 border border-pink-800' },
-  opinion:   { label: 'Opinión',   className: 'bg-blue-900/60 text-blue-300 border border-blue-800' },
-  queja:     { label: 'Queja',     className: 'bg-red-900/60 text-red-300 border border-red-800' },
-  confesion: { label: 'Confesión', className: 'bg-purple-900/60 text-purple-300 border border-purple-800' },
-  pregunta:  { label: 'Pregunta',  className: 'bg-amber-900/60 text-amber-300 border border-amber-800' },
+  quemones:    { label: 'Quemones',    className: 'border border-orange-500/40 text-orange-500 bg-orange-500/10' },
+  infieles:    { label: 'Infieles',    className: 'border border-pink-500/40 text-pink-500 bg-pink-500/10' },
+  confesiones: { label: 'Confesiones', className: 'border border-purple-600/40 text-purple-600 bg-purple-600/10' },
+  rumores:     { label: 'Rumores',     className: 'border border-blue-500/40 text-blue-500 bg-blue-500/10' },
 };
 
 export function CategoryPill({ category }: { category: PostCategory }) {

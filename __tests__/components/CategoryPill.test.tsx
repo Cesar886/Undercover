@@ -6,24 +6,28 @@ import '@testing-library/jest-dom';
 import { CategoryPill } from '@/components/CategoryPill';
 
 describe('CategoryPill', () => {
-  it('renders the Spanish label for chisme', () => {
-    render(<CategoryPill category="chisme" />);
-    expect(screen.getByText('Chisme')).toBeInTheDocument();
+  it('renders Quemones label', () => {
+    render(<CategoryPill category="quemones" />);
+    expect(screen.getByText('Quemones')).toBeInTheDocument();
   });
-  it('renders the Spanish label for opinion', () => {
-    render(<CategoryPill category="opinion" />);
-    expect(screen.getByText('Opinión')).toBeInTheDocument();
+  it('renders Infieles label', () => {
+    render(<CategoryPill category="infieles" />);
+    expect(screen.getByText('Infieles')).toBeInTheDocument();
   });
-  it('renders the Spanish label for queja', () => {
-    render(<CategoryPill category="queja" />);
-    expect(screen.getByText('Queja')).toBeInTheDocument();
+  it('renders Confesiones label', () => {
+    render(<CategoryPill category="confesiones" />);
+    expect(screen.getByText('Confesiones')).toBeInTheDocument();
   });
-  it('renders the Spanish label for confesion', () => {
-    render(<CategoryPill category="confesion" />);
-    expect(screen.getByText('Confesión')).toBeInTheDocument();
+  it('renders Rumores label', () => {
+    render(<CategoryPill category="rumores" />);
+    expect(screen.getByText('Rumores')).toBeInTheDocument();
   });
-  it('renders the Spanish label for pregunta', () => {
-    render(<CategoryPill category="pregunta" />);
-    expect(screen.getByText('Pregunta')).toBeInTheDocument();
+  it('applies orange color class for quemones', () => {
+    const { container } = render(<CategoryPill category="quemones" />);
+    expect(container.firstChild).toHaveClass('text-orange-500');
+  });
+  it('applies pink color class for infieles', () => {
+    const { container } = render(<CategoryPill category="infieles" />);
+    expect(container.firstChild).toHaveClass('text-pink-500');
   });
 });
