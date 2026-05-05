@@ -46,15 +46,17 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const content = sanitize(body.content ?? '');
-  const category: PostCategory = body.category;
+  const rawCategory = body.category;
 
   if (!content || content.length > 500) {
     return NextResponse.json({ error: 'Contenido inválido' }, { status: 400 });
   }
 
-  if (!VALID_CATEGORIES.includes(category)) {
+  if (!VALID_CATEGORIES.includes(rawCategory as PostCategory)) {
     return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
   }
+
+  const category = rawCategory as PostCategory;
 
   const anonId = generateAnonId();
   const result = await query(
