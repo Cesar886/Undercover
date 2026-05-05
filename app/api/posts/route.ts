@@ -6,10 +6,20 @@ import { checkRateLimit } from '@/lib/rateLimit';
 import { PostCategory } from '@/types';
 
 const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones', 'rumores'];
+const VALID_SORTS = ['recent', 'top', 'hot'] as const;
+type SortOption = typeof VALID_SORTS[number];
+
+function buildOrderClause(sort: SortOption): string {
+  if (sort === 'top') return 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC';
+  if (sort === 'hot') return 'ORDER BY (p.upvotes + p.downvotes) DESC, p.created_at DESC';
+  return 'ORDER BY p.created_at DESC';
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category') as PostCategory | null;
+  const rawSort = searchParams.get('sort') ?? 'recent';
+  const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? (rawSort as SortOption) : 'recent';
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const limit = 10;
   const offset = (page - 1) * limit;
@@ -27,7 +37,11 @@ export async function GET(request: NextRequest) {
     sql += ` AND p.category = $${params.length}`;
   }
 
-  sql += ` ORDER BY p.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  if (sort === 'top') {
+    sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
+  }
+
+  sql += ` ${buildOrderClause(sort)} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   params.push(limit, offset);
 
   const result = await query(sql, params);
