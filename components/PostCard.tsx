@@ -5,6 +5,7 @@ import { Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory } from '@/types';
 import { CategoryPill } from './CategoryPill';
 import { VoteButtons } from './VoteButtons';
+import { BookmarkButton } from './BookmarkButton';
 
 const accentBar: Record<PostCategory, string> = {
   quemones:    'bg-orange-500',
@@ -63,6 +64,7 @@ export function PostCard({ post, onReport, onVoted, style, className }: PostCard
               <MessageCircle size={13} />
               <span>{post.comment_count ?? 0}</span>
             </Link>
+            <BookmarkButton postId={post.id} />
             <button
               onClick={() => onReport(post.id)}
               className="text-gray-300 hover:text-red-400 transition-colors"

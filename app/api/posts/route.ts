@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
   const limit = 10;
   const offset = (page - 1) * limit;
 
+  const q = searchParams.get('q')?.trim() ?? '';
+
   const params: unknown[] = [];
   let sql = `
     SELECT p.*,
@@ -31,6 +33,11 @@ export async function GET(request: NextRequest) {
     FROM posts p
     WHERE p.is_hidden = false
   `;
+
+  if (q) {
+    params.push(`%${q}%`);
+    sql += ` AND p.content ILIKE $${params.length}`;
+  }
 
   if (category && VALID_CATEGORIES.includes(category)) {
     params.push(category);
