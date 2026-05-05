@@ -1,5 +1,5 @@
 const WINDOW_MS = 60 * 60 * 1000;
-const MAX_REQUESTS = 3;
+const MAX_REQUESTS = 40;
 
 interface Entry {
   count: number;
