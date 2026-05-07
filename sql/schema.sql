@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 DO $$ BEGIN
-  CREATE TYPE post_category AS ENUM ('chisme', 'opinion', 'queja', 'confesion', 'pregunta');
+  CREATE TYPE post_category AS ENUM ('quemones', 'infieles', 'confesiones', 'rumores');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -9,6 +9,13 @@ DO $$ BEGIN
   CREATE TYPE vote_type AS ENUM ('up', 'down');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  username VARCHAR(30) UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS posts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

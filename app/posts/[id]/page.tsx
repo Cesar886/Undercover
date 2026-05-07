@@ -4,32 +4,68 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronUp, ChevronDown, Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory } from '@/types';
 import { CategoryPill } from '@/components/CategoryPill';
-import { VoteButtons } from '@/components/VoteButtons';
 import { LocalComments } from '@/components/LocalComments';
 import { PostSkeleton } from '@/components/PostSkeleton';
-import { getPost } from '@/lib/localStore';
 
-const accentBar: Record<PostCategory, string> = {
-  quemones:    'bg-orange-500',
-  infieles:    'bg-pink-500',
-  confesiones: 'bg-purple-600',
-  rumores:     'bg-blue-500',
+const voteBg: Record<PostCategory, string> = {
+  quemones:    'bg-orange-50',
+  infieles:    'bg-pink-50',
+  confesiones: 'bg-purple-50',
+  rumores:     'bg-blue-50',
 };
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<Post | null | undefined>(undefined);
+  const [post, setPost]   = useState<Post | null | undefined>(undefined);
+  const [votes, setVotes] = useState({ up: 0, down: 0 });
+  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
-    setPost(getPost(id));
+    fetch(`/api/posts/${id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.post) {
+          setPost(data.post);
+          setVotes({ up: data.post.upvotes, down: data.post.downvotes });
+        } else {
+          setPost(null);
+        }
+      })
+      .catch(() => setPost(null));
   }, [id]);
+
+  async function handleVote(type: 'up' | 'down') {
+    if (voted || !post) return;
+    setVoted(type);
+    setVotes((prev) => ({
+      up:   prev.up   + (type === 'up'   ? 1 : 0),
+      down: prev.down + (type === 'down' ? 1 : 0),
+    }));
+    try {
+      const res = await fetch(`/api/posts/${post.id}/vote`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vote_type: type }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVotes({ up: data.votes.upvotes, down: data.votes.downvotes });
+      } else {
+        setVoted(null);
+        setVotes({ up: post.upvotes, down: post.downvotes });
+      }
+    } catch {
+      setVoted(null);
+      setVotes({ up: post.upvotes, down: post.downvotes });
+    }
+  }
 
   if (post === undefined) {
     return (
-      <main className="max-w-[600px] mx-auto px-4 pt-4 pb-10 space-y-4">
+      <main className="max-w-[740px] mx-auto px-4 pt-4 pb-10 space-y-4">
         <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
         <PostSkeleton />
       </main>
@@ -38,7 +74,7 @@ export default function PostPage() {
 
   if (post === null) {
     return (
-      <main className="max-w-[600px] mx-auto px-4 pt-4 pb-10 text-center py-20 space-y-3">
+      <main className="max-w-[740px] mx-auto px-4 pt-10 text-center space-y-3">
         <p className="text-gray-400 text-sm">Post no encontrado.</p>
         <Link href="/" className="text-orange-500 text-sm hover:text-orange-600 transition-colors">
           Volver al feed
@@ -47,41 +83,89 @@ export default function PostPage() {
     );
   }
 
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
-    addSuffix: true,
-    locale: es,
-  });
-  const initials = post.anon_id.slice(0, 2).toUpperCase();
+  const score   = votes.up - votes.down;
+  const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es });
 
   return (
-    <main className="max-w-[600px] mx-auto px-4 pt-4 pb-10 space-y-5">
+    <main className="max-w-[740px] mx-auto px-4 pt-4 pb-10 space-y-3">
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm transition-colors"
       >
-        <ArrowLeft size={15} />
+        <ArrowLeft size={14} />
         Volver al feed
       </Link>
 
-      <article className="relative bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar[post.category]}`} />
-        <div className="pl-5 pr-4 pt-4 pb-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-[10px] text-gray-500 font-medium">{initials}</span>
-              </div>
-              <span className="text-gray-500 text-xs">{post.anon_id}</span>
-              <CategoryPill category={post.category} />
-            </div>
-            <span className="text-gray-400 text-xs">{timeAgo}</span>
+      {/* Post — Reddit layout */}
+      <div className="bg-white border border-gray-200 rounded-md overflow-hidden hover:border-gray-300 transition-colors">
+        <div className="flex">
+          {/* Vote column */}
+          <div className={`w-10 flex-shrink-0 flex flex-col items-center pt-2 pb-3 gap-0.5 ${voteBg[post.category]}`}>
+            <button
+              onClick={() => handleVote('up')}
+              disabled={!!voted}
+              className={`p-1 rounded hover:bg-orange-100 transition-colors disabled:cursor-not-allowed ${
+                voted === 'up' ? 'text-orange-500' : 'text-gray-300 hover:text-orange-500'
+              }`}
+              aria-label="Upvote"
+            >
+              <ChevronUp size={20} strokeWidth={2.5} />
+            </button>
+            <span className={`text-xs font-bold tabular-nums ${
+              voted === 'up' ? 'text-orange-500' : voted === 'down' ? 'text-blue-500' : 'text-gray-700'
+            }`}>
+              {score}
+            </span>
+            <button
+              onClick={() => handleVote('down')}
+              disabled={!!voted}
+              className={`p-1 rounded hover:bg-blue-100 transition-colors disabled:cursor-not-allowed ${
+                voted === 'down' ? 'text-blue-500' : 'text-gray-300 hover:text-blue-500'
+              }`}
+              aria-label="Downvote"
+            >
+              <ChevronDown size={20} strokeWidth={2.5} />
+            </button>
           </div>
-          <p className="text-gray-800 text-[16px] leading-relaxed break-words">{post.content}</p>
-          <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} />
-        </div>
-      </article>
 
-      <LocalComments postId={post.id} />
+          {/* Content */}
+          <div className="flex-1 min-w-0 px-3 pt-3 pb-2.5">
+            {/* Meta */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-gray-400 mb-2.5">
+              <CategoryPill category={post.category} />
+              <span>·</span>
+              <span className="font-medium text-gray-600">{post.anon_id}</span>
+              <span>·</span>
+              <span>{timeAgo}</span>
+            </div>
+
+            {/* Body */}
+            <p className="text-gray-900 text-[15px] leading-relaxed break-words mb-3">
+              {post.content}
+            </p>
+
+            {/* Action bar */}
+            <div className="flex items-center gap-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <MessageCircle size={13} />
+                <span>{post.comment_count ?? 0} comentarios</span>
+              </span>
+              <button
+                onClick={() => fetch(`/api/posts/${post.id}/report`, { method: 'POST' })}
+                className="flex items-center gap-1 hover:text-red-400 transition-colors"
+              >
+                <Flag size={13} />
+                <span>Reportar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Comments section */}
+      <div className="bg-white border border-gray-200 rounded-md">
+        <LocalComments postId={post.id} />
+      </div>
     </main>
   );
 }

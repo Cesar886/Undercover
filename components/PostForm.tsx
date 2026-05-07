@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { PostCategory } from '@/types';
-import { createPost, getAnonId } from '@/lib/localStore';
+import { AuthModal } from '@/components/AuthModal';
 
 const CATEGORIES: {
   value: PostCategory;
@@ -22,84 +22,108 @@ interface PostFormProps {
 }
 
 export function PostForm({ onPostCreated }: PostFormProps) {
-  const [content, setContent]   = useState('');
-  const [category, setCategory] = useState<PostCategory>('quemones');
-  const [loading, setLoading]   = useState(false);
-  const [anonId, setAnonId]     = useState('');
+  const [content, setContent]     = useState('');
+  const [category, setCategory]   = useState<PostCategory>('quemones');
+  const [loading, setLoading]     = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [username, setUsername]   = useState('');
 
-  useEffect(() => { setAnonId(getAnonId()); }, []);
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setUsername(data.user?.username ?? ''))
+      .catch(() => {});
+  }, []);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = content.trim();
     if (!text || loading) return;
+
+    if (!username) {
+      setShowModal(true);
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      createPost(text, category);
-      setContent('');
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text, category, anon_id: username }),
+      });
+
+      if (res.ok) {
+        setContent('');
+        onPostCreated();
+      }
+    } finally {
       setLoading(false);
-      onPostCreated();
-    }, 150);
+    }
   }
 
-  const remaining    = MAX_CHARS - content.length;
-  const selectedCat  = CATEGORIES.find((c) => c.value === category)!;
+  const remaining   = MAX_CHARS - content.length;
+  const selectedCat = CATEGORIES.find((c) => c.value === category)!;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
-    >
-      {/* Composer body */}
-      <div className="flex gap-3 px-4 pt-4 pb-2">
-        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${selectedCat.avatarClass}`}>
-          AN
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-gray-400 mb-1.5">{anonId || 'Anónimo'}</p>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
-            placeholder="¿Qué está pasando en la U?"
-            rows={3}
-            className="w-full bg-transparent text-gray-900 placeholder-gray-300 text-[15px] leading-relaxed resize-none focus:outline-none"
-          />
-        </div>
-      </div>
+    <>
+      {showModal && <AuthModal onClose={() => setShowModal(false)} />}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100">
-        <div className="flex gap-1.5 flex-wrap">
-          {CATEGORIES.map((c) => (
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+      >
+        <div className="flex gap-3 px-4 pt-4 pb-2">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${selectedCat.avatarClass}`}>
+            {username ? username.slice(0, 2).toUpperCase() : 'AN'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-gray-400 mb-1.5">
+              {username || 'Anónimo'}
+            </p>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+              placeholder="¿Qué está pasando en la U?"
+              rows={3}
+              className="w-full bg-transparent text-gray-900 placeholder-gray-300 text-[15px] leading-relaxed resize-none focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100">
+          <div className="flex gap-1.5 flex-wrap">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setCategory(c.value)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                  category === c.value
+                    ? c.activeClass
+                    : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+            {remaining < 100 && (
+              <span className={`text-xs tabular-nums ${remaining < 30 ? 'text-amber-500' : 'text-gray-300'}`}>
+                {remaining}
+              </span>
+            )}
             <button
-              key={c.value}
-              type="button"
-              onClick={() => setCategory(c.value)}
-              className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${
-                category === c.value
-                  ? c.activeClass
-                  : 'border-gray-200 text-gray-400 hover:border-gray-300'
-              }`}
+              type="submit"
+              disabled={loading || !content.trim()}
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
             >
-              {c.label}
+              {loading ? '...' : 'Soltar'}
             </button>
-          ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-          {remaining < 100 && (
-            <span className={`text-xs tabular-nums ${remaining < 30 ? 'text-amber-500' : 'text-gray-300'}`}>
-              {remaining}
-            </span>
-          )}
-          <button
-            type="submit"
-            disabled={loading || !content.trim()}
-            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
-          >
-            {loading ? '...' : 'Soltar'}
-          </button>
-        </div>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }

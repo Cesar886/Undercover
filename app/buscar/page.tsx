@@ -6,15 +6,14 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Post } from '@/types';
-import { queryPosts, hidePost } from '@/lib/localStore';
 
 export default function BuscarPage() {
-  const [query, setQuery]       = useState('');
+  const [query, setQuery]         = useState('');
   const [submitted, setSubmitted] = useState('');
-  const [posts, setPosts]       = useState<Post[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [searched, setSearched] = useState(false);
-  const { message, showToast }  = useToast();
+  const [posts, setPosts]         = useState<Post[]>([]);
+  const [loading, setLoading]     = useState(false);
+  const [searched, setSearched]   = useState(false);
+  const { message, showToast }    = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -22,10 +21,13 @@ export default function BuscarPage() {
   useEffect(() => {
     if (!submitted) return;
     setLoading(true);
-    const { posts: results } = queryPosts({ q: submitted, sort: 'recent', page: 1 });
-    setPosts(results);
-    setSearched(true);
-    setLoading(false);
+    fetch(`/api/posts?q=${encodeURIComponent(submitted)}&sort=recent&page=1`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPosts(data.posts ?? []);
+        setSearched(true);
+      })
+      .finally(() => setLoading(false));
   }, [submitted]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -35,8 +37,8 @@ export default function BuscarPage() {
     setSubmitted(q);
   }
 
-  function handleReport(postId: string) {
-    hidePost(postId);
+  async function handleReport(postId: string) {
+    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     showToast('Post reportado');
   }

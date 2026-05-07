@@ -11,6 +11,8 @@
     "migrate": "ts-node scripts/migrate.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "lucide-react": "^1.14.0",
     "next": "14.2.35",

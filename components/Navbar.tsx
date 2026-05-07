@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Search, Bookmark } from 'lucide-react';
+import { Search, UserPlus, LogIn } from 'lucide-react';
 
 export function Navbar() {
   return (
@@ -20,11 +20,18 @@ export function Navbar() {
             <Search size={18} />
           </Link>
           <Link
-            href="/guardados"
+            href="/login"
             className="text-gray-400 hover:text-gray-700 transition-colors"
-            aria-label="Guardados"
+            aria-label="Iniciar sesión"
           >
-            <Bookmark size={18} />
+            <LogIn size={18} />
+          </Link>
+          <Link
+            href="/registro"
+            className="text-gray-400 hover:text-gray-700 transition-colors"
+            aria-label="Registrarse"
+          >
+            <UserPlus size={18} />
           </Link>
         </div>
       </div>

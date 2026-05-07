@@ -8,7 +8,6 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Post, PostCategory } from '@/types';
-import { queryPosts, hidePost } from '@/lib/localStore';
 
 export default function Home() {
   const [posts, setPosts]       = useState<Post[]>([]);
@@ -20,12 +19,19 @@ export default function Home() {
   const { message, showToast }  = useToast();
 
   const fetchPosts = useCallback(
-    (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
+    async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
       setLoading(true);
-      const { posts: fetched, hasMore: more } = queryPosts({ category: cat, sort: s, page: pg });
-      setPosts((prev) => (replace ? fetched : [...prev, ...fetched]));
-      setHasMore(more);
-      setLoading(false);
+      try {
+        const params = new URLSearchParams({ sort: s, page: String(pg) });
+        if (cat !== 'all') params.set('category', cat);
+        const res = await fetch(`/api/posts?${params}`);
+        const data = await res.json();
+        const fetched: Post[] = data.posts ?? [];
+        setPosts((prev) => (replace ? fetched : [...prev, ...fetched]));
+        setHasMore(fetched.length === 10);
+      } finally {
+        setLoading(false);
+      }
     },
     []
   );
@@ -41,8 +47,8 @@ export default function Home() {
     showToast('Post publicado');
   }
 
-  function handleReport(postId: string) {
-    hidePost(postId);
+  async function handleReport(postId: string) {
+    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     showToast('Post reportado');
   }
@@ -59,7 +65,6 @@ export default function Home() {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      {/* Filter card */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-2 overflow-x-auto scrollbar-hide">
           <CategoryFilter active={category} onChange={setCategory} />
@@ -69,7 +74,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Feed */}
       <div className="space-y-3">
         {isInitialLoad ? (
           <>

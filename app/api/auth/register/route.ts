@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { sanitize } from '@/lib/sanitize';
+import { hashPassword } from '@/lib/hash';
+
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const username = sanitize(body.username ?? '').trim();
+  const password = (body.password ?? '').trim();
+
+  if (!USERNAME_RE.test(username)) {
+    return NextResponse.json(
+      { error: 'El usuario debe tener 3-30 caracteres (letras, números o _)' },
+      { status: 400 }
+    );
+  }
+
+  if (password.length < 4) {
+    return NextResponse.json(
+      { error: 'La contraseña debe tener al menos 4 caracteres' },
+      { status: 400 }
+    );
+  }
+
+  const existing = await query(
+    'SELECT id FROM users WHERE username = $1',
+    [username]
+  );
+
+  if (existing.rows.length > 0) {
+    return NextResponse.json(
+      { error: 'Ese nombre de usuario ya está en uso' },
+      { status: 409 }
+    );
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  const result = await query(
+    'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, created_at',
+    [username, hashedPassword]
+  );
+
+  const user = { id: result.rows[0].id, username: result.rows[0].username };
+  const response = NextResponse.json({ user }, { status: 201 });
+  response.cookies.set('session_user', JSON.stringify(user), {
+    path: '/',
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 7,
+    sameSite: 'lax',
+  });
+  return response;
+}

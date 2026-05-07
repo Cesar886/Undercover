@@ -1,7 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { castVote } from '@/lib/localStore';
 
 interface VoteButtonsProps {
   postId: string;
@@ -15,30 +14,38 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtons
   const [voted, setVoted]   = useState<'up' | 'down' | null>(null);
   const [bounce, setBounce] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored: Record<string, 'up' | 'down'> = JSON.parse(
-        localStorage.getItem('voted_posts_v2') ?? '{}'
-      );
-      if (stored[postId]) setVoted(stored[postId]);
-    } catch {}
-  }, [postId]);
-
-  function handleVote(voteType: 'up' | 'down') {
+  async function handleVote(voteType: 'up' | 'down') {
     if (voted) return;
-    const updated = castVote(postId, voteType);
-    setCounts(updated);
+
+    // optimistic update
+    setCounts((prev) => ({
+      upvotes:   prev.upvotes   + (voteType === 'up'   ? 1 : 0),
+      downvotes: prev.downvotes + (voteType === 'down' ? 1 : 0),
+    }));
     setVoted(voteType);
     setBounce(true);
     setTimeout(() => setBounce(false), 300);
+
     try {
-      const stored: Record<string, 'up' | 'down'> = JSON.parse(
-        localStorage.getItem('voted_posts_v2') ?? '{}'
-      );
-      stored[postId] = voteType;
-      localStorage.setItem('voted_posts_v2', JSON.stringify(stored));
-    } catch {}
-    onVoted?.();
+      const res = await fetch(`/api/posts/${postId}/vote`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vote_type: voteType }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCounts(data.votes);
+        onVoted?.();
+      } else {
+        // revert on error (e.g. 409 already voted)
+        setCounts({ upvotes, downvotes });
+        setVoted(null);
+      }
+    } catch {
+      setCounts({ upvotes, downvotes });
+      setVoted(null);
+    }
   }
 
   const upClass = voted === 'up'

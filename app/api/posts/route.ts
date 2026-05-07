@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   const category = rawCategory as PostCategory;
 
-  const anonId = generateAnonId();
+  const anonId = sanitize(body.anon_id ?? '').trim() || generateAnonId();
   const result = await query(
     `INSERT INTO posts (anon_id, content, category) VALUES ($1, $2, $3) RETURNING *`,
     [anonId, content, category]
