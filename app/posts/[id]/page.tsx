@@ -4,69 +4,42 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, ChevronUp, ChevronDown, Flag, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory } from '@/types';
 import { CategoryPill } from '@/components/CategoryPill';
+import { VoteButtons } from '@/components/VoteButtons';
 import { LocalComments } from '@/components/LocalComments';
 import { PostSkeleton } from '@/components/PostSkeleton';
 
-const voteBg: Record<PostCategory, string> = {
-  quemones:    'bg-orange-50',
-  infieles:    'bg-pink-50',
-  confesiones: 'bg-purple-50',
-  rumores:     'bg-blue-50',
+const accentBar: Record<PostCategory, string> = {
+  quemones:    'bg-orange-500',
+  infieles:    'bg-pink-500',
+  confesiones: 'bg-purple-600',
+  rumores:     'bg-blue-500',
+};
+
+const avatarColors: Record<PostCategory, string> = {
+  quemones:    'bg-orange-100 text-orange-600',
+  infieles:    'bg-pink-100 text-pink-600',
+  confesiones: 'bg-purple-100 text-purple-700',
+  rumores:     'bg-blue-100 text-blue-600',
 };
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost]   = useState<Post | null | undefined>(undefined);
-  const [votes, setVotes] = useState({ up: 0, down: 0 });
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+  const [post, setPost] = useState<Post | null | undefined>(undefined);
 
   useEffect(() => {
     fetch(`/api/posts/${id}`)
       .then((r) => r.json())
-      .then((data) => {
-        if (data.post) {
-          setPost(data.post);
-          setVotes({ up: data.post.upvotes, down: data.post.downvotes });
-        } else {
-          setPost(null);
-        }
-      })
+      .then((data) => setPost(data.post ?? null))
       .catch(() => setPost(null));
   }, [id]);
 
-  async function handleVote(type: 'up' | 'down') {
-    if (voted || !post) return;
-    setVoted(type);
-    setVotes((prev) => ({
-      up:   prev.up   + (type === 'up'   ? 1 : 0),
-      down: prev.down + (type === 'down' ? 1 : 0),
-    }));
-    try {
-      const res = await fetch(`/api/posts/${post.id}/vote`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vote_type: type }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVotes({ up: data.votes.upvotes, down: data.votes.downvotes });
-      } else {
-        setVoted(null);
-        setVotes({ up: post.upvotes, down: post.downvotes });
-      }
-    } catch {
-      setVoted(null);
-      setVotes({ up: post.upvotes, down: post.downvotes });
-    }
-  }
-
   if (post === undefined) {
     return (
-      <main className="max-w-[740px] mx-auto px-4 pt-4 pb-10 space-y-4">
-        <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
+      <main className="max-w-[680px] mx-auto px-4 pt-6 pb-16 space-y-5">
+        <div className="h-4 w-20 rounded-full bg-gray-100 animate-pulse" />
         <PostSkeleton />
       </main>
     );
@@ -74,98 +47,80 @@ export default function PostPage() {
 
   if (post === null) {
     return (
-      <main className="max-w-[740px] mx-auto px-4 pt-10 text-center space-y-3">
+      <main className="max-w-[680px] mx-auto px-4 pt-20 text-center space-y-3">
         <p className="text-gray-400 text-sm">Post no encontrado.</p>
-        <Link href="/" className="text-orange-500 text-sm hover:text-orange-600 transition-colors">
+        <Link href="/" className="text-orange-500 text-sm hover:underline">
           Volver al feed
         </Link>
       </main>
     );
   }
 
-  const score   = votes.up - votes.down;
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es });
+  const timeAgo  = formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es });
+  const initials = post.anon_id.slice(0, 2).toUpperCase();
 
   return (
-    <main className="max-w-[740px] mx-auto px-4 pt-4 pb-10 space-y-3">
+    <main className="max-w-[680px] mx-auto px-4 pt-6 pb-16 space-y-4">
+      {/* Back link */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors"
       >
-        <ArrowLeft size={14} />
+        <ArrowLeft size={15} strokeWidth={2} />
         Volver al feed
       </Link>
 
-      {/* Post — Reddit layout */}
-      <div className="bg-white border border-gray-200 rounded-md overflow-hidden hover:border-gray-300 transition-colors">
-        <div className="flex">
-          {/* Vote column */}
-          <div className={`w-10 flex-shrink-0 flex flex-col items-center pt-2 pb-3 gap-0.5 ${voteBg[post.category]}`}>
-            <button
-              onClick={() => handleVote('up')}
-              disabled={!!voted}
-              className={`p-1 rounded hover:bg-orange-100 transition-colors disabled:cursor-not-allowed ${
-                voted === 'up' ? 'text-orange-500' : 'text-gray-300 hover:text-orange-500'
-              }`}
-              aria-label="Upvote"
-            >
-              <ChevronUp size={20} strokeWidth={2.5} />
-            </button>
-            <span className={`text-xs font-bold tabular-nums ${
-              voted === 'up' ? 'text-orange-500' : voted === 'down' ? 'text-blue-500' : 'text-gray-700'
-            }`}>
-              {score}
-            </span>
-            <button
-              onClick={() => handleVote('down')}
-              disabled={!!voted}
-              className={`p-1 rounded hover:bg-blue-100 transition-colors disabled:cursor-not-allowed ${
-                voted === 'down' ? 'text-blue-500' : 'text-gray-300 hover:text-blue-500'
-              }`}
-              aria-label="Downvote"
-            >
-              <ChevronDown size={20} strokeWidth={2.5} />
-            </button>
+      {/* Post card */}
+      <article className="relative bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        {/* Category accent */}
+        <div className={`absolute inset-y-0 left-0 w-1 ${accentBar[post.category]}`} />
+
+        <div className="pl-6 pr-5 pt-5 pb-4 space-y-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${avatarColors[post.category]}`}>
+                {initials}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{post.anon_id}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <CategoryPill category={post.category} />
+                </div>
+              </div>
+            </div>
+            <time className="text-xs text-gray-400 flex-shrink-0">{timeAgo}</time>
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 px-3 pt-3 pb-2.5">
-            {/* Meta */}
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-gray-400 mb-2.5">
-              <CategoryPill category={post.category} />
-              <span>·</span>
-              <span className="font-medium text-gray-600">{post.anon_id}</span>
-              <span>·</span>
-              <span>{timeAgo}</span>
-            </div>
+          <p className="text-gray-800 text-[17px] leading-relaxed break-words">
+            {post.content}
+          </p>
 
-            {/* Body */}
-            <p className="text-gray-900 text-[15px] leading-relaxed break-words mb-3">
-              {post.content}
-            </p>
-
-            {/* Action bar */}
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-1 border-t border-gray-50">
+            <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} />
             <div className="flex items-center gap-4 text-xs text-gray-400">
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
                 <MessageCircle size={13} />
-                <span>{post.comment_count ?? 0} comentarios</span>
+                {post.comment_count ?? 0}
               </span>
               <button
                 onClick={() => fetch(`/api/posts/${post.id}/report`, { method: 'POST' })}
-                className="flex items-center gap-1 hover:text-red-400 transition-colors"
+                className="flex items-center gap-1.5 hover:text-red-400 transition-colors"
               >
                 <Flag size={13} />
-                <span>Reportar</span>
+                Reportar
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </article>
 
-      {/* Comments section */}
-      <div className="bg-white border border-gray-200 rounded-md">
+      {/* Comments */}
+      <section className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
         <LocalComments postId={post.id} />
-      </div>
+      </section>
     </main>
   );
 }
