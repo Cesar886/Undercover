@@ -5,6 +5,8 @@ import { Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory } from '@/types';
 import { CategoryPill } from './CategoryPill';
 import { VoteButtons } from './VoteButtons';
+import { PostImage } from './PostImage';
+import { colorFor } from '@/lib/avatar';
 
 const accentBar: Record<PostCategory, string> = {
   quemones:    'bg-orange-500',
@@ -13,22 +15,16 @@ const accentBar: Record<PostCategory, string> = {
   rumores:     'bg-blue-500',
 };
 
-const avatarColor: Record<PostCategory, string> = {
-  quemones:    'bg-orange-100 text-orange-600',
-  infieles:    'bg-pink-100 text-pink-600',
-  confesiones: 'bg-purple-100 text-purple-700',
-  rumores:     'bg-blue-100 text-blue-600',
-};
-
 interface PostCardProps {
   post: Post;
   onReport: (id: string) => void;
   onVoted?: () => void;
+  onVoteError?: (msg: string) => void;
   style?: React.CSSProperties;
   className?: string;
 }
 
-export function PostCard({ post, onReport, onVoted, style, className }: PostCardProps) {
+export function PostCard({ post, onReport, onVoted, onVoteError, style, className }: PostCardProps) {
   const timeAgo = formatDistanceToNow(new Date(post.created_at), {
     addSuffix: true,
     locale: es,
@@ -47,7 +43,7 @@ export function PostCard({ post, onReport, onVoted, style, className }: PostCard
         {/* Header */}
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${avatarColor[post.category]}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${colorFor(post.anon_id)}`}>
               <span className="text-[10px] font-bold">{initials}</span>
             </div>
             <span className="text-gray-500 text-xs">{post.anon_id}</span>
@@ -63,9 +59,15 @@ export function PostCard({ post, onReport, onVoted, style, className }: PostCard
           </p>
         </Link>
 
+        {post.image_webp && (
+          <div className="mb-3">
+            <PostImage src={post.image_webp} className="max-h-72 w-auto" />
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between">
-          <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} onVoted={onVoted} />
+          <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} onVoted={onVoted} onError={onVoteError} />
           <div className="flex items-center gap-3">
             <Link
               href={`/posts/${post.id}`}

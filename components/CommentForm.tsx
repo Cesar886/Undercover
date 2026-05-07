@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ImagePicker } from '@/components/ImagePicker';
+import { apiPost } from '@/lib/apiClient';
 
 const MAX_CHARS = 300;
 
@@ -9,47 +11,66 @@ export function CommentForm({ postId }: { postId: string }) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const text = content.trim();
+    if ((!text && !image) || loading) return;
+
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? 'Error al comentar');
-        return;
-      }
+    setImageError(null);
+
+    const result = await apiPost(`/api/posts/${postId}/comments`, {
+      content: text,
+      image: image ?? undefined,
+    });
+
+    if (result.ok) {
       setContent('');
+      setImage(null);
       router.refresh();
-    } catch {
-      setError('Error al conectar con el servidor');
-    } finally {
-      setLoading(false);
+    } else {
+      if (
+        result.error.toLowerCase().includes('imagen') ||
+        result.error.toLowerCase().includes('formato')
+      ) {
+        setImageError(result.error);
+      } else {
+        setError(result.error);
+      }
     }
+    setLoading(false);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-2" aria-busy={loading}>
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
         placeholder="Añade un comentario anónimo..."
         rows={2}
-        className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500"
+        disabled={loading}
+        className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:opacity-60"
       />
+      <ImagePicker
+        preview={image}
+        onPick={(d) => { setImage(d); setImageError(null); }}
+        onClear={() => { setImage(null); setImageError(null); }}
+        onError={(m) => setImageError(m)}
+        disabled={loading}
+        uploading={loading && !!image}
+      />
+      {imageError && <p className="text-red-500 text-xs">{imageError}</p>}
       <div className="flex items-center justify-between">
         <span className={`text-xs ${MAX_CHARS - content.length < 30 ? 'text-amber-500' : 'text-gray-400'}`}>
           {MAX_CHARS - content.length} restantes
         </span>
         <button
           type="submit"
-          disabled={loading || !content.trim()}
+          disabled={loading || (!content.trim() && !image)}
           className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
         >
           {loading ? 'Enviando...' : 'Comentar'}

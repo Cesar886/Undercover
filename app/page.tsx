@@ -7,6 +7,7 @@ import { SortFilter, SortOption } from '@/components/SortFilter';
 import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
+import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { Post, PostCategory } from '@/types';
 
 export default function Home() {
@@ -59,6 +60,43 @@ export default function Home() {
     fetchPosts(category, sort, next, false);
   }
 
+  // Reactividad en vivo vía SSE.
+  useFeedEvents(
+    useCallback(
+      (ev) => {
+        if (ev.type === 'post:new') {
+          // Solo insertar si encaja en el filtro y solo en orden "recent".
+          if (sort !== 'recent') return;
+          if (category !== 'all' && ev.post.category !== category) return;
+          setPosts((prev) => (prev.some((p) => p.id === ev.post.id) ? prev : [ev.post, ...prev]));
+          return;
+        }
+        if (ev.type === 'post:vote') {
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === ev.postId ? { ...p, upvotes: ev.upvotes, downvotes: ev.downvotes } : p
+            )
+          );
+          return;
+        }
+        if (ev.type === 'post:hidden') {
+          setPosts((prev) => prev.filter((p) => p.id !== ev.postId));
+          return;
+        }
+        if (ev.type === 'comment:new') {
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === ev.postId
+                ? { ...p, comment_count: (p.comment_count ?? 0) + 1 }
+                : p
+            )
+          );
+        }
+      },
+      [category, sort]
+    )
+  );
+
   const isInitialLoad = loading && posts.length === 0;
 
   return (
@@ -88,6 +126,7 @@ export default function Home() {
               post={post}
               onReport={handleReport}
               onVoted={() => showToast('Voto guardado')}
+              onVoteError={(msg) => showToast(msg)}
               style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
               className="opacity-0 animate-fade-slide-in"
             />

@@ -1,5 +1,8 @@
 jest.mock('@/lib/db', () => ({ query: jest.fn() }));
-jest.mock('@/lib/rateLimit', () => ({ checkRateLimit: jest.fn().mockReturnValue(true) }));
+jest.mock('@/lib/rateLimit', () => ({
+  checkRateLimit: jest.fn().mockReturnValue({ ok: true, retryAfter: 0 }),
+  RATE_LIMITS: { posts: { windowMs: 1000, max: 40 } },
+}));
 
 import { GET, POST } from '@/app/api/posts/route';
 import { NextRequest } from 'next/server';
@@ -11,7 +14,7 @@ const mockRateLimit = checkRateLimit as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockRateLimit.mockReturnValue(true);
+  mockRateLimit.mockReturnValue({ ok: true, retryAfter: 0 });
 });
 
 describe('GET /api/posts', () => {
@@ -67,7 +70,7 @@ describe('POST /api/posts', () => {
   });
 
   it('returns 429 when rate limit exceeded', async () => {
-    mockRateLimit.mockReturnValueOnce(false);
+    mockRateLimit.mockReturnValueOnce({ ok: false, retryAfter: 30 });
     const req = new NextRequest('http://localhost/api/posts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

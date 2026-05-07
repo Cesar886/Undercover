@@ -1,23 +1,38 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { apiGet, apiPatch } from '@/lib/apiClient';
 
 interface VoteButtonsProps {
   postId: string;
   upvotes: number;
   downvotes: number;
   onVoted?: () => void;
+  onError?: (msg: string) => void;
 }
 
-export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtonsProps) {
+interface VoteResponse {
+  votes: { upvotes: number; downvotes: number };
+}
+
+export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: VoteButtonsProps) {
   const [counts, setCounts] = useState({ upvotes, downvotes });
   const [voted, setVoted]   = useState<'up' | 'down' | null>(null);
   const [bounce, setBounce] = useState(false);
 
+  useEffect(() => {
+    setCounts({ upvotes, downvotes });
+  }, [upvotes, downvotes]);
+
+  useEffect(() => {
+    apiGet<{ voted: 'up' | 'down' | null }>(`/api/posts/${postId}/vote`).then((r) => {
+      if (r.ok && r.data.voted) setVoted(r.data.voted);
+    });
+  }, [postId]);
+
   async function handleVote(voteType: 'up' | 'down') {
     if (voted) return;
 
-    // optimistic update
     setCounts((prev) => ({
       upvotes:   prev.upvotes   + (voteType === 'up'   ? 1 : 0),
       downvotes: prev.downvotes + (voteType === 'down' ? 1 : 0),
@@ -26,25 +41,15 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted }: VoteButtons
     setBounce(true);
     setTimeout(() => setBounce(false), 300);
 
-    try {
-      const res = await fetch(`/api/posts/${postId}/vote`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vote_type: voteType }),
-      });
+    const result = await apiPatch<VoteResponse>(`/api/posts/${postId}/vote`, { vote_type: voteType });
 
-      if (res.ok) {
-        const data = await res.json();
-        setCounts(data.votes);
-        onVoted?.();
-      } else {
-        // revert on error (e.g. 409 already voted)
-        setCounts({ upvotes, downvotes });
-        setVoted(null);
-      }
-    } catch {
+    if (result.ok) {
+      setCounts(result.data.votes);
+      onVoted?.();
+    } else {
       setCounts({ upvotes, downvotes });
       setVoted(null);
+      onError?.(result.error);
     }
   }
 

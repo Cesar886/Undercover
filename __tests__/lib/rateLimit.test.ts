@@ -1,27 +1,39 @@
-import { checkRateLimit, _resetForTesting } from '@/lib/rateLimit';
+import { checkRateLimit, RATE_LIMITS, _resetForTesting } from '@/lib/rateLimit';
 
 beforeEach(() => _resetForTesting());
 
 describe('checkRateLimit', () => {
-  it('allows first 40 requests from same IP', () => {
-    for (let i = 0; i < 40; i++) {
-      expect(checkRateLimit('1.2.3.4')).toBe(true);
+  it('allows up to max requests', () => {
+    for (let i = 0; i < RATE_LIMITS.posts.max; i++) {
+      expect(checkRateLimit('k1', RATE_LIMITS.posts).ok).toBe(true);
     }
   });
-  it('blocks 41st request from same IP', () => {
-    for (let i = 0; i < 40; i++) checkRateLimit('1.2.3.4');
-    expect(checkRateLimit('1.2.3.4')).toBe(false);
+
+  it('blocks past max with retryAfter', () => {
+    for (let i = 0; i < RATE_LIMITS.posts.max; i++) checkRateLimit('k1', RATE_LIMITS.posts);
+    const r = checkRateLimit('k1', RATE_LIMITS.posts);
+    expect(r.ok).toBe(false);
+    expect(r.retryAfter).toBeGreaterThan(0);
   });
-  it('allows different IPs independently', () => {
-    for (let i = 0; i < 40; i++) checkRateLimit('1.2.3.4');
-    expect(checkRateLimit('5.6.7.8')).toBe(true);
+
+  it('keys are independent', () => {
+    for (let i = 0; i < RATE_LIMITS.posts.max; i++) checkRateLimit('k1', RATE_LIMITS.posts);
+    expect(checkRateLimit('k2', RATE_LIMITS.posts).ok).toBe(true);
   });
-  it('resets after the time window', () => {
+
+  it('resets after window', () => {
     jest.useFakeTimers();
-    for (let i = 0; i < 40; i++) checkRateLimit('1.2.3.4');
-    expect(checkRateLimit('1.2.3.4')).toBe(false);
-    jest.advanceTimersByTime(61 * 60 * 1000);
-    expect(checkRateLimit('1.2.3.4')).toBe(true);
+    for (let i = 0; i < RATE_LIMITS.posts.max; i++) checkRateLimit('k1', RATE_LIMITS.posts);
+    expect(checkRateLimit('k1', RATE_LIMITS.posts).ok).toBe(false);
+    jest.advanceTimersByTime(RATE_LIMITS.posts.windowMs + 1000);
+    expect(checkRateLimit('k1', RATE_LIMITS.posts).ok).toBe(true);
     jest.useRealTimers();
+  });
+
+  it('different limit configs apply per call', () => {
+    const opts = { windowMs: 1000, max: 2 };
+    expect(checkRateLimit('x', opts).ok).toBe(true);
+    expect(checkRateLimit('x', opts).ok).toBe(true);
+    expect(checkRateLimit('x', opts).ok).toBe(false);
   });
 });

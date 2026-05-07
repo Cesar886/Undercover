@@ -10,6 +10,7 @@ export interface Post {
   downvotes: number;
   report_count: number;
   is_hidden: boolean;
+  image_webp: string | null;
   created_at: string;
   comment_count?: number;
 }
@@ -17,7 +18,9 @@ export interface Post {
 export interface Comment {
   id: string;
   post_id: string;
+  parent_id?: string | null;
   anon_id: string;
   content: string;
+  image_webp: string | null;
   created_at: string;
 }

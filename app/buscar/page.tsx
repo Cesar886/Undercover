@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
+import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { Post } from '@/types';
 
 export default function BuscarPage() {
@@ -43,6 +44,31 @@ export default function BuscarPage() {
     showToast('Post reportado');
   }
 
+  // Mantener resultados al día con el stream (votos / hidden / comentarios sobre los visibles).
+  useFeedEvents(
+    useCallback((ev) => {
+      if (ev.type === 'post:vote') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === ev.postId ? { ...p, upvotes: ev.upvotes, downvotes: ev.downvotes } : p
+          )
+        );
+        return;
+      }
+      if (ev.type === 'post:hidden') {
+        setPosts((prev) => prev.filter((p) => p.id !== ev.postId));
+        return;
+      }
+      if (ev.type === 'comment:new') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === ev.postId ? { ...p, comment_count: (p.comment_count ?? 0) + 1 } : p
+          )
+        );
+      }
+    }, [])
+  );
+
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-5">
       <form onSubmit={handleSubmit} className="relative">
@@ -76,6 +102,7 @@ export default function BuscarPage() {
                 post={post}
                 onReport={handleReport}
                 onVoted={() => showToast('Voto guardado')}
+                onVoteError={(msg) => showToast(msg)}
                 style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
                 className="opacity-0 animate-fade-slide-in"
               />

@@ -19,4 +19,17 @@ describe('sanitize', () => {
   it('strips HTML attributes', () => {
     expect(sanitize('<a href="evil.com">click</a>')).toBe('click');
   });
+  it('removes control characters', () => {
+    expect(sanitize('hi\x00\x01\x02there')).toBe('hithere');
+  });
+  it('preserves newlines and tabs', () => {
+    expect(sanitize('a\nb\tc')).toBe('a\nb\tc');
+  });
+  it('collapses excessive spaces', () => {
+    expect(sanitize('a       b')).toBe('a  b');
+  });
+  it('normalizes unicode (NFKC)', () => {
+    // U+FF21 (fullwidth A) → A
+    expect(sanitize('Ａ')).toBe('A');
+  });
 });

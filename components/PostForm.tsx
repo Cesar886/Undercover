@@ -2,6 +2,11 @@
 import { useState, useEffect } from 'react';
 import { PostCategory } from '@/types';
 import { AuthModal } from '@/components/AuthModal';
+import { ImagePicker } from '@/components/ImagePicker';
+import { Toast } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
+import { colorFor } from '@/lib/avatar';
+import { apiPost } from '@/lib/apiClient';
 
 const CATEGORIES: {
   value: PostCategory;
@@ -27,6 +32,9 @@ export function PostForm({ onPostCreated }: PostFormProps) {
   const [loading, setLoading]     = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [username, setUsername]   = useState('');
+  const [image, setImage]         = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const { message, showToast }    = useToast();
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -38,7 +46,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = content.trim();
-    if (!text || loading) return;
+    if ((!text && !image) || loading) return;
 
     if (!username) {
       setShowModal(true);
@@ -46,20 +54,31 @@ export function PostForm({ onPostCreated }: PostFormProps) {
     }
 
     setLoading(true);
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text, category, anon_id: username }),
-      });
+    setImageError(null);
+    const result = await apiPost('/api/posts', {
+      content: text,
+      category,
+      image: image ?? undefined,
+    });
 
-      if (res.ok) {
-        setContent('');
-        onPostCreated();
+    if (result.ok) {
+      setContent('');
+      setImage(null);
+      showToast('Publicado');
+      onPostCreated();
+    } else {
+      if (result.status === 401) {
+        setShowModal(true);
+      } else if (
+        result.error.toLowerCase().includes('imagen') ||
+        result.error.toLowerCase().includes('formato')
+      ) {
+        setImageError(result.error);
+      } else {
+        showToast(result.error);
       }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }
 
   const remaining   = MAX_CHARS - content.length;
@@ -72,9 +91,10 @@ export function PostForm({ onPostCreated }: PostFormProps) {
       <form
         onSubmit={handleSubmit}
         className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+        aria-busy={loading}
       >
         <div className="flex gap-3 px-4 pt-4 pb-2">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${selectedCat.avatarClass}`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${username ? colorFor(username) : 'bg-gray-100 text-gray-400'}`}>
             {username ? username.slice(0, 2).toUpperCase() : 'AN'}
           </div>
           <div className="flex-1 min-w-0">
@@ -86,8 +106,18 @@ export function PostForm({ onPostCreated }: PostFormProps) {
               onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
               placeholder="¿Qué está pasando en la U?"
               rows={3}
-              className="w-full bg-transparent text-gray-900 placeholder-gray-300 text-[15px] leading-relaxed resize-none focus:outline-none"
+              disabled={loading}
+              className="w-full bg-transparent text-gray-900 placeholder-gray-300 text-[15px] leading-relaxed resize-none focus:outline-none disabled:opacity-60"
             />
+            <ImagePicker
+              preview={image}
+              onPick={(d) => { setImage(d); setImageError(null); }}
+              onClear={() => { setImage(null); setImageError(null); }}
+              onError={(m) => setImageError(m)}
+              disabled={loading}
+              uploading={loading && !!image}
+            />
+            {imageError && <p className="text-red-500 text-xs mt-1">{imageError}</p>}
           </div>
         </div>
 
@@ -116,7 +146,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
             )}
             <button
               type="submit"
-              disabled={loading || !content.trim()}
+              disabled={loading || (!content.trim() && !image)}
               className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
             >
               {loading ? '...' : 'Soltar'}
@@ -124,6 +154,8 @@ export function PostForm({ onPostCreated }: PostFormProps) {
           </div>
         </div>
       </form>
+
+      <Toast message={message} />
     </>
   );
 }

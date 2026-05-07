@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
-import { sanitize } from '@/lib/sanitize';
 import { generateAnonId } from '@/lib/hash';
-import { checkRateLimit } from '@/lib/rateLimit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { emitFeed } from '@/lib/events';
+import { validatePostInput } from '@/lib/validation';
+import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
 
 const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones', 'rumores'];
@@ -56,34 +59,55 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
+  // Sesión requerida y usada como clave de rate-limit (no IP — todos comparten IP en la uni).
+  let username: string | null = null;
+  try {
+    const sessionRaw = (await cookies()).get('session_user')?.value;
+    if (sessionRaw) {
+      const parsed = JSON.parse(sessionRaw);
+      if (typeof parsed.username === 'string' && parsed.username.trim()) {
+        username = parsed.username.trim();
+      }
+    }
+  } catch {
+    // sin sesión válida
+  }
 
-  if (!checkRateLimit(ip)) {
+  const rateKey = username ? `posts:user:${username}` : `posts:anon:${request.headers.get('x-forwarded-for') ?? '0.0.0.0'}`;
+  const rl = checkRateLimit(rateKey, RATE_LIMITS.posts);
+  if (!rl.ok) {
     return NextResponse.json(
       { error: 'Demasiados posts. Intenta más tarde.' },
-      { status: 429 }
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
     );
   }
 
-  const body = await request.json();
-  const content = sanitize(body.content ?? '');
-  const rawCategory = body.category;
-
-  if (!content || content.length > 500) {
-    return NextResponse.json({ error: 'Contenido inválido' }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  if (!VALID_CATEGORIES.includes(rawCategory as PostCategory)) {
-    return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
+  const v = validatePostInput(body);
+  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+
+  let imageWebp: string | null = null;
+  if (v.value.image) {
+    const img = await validateAndConvertImage(v.value.image);
+    if (!img.ok) return NextResponse.json({ error: img.error }, { status: 400 });
+    imageWebp = img.webpDataUrl;
   }
 
-  const category = rawCategory as PostCategory;
+  const anonId = username ?? generateAnonId();
 
-  const anonId = sanitize(body.anon_id ?? '').trim() || generateAnonId();
   const result = await query(
-    `INSERT INTO posts (anon_id, content, category) VALUES ($1, $2, $3) RETURNING *`,
-    [anonId, content, category]
+    `INSERT INTO posts (anon_id, content, category, image_webp) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [anonId, v.value.content, v.value.category, imageWebp]
   );
+
+  const post = { ...result.rows[0], comment_count: 0 };
+  emitFeed({ type: 'post:new', post });
 
   return NextResponse.json({ post: result.rows[0] }, { status: 201 });
 }
