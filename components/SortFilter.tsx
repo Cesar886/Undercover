@@ -35,21 +35,21 @@ export function SortFilter({ active, onChange, compact }: SortFilterProps) {
       <div ref={ref} className="relative flex-shrink-0">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
+          className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors py-1"
         >
           <ArrowUpDown size={13} strokeWidth={1.5} />
           <span className="hidden sm:inline whitespace-nowrap">{activeLabel}</span>
         </button>
         {open && (
-          <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[130px] z-50">
+          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg py-1 min-w-[130px] z-50">
             {SORTS.map((s) => (
               <button
                 key={s.value}
                 onClick={() => { onChange(s.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                   active === s.value
-                    ? 'text-orange-600 font-semibold bg-orange-50'
-                    : 'text-gray-600 hover:bg-gray-50'
+                    ? 'text-orange-600 font-semibold bg-orange-50 dark:bg-orange-500/10'
+                    : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                 }`}
               >
                 {s.label}

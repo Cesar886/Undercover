@@ -21,6 +21,7 @@ import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
+  general:     { bar: 'bg-slate-400',  ring: 'ring-slate-300/40' },
   quemones:    { bar: 'bg-orange-500', ring: 'ring-orange-300/40' },
   infieles:    { bar: 'bg-pink-500',   ring: 'ring-pink-300/40' },
   confesiones: { bar: 'bg-purple-600', ring: 'ring-purple-300/40' },
@@ -180,7 +181,7 @@ export default function PostPage() {
         Volver al feed
       </Link>
 
-      <article className={`relative bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm`}>
+      <article className={`relative bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm`}>
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
@@ -189,7 +190,7 @@ export default function PostPage() {
               <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${avatarColor(post.anon_id)}`}>
                 <span className="text-[10px] font-bold">{initials}</span>
               </div>
-              <span className="text-gray-500 text-xs">{post.anon_id}</span>
+              <span className="text-gray-500 dark:text-slate-400 text-xs">{post.anon_id}</span>
               <CategoryPill category={post.category} />
             </div>
             <div className="flex items-center gap-1.5">
@@ -220,7 +221,7 @@ export default function PostPage() {
               />
             </div>
           ) : (
-            <p className="text-gray-800 text-[15px] leading-relaxed break-words mb-4">
+            <p className="text-gray-800 dark:text-slate-200 text-[15px] leading-relaxed break-words mb-4">
               {post.content}
             </p>
           )}
@@ -231,7 +232,7 @@ export default function PostPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-slate-800">
             <VoteButtons
               postId={post.id}
               upvotes={post.upvotes}

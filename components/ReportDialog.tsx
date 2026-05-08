@@ -57,13 +57,13 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
       aria-labelledby="report-title"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 animate-fade-slide-in"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-5 animate-fade-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="report-title" className="text-base font-semibold text-stone-900 mb-1">
+        <h2 id="report-title" className="text-base font-semibold text-stone-900 dark:text-slate-100 mb-1">
           Reportar
         </h2>
-        <p className="text-[13px] text-stone-500 mb-4">
+        <p className="text-[13px] text-stone-500 dark:text-slate-400 mb-4">
           Selecciona el motivo. Lo revisará el equipo de moderación.
         </p>
 
@@ -77,15 +77,15 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
                 onClick={() => setReason(r.value)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
                   active
-                    ? 'border-orange-400 bg-orange-50/60'
-                    : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
+                    ? 'border-orange-400 bg-orange-50/60 dark:bg-orange-500/10'
+                    : 'border-stone-200 dark:border-slate-700 hover:border-stone-300 dark:hover:border-slate-600 hover:bg-stone-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 transition-colors ${
                     active ? 'border-orange-500 bg-orange-500' : 'border-stone-300'
                   }`} />
-                  <span className="text-[13px] font-medium text-stone-800">{r.label}</span>
+                  <span className="text-[13px] font-medium text-stone-800 dark:text-slate-200">{r.label}</span>
                 </div>
                 <p className="text-[11px] text-stone-500 mt-0.5 ml-5.5 pl-[22px]">{r.description}</p>
               </button>
@@ -100,7 +100,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
               onChange={(e) => setDetail(e.target.value.slice(0, 200))}
               placeholder="Cuéntanos brevemente (opcional)"
               rows={2}
-              className="w-full text-[13px] text-stone-800 placeholder-stone-300 resize-none border border-stone-200 focus:border-orange-400 rounded-lg px-3 py-2 focus:outline-none"
+              className="w-full text-[13px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent dark:bg-slate-800 resize-none border border-stone-200 dark:border-slate-700 focus:border-orange-400 rounded-lg px-3 py-2 focus:outline-none"
             />
             <p className="text-[10px] text-stone-400 text-right mt-0.5">{200 - detail.length}</p>
           </div>
@@ -111,7 +111,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-1.5 text-sm text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-all"
+            className="px-4 py-1.5 text-sm text-stone-500 dark:text-slate-400 hover:text-stone-800 dark:hover:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg transition-all"
           >
             Cancelar
           </button>

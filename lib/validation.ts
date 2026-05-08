@@ -6,7 +6,7 @@ export type Validated<T> =
   | { ok: false; error: string; status: number };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones'];
+const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
 
 export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value);

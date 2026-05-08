@@ -60,7 +60,7 @@ export function InlineEditor({
         rows={1}
         className={
           textareaClassName ??
-          'w-full text-[15px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none border border-stone-200 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60'
+          'w-full text-[15px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent dark:bg-slate-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-slate-700 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60'
         }
       />
       <div className="flex items-center justify-between mt-2">
@@ -72,7 +72,7 @@ export function InlineEditor({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-all"
+            className="px-3 py-1.5 text-xs text-stone-400 dark:text-slate-500 hover:text-stone-700 dark:hover:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg transition-all"
           >
             Cancelar
           </button>

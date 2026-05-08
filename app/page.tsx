@@ -112,12 +112,12 @@ export default function Home() {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="sticky top-12 z-40 bg-white border border-gray-200 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3 px-4 py-2.5">
+      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-stone-50/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-gray-200/60 dark:border-slate-800/60">
+        <div className="flex items-center gap-3 max-w-[600px] mx-auto">
           <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             <CategoryFilter active={category} onChange={setCategory} />
           </div>
-          <div className="flex-shrink-0 pl-3 border-l border-gray-100">
+          <div className="flex-shrink-0 pl-3 border-l border-gray-200/70">
             <SortFilter active={sort} onChange={setSort} compact />
           </div>
         </div>
@@ -148,10 +148,10 @@ export default function Home() {
         )}
 
         {!loading && posts.length === 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl py-14 text-center shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl py-14 text-center shadow-sm">
             <p className="text-2xl mb-2">🔥</p>
-            <p className="text-gray-500 text-sm font-medium">Nada por aquí todavía</p>
-            <p className="text-gray-400 text-xs mt-1">Sé el primero en quemar algo</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Nada por aquí todavía</p>
+            <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">Sé el primero en quemar algo</p>
           </div>
         )}
       </div>

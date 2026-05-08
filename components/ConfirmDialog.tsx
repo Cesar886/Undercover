@@ -47,21 +47,21 @@ export function ConfirmDialog({
       aria-labelledby="confirm-title"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 animate-fade-slide-in"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-5 animate-fade-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-title" className="text-base font-semibold text-stone-900 mb-1.5">
+        <h2 id="confirm-title" className="text-base font-semibold text-stone-900 dark:text-slate-100 mb-1.5">
           {title}
         </h2>
         {description && (
-          <p className="text-[13px] text-stone-500 leading-relaxed mb-4">{description}</p>
+          <p className="text-[13px] text-stone-500 dark:text-slate-400 leading-relaxed mb-4">{description}</p>
         )}
         <div className="flex items-center justify-end gap-2 mt-4">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-1.5 text-sm text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-all"
+            className="px-4 py-1.5 text-sm text-stone-500 dark:text-slate-400 hover:text-stone-800 dark:hover:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg transition-all"
           >
             {cancelLabel}
           </button>

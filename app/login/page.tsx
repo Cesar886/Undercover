@@ -36,15 +36,15 @@ export default function LoginPage() {
 
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-6 pt-6 pb-2">
-          <h1 className="text-lg font-bold text-gray-900">Iniciar sesión</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Bienvenido de vuelta</p>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100">Iniciar sesión</h1>
+          <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5">Bienvenido de vuelta</p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 pb-6 pt-4 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">
               Usuario
             </label>
             <input
@@ -53,12 +53,12 @@ export default function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="tu_usuario"
               required
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition-colors"
+              className="w-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:border-orange-400 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">
               Contraseña
             </label>
             <input
@@ -67,7 +67,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition-colors"
+              className="w-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:border-orange-400 transition-colors"
             />
           </div>
 

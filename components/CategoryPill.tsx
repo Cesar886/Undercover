@@ -4,6 +4,7 @@ const config: Record<PostCategory, { label: string; className: string }> = {
   quemones:    { label: 'Quemones',    className: 'border border-orange-500/40 text-orange-500 bg-orange-500/10' },
   infieles:    { label: 'Infieles',    className: 'border border-pink-500/40 text-pink-500 bg-pink-500/10' },
   confesiones: { label: 'Confesiones', className: 'border border-purple-600/40 text-purple-600 bg-purple-600/10' },
+  general:     { label: 'General',     className: 'border border-slate-400/40 text-slate-500 bg-slate-400/10' },
 };
 
 export function CategoryPill({ category }: { category: PostCategory }) {

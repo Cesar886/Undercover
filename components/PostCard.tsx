@@ -17,6 +17,7 @@ import { useFeedEvents } from './FeedStreamProvider';
 import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 
 const accentBar: Record<PostCategory, string> = {
+  general:     'bg-slate-400',
   quemones:    'bg-orange-500',
   infieles:    'bg-pink-500',
   confesiones: 'bg-purple-600',
@@ -122,7 +123,7 @@ export function PostCard({
   return (
     <article
       style={style}
-      className={`group relative bg-white border border-stone-200/80 rounded-2xl overflow-hidden hover:shadow-lg hover:border-stone-300/70 transition-all duration-200 shadow-sm shadow-stone-100/60 ${className ?? ''}`}
+      className={`group relative bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-800/60 rounded-2xl overflow-hidden hover:shadow-lg hover:border-stone-300/70 dark:hover:border-slate-700 transition-all duration-200 shadow-sm shadow-stone-100/60 ${className ?? ''}`}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar[post.category]}`} />
 
@@ -132,14 +133,14 @@ export function PostCard({
             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white shadow-sm ${colorFor(post.anon_id)}`}>
               <span className="text-[10px] font-bold">{initials}</span>
             </div>
-            <span className="text-stone-500 text-xs">{post.anon_id}</span>
+            <span className="text-stone-500 dark:text-slate-400 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-stone-400 text-[11px]">
+            <span className="text-stone-400 dark:text-slate-500 text-[11px]">
               {timeAgo}
               {post.updated_at && (
-                <span title={editedTitle} className="text-stone-300"> · editado</span>
+                <span title={editedTitle} className="text-stone-300 dark:text-slate-600"> · editado</span>
               )}
             </span>
             {isAuthor && !editing && (
@@ -164,7 +165,7 @@ export function PostCard({
           </div>
         ) : (
           <Link href={`/posts/${post.id}`} className="block mb-3">
-            <p className="text-stone-800 text-[15px] leading-relaxed break-words hover:text-stone-600 transition-colors">
+            <p className="text-stone-800 dark:text-slate-200 text-[15px] leading-relaxed break-words hover:text-stone-600 dark:hover:text-slate-300 transition-colors">
               {post.content}
             </p>
           </Link>
@@ -181,7 +182,7 @@ export function PostCard({
           <div className="flex items-center gap-3">
             <Link
               href={`/posts/${post.id}`}
-              className="flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-xs transition-colors"
+              className="flex items-center gap-1.5 text-stone-400 dark:text-slate-500 hover:text-stone-600 dark:hover:text-slate-300 text-xs transition-colors"
             >
               <MessageCircle size={13} strokeWidth={1.5} />
               <span>{commentCount}</span>
@@ -189,7 +190,7 @@ export function PostCard({
             {!isAuthor && (
               <button
                 onClick={() => setReportOpen(true)}
-                className="text-stone-300 hover:text-red-400 transition-colors"
+                className="text-stone-300 dark:text-slate-600 hover:text-red-400 transition-colors"
                 title="Reportar"
                 aria-label="Reportar post"
               >
