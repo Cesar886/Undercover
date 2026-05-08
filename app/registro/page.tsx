@@ -1,178 +1,40 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function RegistroPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [success, setSuccess]   = useState(false);
-
-  type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken';
-  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (username.trim().length === 0) { setUsernameStatus('idle'); return; }
-
-    setUsernameStatus('checking');
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username.trim())}`);
-        const data = await res.json();
-        setUsernameStatus(data.available ? 'available' : 'taken');
-      } catch {
-        setUsernameStatus('idle');
-      }
-    }, 500);
-
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [username]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-
-    if (password !== confirm) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? 'Error al registrarse');
-        return;
-      }
-
-      setSuccess(true);
-      setTimeout(() => router.push('/'), 1500);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (success) {
-    return (
-      <main className="max-w-[600px] mx-auto px-4 py-6">
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center">
-          <p className="text-3xl mb-3">🔥</p>
-          <p className="font-semibold text-gray-900">¡Registro exitoso!</p>
-          <p className="text-sm text-gray-400 mt-1">Redirigiendo...</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 pt-6 pb-2">
-          <h1 className="text-lg font-bold text-gray-900">Crear cuenta</h1>
-        </div>
+    <main className="min-h-[80vh] flex items-center justify-center px-4">
+      <div className="w-full max-w-[440px]">
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 pt-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Alias anónimo
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.replace(/\s/g, ''))}
-                placeholder="No uses tu nombre real"
-                maxLength={30}
-                required
-                className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm text-gray-900 placeholder-gray-300 focus:outline-none transition-colors ${
-                  usernameStatus === 'available' ? 'border-green-400 focus:border-green-500' :
-                  usernameStatus === 'taken'     ? 'border-red-400 focus:border-red-500' :
-                  'border-gray-200 focus:border-orange-400'
-                }`}
-              />
-              {usernameStatus === 'checking' && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-orange-400 rounded-full animate-spin" />
-              )}
-              {usernameStatus === 'available' && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 text-base">✓</span>
-              )}
-              {usernameStatus === 'taken' && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-base">✗</span>
-              )}
-            </div>
-            {usernameStatus === 'available' && (
-              <p className="text-[11px] text-green-500 mt-1">¡Alias disponible!</p>
-            )}
-            {usernameStatus === 'taken' && (
-              <p className="text-[11px] text-red-500 mt-1">Ese alias ya está en uso, elige otro.</p>
-            )}
-            {(usernameStatus === 'idle' || usernameStatus === 'checking') && (
-              <p className="text-[11px] text-orange-400/80 mt-1">Sin espacios — este alias será público en tus posts.</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Confirmar contraseña
-            </label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition-colors"
-            />
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-              {error}
+          <div className="px-8 pt-8 pb-6 text-center">
+            <p className="text-3xl mb-3">🔥</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Crear cuenta</h1>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
+              Solo para estudiantes de la Universidad de Montemorelos
             </p>
-          )}
+          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
-          >
-            {loading ? 'Registrando...' : 'Crear cuenta'}
-          </button>
+          <div className="px-8 pb-8 flex flex-col gap-4">
+            <a
+              href="/api/auth/google"
+              className="flex items-center justify-center gap-3 w-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-200 transition-colors shadow-sm"
+            >
+              <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+              </svg>
+              Registrarse con Google
+            </a>
 
-          <p className="text-center text-xs text-gray-400">
-            ¿Ya tienes cuenta?{' '}
-            <Link href="/" className="text-orange-500 hover:underline">
-              Volver al inicio
-            </Link>
-          </p>
-        </form>
+            <p className="text-center text-xs text-gray-400 dark:text-slate-500 leading-relaxed">
+              Usa tu correo institucional<br />
+              <span className="font-mono text-gray-500 dark:text-slate-400">1234567@alumno.um.edu.mx</span>
+            </p>
+          </div>
+        </div>
       </div>
     </main>
   );
