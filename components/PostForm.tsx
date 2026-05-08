@@ -5,7 +5,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { ImagePicker } from '@/components/ImagePicker';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
-import { colorFor } from '@/lib/avatar';
+import { AnonAvatar } from '@/components/AnonAvatar';
 import { apiPost } from '@/lib/apiClient';
 
 const CATEGORIES: {
@@ -142,13 +142,11 @@ export function PostForm({ onPostCreated }: PostFormProps) {
       >
         {/* Avatar + textarea */}
         <div className="flex gap-3 px-4 pt-4 pb-3">
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ring-2 ring-white shadow-sm transition-all duration-200 ${
-              username ? colorFor(username) : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            {username ? username.slice(0, 2).toUpperCase() : 'AN'}
-          </div>
+          <AnonAvatar
+            name={username || 'AN'}
+            size={36}
+            className="ring-2 ring-white shadow-sm flex-shrink-0"
+          />
 
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold tracking-widest uppercase mb-1.5">

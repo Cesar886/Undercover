@@ -12,7 +12,7 @@ import { AuthorMenu } from './AuthorMenu';
 import { InlineEditor } from './InlineEditor';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ReportDialog } from './ReportDialog';
-import { colorFor } from '@/lib/avatar';
+import { AnonAvatar } from './AnonAvatar';
 import { useFeedEvents } from './FeedStreamProvider';
 import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 
@@ -118,8 +118,6 @@ export function PostCard({
     }
   }
 
-  const initials = post.anon_id.slice(0, 2).toUpperCase();
-
   return (
     <article
       style={style}
@@ -130,9 +128,7 @@ export function PostCard({
       <div className="pl-5 pr-4 pt-4 pb-3.5">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white shadow-sm ${colorFor(post.anon_id)}`}>
-              <span className="text-[10px] font-bold">{initials}</span>
-            </div>
+            <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
             <span className="text-stone-500 dark:text-slate-400 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>

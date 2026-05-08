@@ -19,6 +19,7 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import { AnonAvatar } from '@/components/AnonAvatar';
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
   general:     { bar: 'bg-slate-400',  ring: 'ring-slate-300/40' },
@@ -131,7 +132,6 @@ export default function PostPage() {
   const editedTitle = post.updated_at
     ? `Editado el ${format(new Date(post.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
     : undefined;
-  const initials = post.anon_id.slice(0, 2).toUpperCase();
   const isAuthor = !!username && username === post.anon_id;
 
   async function handleSaveEdit(content: string) {
@@ -187,9 +187,7 @@ export default function PostPage() {
         <div className="pl-5 pr-4 pt-4 pb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${avatarColor(post.anon_id)}`}>
-                <span className="text-[10px] font-bold">{initials}</span>
-              </div>
+              <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
               <span className="text-gray-500 dark:text-slate-400 text-xs">{post.anon_id}</span>
               <CategoryPill category={post.category} />
             </div>
@@ -285,16 +283,3 @@ export default function PostPage() {
   );
 }
 
-function avatarColor(seed: string): string {
-  const palette = [
-    'bg-amber-100 text-amber-800',
-    'bg-rose-100 text-rose-800',
-    'bg-violet-100 text-violet-800',
-    'bg-sky-100 text-sky-800',
-    'bg-emerald-100 text-emerald-800',
-    'bg-stone-200 text-stone-700',
-  ];
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
-}

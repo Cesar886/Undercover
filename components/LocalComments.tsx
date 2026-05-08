@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CornerDownRight, Flag, SendHorizonal, MessageSquare } from 'lucide-react';
-import { colorFor } from '@/lib/avatar';
+import { AnonAvatar } from '@/components/AnonAvatar';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { ImagePicker } from '@/components/ImagePicker';
 import { PostImage } from '@/components/PostImage';
@@ -82,12 +82,13 @@ function CharRing({ current, max }: { current: number; max: number }) {
 }
 
 function AvatarBadge({ name, size = 'sm', muted = false }: { name: string; size?: 'sm' | 'md'; muted?: boolean }) {
-  const color = muted ? 'bg-stone-200 text-stone-400' : colorFor(name || 'AN');
-  const initials = muted ? '·' : (name || 'AN').slice(0, 2).toUpperCase();
   return (
-    <div className={`${size === 'md' ? 'w-8 h-8 text-[11px]' : 'w-7 h-7 text-[10px]'} rounded-full flex items-center justify-center font-bold flex-shrink-0 ring-2 ring-white shadow-sm ${color}`}>
-      {initials}
-    </div>
+    <AnonAvatar
+      name={name || 'AN'}
+      size={size === 'md' ? 32 : 28}
+      muted={muted}
+      className="ring-2 ring-white shadow-sm flex-shrink-0"
+    />
   );
 }
 
