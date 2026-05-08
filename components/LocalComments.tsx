@@ -1,15 +1,20 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CornerDownRight, SendHorizonal, MessageSquare } from 'lucide-react';
+import { CornerDownRight, Flag, SendHorizonal, MessageSquare } from 'lucide-react';
 import { colorFor } from '@/lib/avatar';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { ImagePicker } from '@/components/ImagePicker';
 import { PostImage } from '@/components/PostImage';
 import { Toast } from '@/components/Toast';
+import { AuthorMenu } from '@/components/AuthorMenu';
+import { InlineEditor } from '@/components/InlineEditor';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
-import { apiPost } from '@/lib/apiClient';
+import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
+import { ReportReason } from '@/types';
 
 interface Comment {
   id: string;
@@ -17,12 +22,15 @@ interface Comment {
   content: string;
   image_webp?: string | null;
   created_at: string;
-  parent_id: string | null;
+  updated_at?: string | null;
+  is_deleted?: boolean;
+  parent_id?: string | null;
   replies?: Comment[];
 }
 
 const MAX_CHARS = 300;
 const MAX_VISUAL_DEPTH = 2;
+const SOFT_DELETED_TEXT = '[Este comentario ha sido eliminado]';
 
 function buildTree(flat: Comment[]): Comment[] {
   const seen = new Set<string>();
@@ -73,9 +81,9 @@ function CharRing({ current, max }: { current: number; max: number }) {
   );
 }
 
-function AvatarBadge({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
-  const color = colorFor(name || 'AN');
-  const initials = (name || 'AN').slice(0, 2).toUpperCase();
+function AvatarBadge({ name, size = 'sm', muted = false }: { name: string; size?: 'sm' | 'md'; muted?: boolean }) {
+  const color = muted ? 'bg-stone-200 text-stone-400' : colorFor(name || 'AN');
+  const initials = muted ? '·' : (name || 'AN').slice(0, 2).toUpperCase();
   return (
     <div className={`${size === 'md' ? 'w-8 h-8 text-[11px]' : 'w-7 h-7 text-[10px]'} rounded-full flex items-center justify-center font-bold flex-shrink-0 ring-2 ring-white shadow-sm ${color}`}>
       {initials}
@@ -169,52 +177,132 @@ function ReplyForm({
 
 function CommentItem({
   comment,
+  postId,
   depth,
   parentAnonId,
   replyingTo,
   username,
+  editingId,
   onReply,
   onSubmitReply,
   onCancelReply,
+  onStartEdit,
+  onCancelEdit,
+  onSavedEdit,
+  onAskDelete,
+  onAskReport,
 }: {
   comment: Comment & { replies?: Comment[] };
+  postId: string;
   depth: number;
   parentAnonId?: string;
   replyingTo: { id: string; anonId: string } | null;
   username: string;
+  editingId: string | null;
   onReply: (id: string, anonId: string) => void;
   onSubmitReply: (parentId: string, content: string, image: string | null) => Promise<void>;
   onCancelReply: () => void;
+  onStartEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onSavedEdit: (id: string, content: string, updated_at: string) => void;
+  onAskDelete: (id: string, hasReplies: boolean) => void;
+  onAskReport: (id: string) => void;
 }) {
-  const timeAgo = formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es });
+  const created = new Date(comment.created_at);
+  const timeAgo = formatDistanceToNow(created, { addSuffix: true, locale: es });
+  const editedTitle = comment.updated_at
+    ? `Editado el ${format(new Date(comment.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
+    : undefined;
   const isReplying = replyingTo?.id === comment.id;
+  const isEditing = editingId === comment.id;
+  const isAuthor = !!username && username === comment.anon_id && !comment.is_deleted;
+  const hasReplies = (comment.replies?.length ?? 0) > 0;
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  async function handleSaveEdit(content: string) {
+    setSavingEdit(true);
+    const r = await apiPatch<{ comment: Comment }>(
+      `/api/posts/${postId}/comments/${comment.id}`,
+      { content }
+    );
+    setSavingEdit(false);
+    if (r.ok) {
+      onSavedEdit(comment.id, r.data.comment.content, r.data.comment.updated_at ?? new Date().toISOString());
+      onCancelEdit();
+    }
+  }
 
   return (
     <div>
       <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80">
         <div className="mt-0.5">
-          <AvatarBadge name={comment.anon_id} size="sm" />
+          <AvatarBadge name={comment.anon_id} size="sm" muted={!!comment.is_deleted} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-[13px] font-bold text-stone-800 leading-none">{comment.anon_id}</span>
-            <span className="text-[11px] text-stone-400 leading-none">{timeAgo}</span>
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className={`text-[13px] font-bold leading-none truncate ${comment.is_deleted ? 'text-stone-400' : 'text-stone-800'}`}>
+                {comment.is_deleted ? '—' : comment.anon_id}
+              </span>
+              <span className="text-[11px] text-stone-400 leading-none">
+                {timeAgo}
+                {!comment.is_deleted && comment.updated_at && (
+                  <span title={editedTitle} className="text-stone-300"> · editado</span>
+                )}
+              </span>
+            </div>
+            {!comment.is_deleted && (
+              <div className="flex items-center gap-1">
+                {isAuthor && !isEditing && (
+                  <AuthorMenu
+                    size="sm"
+                    onEdit={() => onStartEdit(comment.id)}
+                    onDelete={() => onAskDelete(comment.id, hasReplies)}
+                  />
+                )}
+                {!isAuthor && username && (
+                  <button
+                    onClick={() => onAskReport(comment.id)}
+                    className="text-stone-300 hover:text-red-400 transition-colors p-1 -m-1"
+                    aria-label="Reportar comentario"
+                    title="Reportar"
+                  >
+                    <Flag size={11} strokeWidth={1.8} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          <p className="text-[14px] text-stone-700 leading-relaxed break-words">
-            {parentAnonId && (
-              <span className="text-orange-500 font-semibold mr-1">@{parentAnonId}</span>
-            )}
-            {comment.content}
-          </p>
+          {comment.is_deleted ? (
+            <p className="text-[14px] italic text-stone-400 leading-relaxed">
+              {SOFT_DELETED_TEXT}
+            </p>
+          ) : isEditing ? (
+            <InlineEditor
+              initial={comment.content}
+              maxChars={MAX_CHARS}
+              saving={savingEdit}
+              onCancel={onCancelEdit}
+              onSave={handleSaveEdit}
+              textareaClassName="w-full text-[14px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none border border-stone-200 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
+            />
+          ) : (
+            <p className="text-[14px] text-stone-700 leading-relaxed break-words">
+              {parentAnonId && (
+                <span className="text-orange-500 font-semibold mr-1">@{parentAnonId}</span>
+              )}
+              {comment.content}
+            </p>
+          )}
 
-          {comment.image_webp && (
+          {comment.image_webp && !comment.is_deleted && !isEditing && (
             <div className="mt-2">
               <PostImage src={comment.image_webp} className="max-h-56 w-auto rounded-lg" />
             </div>
           )}
 
-          {username && (
+          {!comment.is_deleted && !isEditing && username && (
             <button
               onClick={() => (isReplying ? onCancelReply() : onReply(comment.id, comment.anon_id))}
               className={`mt-2 inline-flex items-center gap-1 text-[11px] font-medium transition-all ${
@@ -250,13 +338,20 @@ function CommentItem({
             <CommentItem
               key={reply.id}
               comment={reply as Comment & { replies?: Comment[] }}
+              postId={postId}
               depth={depth < MAX_VISUAL_DEPTH ? depth + 1 : MAX_VISUAL_DEPTH}
               parentAnonId={depth >= MAX_VISUAL_DEPTH ? comment.anon_id : undefined}
               replyingTo={replyingTo}
               username={username}
+              editingId={editingId}
               onReply={onReply}
               onSubmitReply={onSubmitReply}
               onCancelReply={onCancelReply}
+              onStartEdit={onStartEdit}
+              onCancelEdit={onCancelEdit}
+              onSavedEdit={onSavedEdit}
+              onAskDelete={onAskDelete}
+              onAskReport={onAskReport}
             />
           ))}
         </div>
@@ -272,8 +367,13 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
   const [focused, setFocused]       = useState(false);
   const [username, setUsername]     = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string; anonId: string } | null>(null);
+  const [editingId, setEditingId]   = useState<string | null>(null);
   const [image, setImage]           = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; hasReplies: boolean } | null>(null);
+  const [deleting, setDeleting]     = useState(false);
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
+  const [sendingReport, setSendingReport] = useState(false);
   const { message, showToast }      = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -289,8 +389,8 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
   }, [postId]);
 
   useEffect(() => {
-    onCountChange?.(comments.length);
-  }, [comments.length, onCountChange]);
+    onCountChange?.(comments.filter((c) => !c.is_deleted).length);
+  }, [comments, onCountChange]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -345,35 +445,104 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
     textareaRef.current?.blur();
   }
 
+  function handleSavedEdit(id: string, newContent: string, updated_at: string) {
+    setComments((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, content: newContent, updated_at } : c))
+    );
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const r = await apiDelete<{ success: boolean; soft: boolean }>(
+      `/api/posts/${postId}/comments/${deleteTarget.id}`
+    );
+    setDeleting(false);
+    if (r.ok) {
+      const id = deleteTarget.id;
+      const soft = r.data.soft;
+      setComments((prev) => {
+        if (soft) {
+          return prev.map((c) =>
+            c.id === id ? { ...c, is_deleted: true, content: '', image_webp: null } : c
+          );
+        }
+        return prev.filter((c) => c.id !== id);
+      });
+      setDeleteTarget(null);
+      showToast('Comentario eliminado');
+    } else {
+      showToast(r.error);
+    }
+  }
+
+  async function submitReport(reason: ReportReason, detail?: string) {
+    if (!reportTarget) return;
+    setSendingReport(true);
+    const r = await apiPost(
+      `/api/posts/${postId}/comments/${reportTarget}/report`,
+      { reason, detail }
+    );
+    setSendingReport(false);
+    if (r.ok) {
+      setReportTarget(null);
+      showToast('Gracias, lo revisaremos.');
+    } else {
+      showToast(r.error);
+    }
+  }
+
   useFeedEvents(
     useCallback(
       (ev) => {
-        if (ev.type !== 'comment:new' || ev.postId !== postId) return;
-        setComments((prev) => {
-          if (prev.some((c) => c.id === ev.comment.id)) return prev;
-          return [...prev, ev.comment];
-        });
+        if (ev.type === 'comment:new' && ev.postId === postId) {
+          setComments((prev) => {
+            if (prev.some((c) => c.id === ev.comment.id)) return prev;
+            return [...prev, ev.comment];
+          });
+          return;
+        }
+        if (ev.type === 'comment:edited' && ev.postId === postId) {
+          setComments((prev) =>
+            prev.map((c) =>
+              c.id === ev.comment.id
+                ? { ...c, content: ev.comment.content, updated_at: ev.comment.updated_at }
+                : c
+            )
+          );
+          return;
+        }
+        if (ev.type === 'comment:deleted' && ev.postId === postId) {
+          setComments((prev) => {
+            if (ev.soft) {
+              return prev.map((c) =>
+                c.id === ev.commentId
+                  ? { ...c, is_deleted: true, content: '', image_webp: null }
+                  : c
+              );
+            }
+            return prev.filter((c) => c.id !== ev.commentId);
+          });
+        }
       },
       [postId]
     )
   );
 
   const tree = buildTree(comments);
+  const visibleCount = comments.filter((c) => !c.is_deleted).length;
 
   return (
     <div className="bg-white border border-stone-200/80 rounded-2xl shadow-md shadow-stone-100/80 overflow-hidden">
-
-      {/* Header */}
       <div className="px-5 py-3.5 border-b border-stone-100 flex items-center gap-2.5">
         <span className="font-display text-[15px] font-semibold text-stone-800 tracking-tight">Comentarios</span>
-        {comments.length > 0 && (
+        {visibleCount > 0 && (
           <span className="bg-orange-100 text-orange-600 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
-            {comments.length}
+            {visibleCount}
           </span>
         )}
       </div>
 
-      {/* Compose */}
       {username ? (
         <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 transition-colors duration-300 ${focused ? 'bg-amber-50/20' : ''}`}>
           <div className="flex-shrink-0 mt-0.5">
@@ -460,7 +629,6 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
         </div>
       )}
 
-      {/* Comments tree */}
       {comments.length === 0 ? (
         <div className="py-14 text-center">
           <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 mb-3" />
@@ -473,16 +641,44 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
             <CommentItem
               key={c.id}
               comment={c as Comment & { replies?: Comment[] }}
+              postId={postId}
               depth={0}
               replyingTo={replyingTo}
               username={username}
+              editingId={editingId}
               onReply={(id, anonId) => setReplyingTo({ id, anonId })}
               onSubmitReply={handleReplySubmit}
               onCancelReply={() => setReplyingTo(null)}
+              onStartEdit={(id) => setEditingId(id)}
+              onCancelEdit={() => setEditingId(null)}
+              onSavedEdit={handleSavedEdit}
+              onAskDelete={(id, hasReplies) => setDeleteTarget({ id, hasReplies })}
+              onAskReport={(id) => setReportTarget(id)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="¿Eliminar comentario?"
+        description={
+          deleteTarget?.hasReplies
+            ? 'Como el comentario tiene respuestas, el texto se reemplazará por "[Este comentario ha sido eliminado]". Las respuestas se conservan.'
+            : 'Esta acción no se puede deshacer.'
+        }
+        busy={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+
+      <ReportDialog
+        open={!!reportTarget}
+        busy={sendingReport}
+        onCancel={() => setReportTarget(null)}
+        onSubmit={submitReport}
+      />
+
       <Toast message={message} />
     </div>
   );

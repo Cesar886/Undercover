@@ -27,9 +27,6 @@ export function AuthModal({ onClose }: AuthModalProps) {
           <h2 className="text-base font-bold text-gray-900">
             Para publicar necesitas una cuenta
           </h2>
-          <p className="text-sm text-gray-400">
-            Únete a QuemonesUM y suéltalo todo
-          </p>
         </div>
 
         <div className="space-y-2.5">

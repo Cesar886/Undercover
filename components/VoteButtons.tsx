@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { apiGet, apiPatch } from '@/lib/apiClient';
+import { useFeedEvents } from '@/components/FeedStreamProvider';
 
 interface VoteButtonsProps {
   postId: string;
@@ -21,14 +22,22 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
   const [bounce, setBounce] = useState(false);
 
   useEffect(() => {
-    setCounts({ upvotes, downvotes });
-  }, [upvotes, downvotes]);
-
-  useEffect(() => {
     apiGet<{ voted: 'up' | 'down' | null }>(`/api/posts/${postId}/vote`).then((r) => {
       if (r.ok && r.data.voted) setVoted(r.data.voted);
     });
   }, [postId]);
+
+  // Actualización en tiempo real: cuando otro usuario vota, los conteos se actualizan sin recarga.
+  useFeedEvents(
+    useCallback(
+      (ev) => {
+        if (ev.type === 'post:vote' && ev.postId === postId) {
+          setCounts({ upvotes: ev.upvotes, downvotes: ev.downvotes });
+        }
+      },
+      [postId]
+    )
+  );
 
   async function handleVote(voteType: 'up' | 'down') {
     if (voted) return;
@@ -55,18 +64,18 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
 
   const upClass = voted === 'up'
     ? 'bg-orange-50 border-orange-400 text-orange-500'
-    : 'border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500';
+    : 'border-stone-200 text-stone-500 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500';
 
   const downClass = voted === 'down'
-    ? 'bg-blue-50 border-blue-400 text-blue-500'
-    : 'border-gray-200 text-gray-500 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500';
+    ? 'bg-sky-50 border-sky-400 text-sky-500'
+    : 'border-stone-200 text-stone-500 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-500';
 
   return (
     <div className="flex items-center gap-2">
       <button
         onClick={() => handleVote('up')}
         disabled={!!voted}
-        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-not-allowed ${upClass}`}
+        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all active:scale-95 disabled:cursor-not-allowed ${upClass}`}
         aria-label="Upvote"
       >
         <ThumbsUp size={12} strokeWidth={1.5} />
@@ -77,7 +86,7 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
       <button
         onClick={() => handleVote('down')}
         disabled={!!voted}
-        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-not-allowed ${downClass}`}
+        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all active:scale-95 disabled:cursor-not-allowed ${downClass}`}
         aria-label="Downvote"
       >
         <ThumbsDown size={12} strokeWidth={1.5} />

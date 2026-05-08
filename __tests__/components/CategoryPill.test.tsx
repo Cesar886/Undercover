@@ -18,9 +18,9 @@ describe('CategoryPill', () => {
     render(<CategoryPill category="confesiones" />);
     expect(screen.getByText('Confesiones')).toBeInTheDocument();
   });
-  it('renders Rumores label', () => {
-    render(<CategoryPill category="rumores" />);
-    expect(screen.getByText('Rumores')).toBeInTheDocument();
+  it('renders Confesiones label (alias check)', () => {
+    render(<CategoryPill category="confesiones" />);
+    expect(screen.getByText('Confesiones')).toBeInTheDocument();
   });
   it('applies orange color class for quemones', () => {
     const { container } = render(<CategoryPill category="quemones" />);

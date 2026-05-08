@@ -3,16 +3,21 @@ import { query } from '@/lib/db';
 import { sanitize } from '@/lib/sanitize';
 import { hashPassword } from '@/lib/hash';
 
-const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
-
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const username = sanitize(body.username ?? '').trim();
   const password = (body.password ?? '').trim();
 
-  if (!USERNAME_RE.test(username)) {
+  if (/\s/.test(username)) {
     return NextResponse.json(
-      { error: 'El usuario debe tener 3-30 caracteres (letras, números o _)' },
+      { error: 'El alias no puede contener espacios' },
+      { status: 400 }
+    );
+  }
+
+  if (username.length < 1 || username.length > 30) {
+    return NextResponse.json(
+      { error: 'El alias debe tener entre 1 y 30 caracteres' },
       { status: 400 }
     );
   }

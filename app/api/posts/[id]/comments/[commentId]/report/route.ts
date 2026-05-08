@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
-import { emitFeed } from '@/lib/events';
 import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
@@ -22,9 +21,11 @@ function buildReporterId(request: NextRequest, sessionRaw: string | undefined): 
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string; commentId: string } }
 ) {
-  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  if (!isUuid(params.id) || !isUuid(params.commentId)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  }
 
   let sessionRaw: string | undefined;
   try {
@@ -54,27 +55,23 @@ export async function POST(
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
   const result = await query(
-    `UPDATE posts
+    `UPDATE comments
      SET report_count = report_count + 1,
          is_hidden = CASE WHEN report_count + 1 >= 10 THEN true ELSE is_hidden END
-     WHERE id = $1
+     WHERE id = $1 AND post_id = $2
      RETURNING report_count, is_hidden`,
-    [params.id]
+    [params.commentId, params.id]
   );
 
   if (result.rows.length === 0) {
-    return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+    return NextResponse.json({ error: 'Comentario no encontrado' }, { status: 404 });
   }
 
   await query(
     `INSERT INTO reports (target_type, target_id, reason, detail, reporter_id)
-     VALUES ('post', $1, $2, $3, $4)`,
-    [params.id, v.value.reason, v.value.detail ?? null, reporterId]
+     VALUES ('comment', $1, $2, $3, $4)`,
+    [params.commentId, v.value.reason, v.value.detail ?? null, reporterId]
   );
-
-  if (result.rows[0].is_hidden) {
-    emitFeed({ type: 'post:hidden', postId: params.id });
-  }
 
   return NextResponse.json({ success: true, ...result.rows[0] });
 }

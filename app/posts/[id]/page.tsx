@@ -1,20 +1,24 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Flag, MessageCircle } from 'lucide-react';
-import { Post, PostCategory } from '@/types';
+import { Post, PostCategory, ReportReason } from '@/types';
 import { CategoryPill } from '@/components/CategoryPill';
 import { VoteButtons } from '@/components/VoteButtons';
 import { LocalComments } from '@/components/LocalComments';
 import { PostSkeleton } from '@/components/PostSkeleton';
 import { PostImage } from '@/components/PostImage';
 import { Toast } from '@/components/Toast';
+import { AuthorMenu } from '@/components/AuthorMenu';
+import { InlineEditor } from '@/components/InlineEditor';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
-import { apiGet, apiPost } from '@/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
   quemones:    { bar: 'bg-orange-500', ring: 'ring-orange-300/40' },
@@ -26,8 +30,16 @@ type LoadState = { kind: 'loading' } | { kind: 'ok'; post: Post } | { kind: 'not
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [commentCount, setCommentCount] = useState(0);
+  const [username, setUsername] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
   const { message, showToast } = useToast();
 
   const loadPost = useCallback(async () => {
@@ -48,13 +60,14 @@ export default function PostPage() {
 
   useEffect(() => { loadPost(); }, [loadPost]);
 
-  const handleCommentCount = useCallback((n: number) => setCommentCount(n), []);
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setUsername(data.user?.username ?? ''))
+      .catch(() => {});
+  }, []);
 
-  async function handleReport(postId: string) {
-    const r = await apiPost(`/api/posts/${postId}/report`, {});
-    if (r.ok) showToast('Reporte enviado');
-    else showToast(r.error);
-  }
+  const handleCommentCount = useCallback((n: number) => setCommentCount(n), []);
 
   useFeedEvents(
     useCallback(
@@ -64,6 +77,9 @@ export default function PostPage() {
           return;
         }
         if (ev.type === 'post:hidden' && ev.postId === id) setState({ kind: 'notfound' });
+        if (ev.type === 'post:edited' && ev.post.id === id) {
+          setState((s) => s.kind === 'ok' ? { kind: 'ok', post: { ...s.post, content: ev.post.content, updated_at: ev.post.updated_at } } : s);
+        }
       },
       [id]
     )
@@ -111,7 +127,48 @@ export default function PostPage() {
   const created = new Date(post.created_at);
   const timeAgo = formatDistanceToNow(created, { addSuffix: true, locale: es });
   const fullDate = format(created, "d 'de' MMMM, HH:mm", { locale: es });
+  const editedTitle = post.updated_at
+    ? `Editado el ${format(new Date(post.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
+    : undefined;
   const initials = post.anon_id.slice(0, 2).toUpperCase();
+  const isAuthor = !!username && username === post.anon_id;
+
+  async function handleSaveEdit(content: string) {
+    setSavingEdit(true);
+    const r = await apiPatch<{ post: Post }>(`/api/posts/${post.id}`, { content });
+    setSavingEdit(false);
+    if (r.ok) {
+      setState({ kind: 'ok', post: r.data.post });
+      setEditing(false);
+    } else {
+      showToast(r.error);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    const r = await apiDelete<{ success: boolean }>(`/api/posts/${post.id}`);
+    setDeleting(false);
+    if (r.ok) {
+      setConfirmDelete(false);
+      showToast('Post eliminado');
+      router.push('/');
+    } else {
+      showToast(r.error);
+    }
+  }
+
+  async function handleReport(reason: ReportReason, detail?: string) {
+    setSendingReport(true);
+    const r = await apiPost(`/api/posts/${post.id}/report`, { reason, detail });
+    setSendingReport(false);
+    if (r.ok) {
+      setReportOpen(false);
+      showToast('Gracias, lo revisaremos.');
+    } else {
+      showToast(r.error);
+    }
+  }
 
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 animate-fade-in">
@@ -127,7 +184,6 @@ export default function PostPage() {
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
-          {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${avatarColor(post.anon_id)}`}>
@@ -136,21 +192,45 @@ export default function PostPage() {
               <span className="text-gray-500 text-xs">{post.anon_id}</span>
               <CategoryPill category={post.category} />
             </div>
-            <span className="text-gray-400 text-[11px]" title={fullDate}>{timeAgo}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400 text-[11px]" title={fullDate}>
+                {timeAgo}
+                {post.updated_at && (
+                  <span title={editedTitle} className="text-stone-300"> · editado</span>
+                )}
+              </span>
+              {isAuthor && !editing && (
+                <AuthorMenu
+                  size="sm"
+                  onEdit={() => setEditing(true)}
+                  onDelete={() => setConfirmDelete(true)}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Content */}
-          <p className="text-gray-800 text-[15px] leading-relaxed break-words mb-4">
-            {post.content}
-          </p>
+          {editing ? (
+            <div className="mb-4">
+              <InlineEditor
+                initial={post.content}
+                maxChars={500}
+                saving={savingEdit}
+                onCancel={() => setEditing(false)}
+                onSave={handleSaveEdit}
+              />
+            </div>
+          ) : (
+            <p className="text-gray-800 text-[15px] leading-relaxed break-words mb-4">
+              {post.content}
+            </p>
+          )}
 
-          {post.image_webp && (
+          {post.image_webp && !editing && (
             <div className="mb-4">
               <PostImage src={post.image_webp} className="max-h-[520px] w-full object-cover rounded-xl" />
             </div>
           )}
 
-          {/* Footer */}
           <div className="flex items-center justify-between pt-1 border-t border-gray-100">
             <VoteButtons
               postId={post.id}
@@ -164,23 +244,40 @@ export default function PostPage() {
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>
               </span>
-              <button
-                onClick={() => handleReport(post.id)}
-                className="flex items-center gap-1 text-xs hover:text-red-400 transition-colors"
-                aria-label="Reportar"
-              >
-                <Flag size={13} />
-                Reportar
-              </button>
+              {!isAuthor && (
+                <button
+                  onClick={() => setReportOpen(true)}
+                  className="flex items-center gap-1 text-xs hover:text-red-400 transition-colors"
+                  aria-label="Reportar"
+                >
+                  <Flag size={13} />
+                  Reportar
+                </button>
+              )}
             </div>
           </div>
         </div>
       </article>
 
-      {/* Comments */}
       <section className="mt-6">
         <LocalComments postId={post.id} onCountChange={handleCommentCount} />
       </section>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="¿Eliminar post?"
+        description="Esta acción no se puede deshacer. Se borrará el post junto con todos sus comentarios."
+        busy={deleting}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+      />
+
+      <ReportDialog
+        open={reportOpen}
+        busy={sendingReport}
+        onCancel={() => setReportOpen(false)}
+        onSubmit={handleReport}
+      />
 
       <Toast message={message} />
     </main>

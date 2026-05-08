@@ -1,24 +1,19 @@
 import { EventEmitter } from 'events';
-import { Post } from '@/types';
+import { Comment, Post } from '@/types';
 
 export type FeedEvent =
   | { type: 'post:new'; post: Post }
   | { type: 'post:vote'; postId: string; upvotes: number; downvotes: number }
   | { type: 'post:hidden'; postId: string }
+  | { type: 'post:edited'; post: Post }
   | {
       type: 'comment:new';
       postId: string;
-      comment: {
-        id: string;
-        post_id: string;
-        parent_id: string | null;
-        anon_id: string;
-        content: string;
-        created_at: string;
-      };
-    };
+      comment: Comment;
+    }
+  | { type: 'comment:edited'; postId: string; comment: Comment }
+  | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean };
 
-// Persistir el bus a través de hot-reload en dev, evita listeners huérfanos.
 const globalForBus = globalThis as unknown as { __feedBus?: EventEmitter };
 const bus = globalForBus.__feedBus ?? new EventEmitter();
 bus.setMaxListeners(0);

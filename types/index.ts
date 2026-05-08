@@ -12,6 +12,7 @@ export interface Post {
   is_hidden: boolean;
   image_webp: string | null;
   created_at: string;
+  updated_at: string | null;
   comment_count?: number;
 }
 
@@ -23,4 +24,20 @@ export interface Comment {
   content: string;
   image_webp: string | null;
   created_at: string;
+  updated_at: string | null;
+  is_deleted: boolean;
+  report_count: number;
+  is_hidden: boolean;
+}
+
+export type ReportReason =
+  | 'spam'
+  | 'inappropriate'
+  | 'harassment'
+  | 'misinformation'
+  | 'other';
+
+export interface ReportPayload {
+  reason: ReportReason;
+  detail?: string;
 }

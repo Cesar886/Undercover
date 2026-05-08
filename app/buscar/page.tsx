@@ -6,7 +6,7 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
-import { apiGet, apiPost } from '@/lib/apiClient';
+import { apiGet } from '@/lib/apiClient';
 import { Post } from '@/types';
 
 export default function BuscarPage() {
@@ -15,10 +15,18 @@ export default function BuscarPage() {
   const [posts, setPosts]         = useState<Post[]>([]);
   const [loading, setLoading]     = useState(false);
   const [searched, setSearched]   = useState(false);
+  const [username, setUsername]   = useState('');
   const { message, showToast }    = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setUsername(data.user?.username ?? ''))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!submitted) return;
@@ -43,14 +51,9 @@ export default function BuscarPage() {
     setSubmitted(q);
   }
 
-  async function handleReport(postId: string) {
-    const r = await apiPost(`/api/posts/${postId}/report`, {});
-    if (r.ok) {
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
-      showToast('Post reportado');
-    } else {
-      showToast(r.error);
-    }
+  function handleDeleted(postId: string) {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    showToast('Post eliminado');
   }
 
   // Mantener resultados al día con el stream (votos / hidden / comentarios sobre los visibles).
@@ -109,9 +112,12 @@ export default function BuscarPage() {
               <PostCard
                 key={post.id}
                 post={post}
-                onReport={handleReport}
+                currentUsername={username}
                 onVoted={() => showToast('Voto guardado')}
                 onVoteError={(msg) => showToast(msg)}
+                onDeleted={handleDeleted}
+                onActionError={(msg) => showToast(msg)}
+                onReported={() => showToast('Gracias, lo revisaremos.')}
                 style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
                 className="opacity-0 animate-fade-slide-in"
               />

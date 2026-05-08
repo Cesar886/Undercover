@@ -3,6 +3,8 @@ import {
   validateCommentInput,
   validateVoteInput,
   validateReportInput,
+  validateEditPostInput,
+  validateEditCommentInput,
   isUuid,
 } from '@/lib/validation';
 
@@ -28,12 +30,12 @@ describe('validatePostInput', () => {
     expect(r.ok).toBe(false);
   });
   it('accepts valid input', () => {
-    const r = validatePostInput({ content: 'hi', category: 'rumores' });
+    const r = validatePostInput({ content: 'hi', category: 'quemones' });
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value.category).toBe('rumores');
+    if (r.ok) expect(r.value.category).toBe('quemones');
   });
   it('passes image through when provided', () => {
-    const r = validatePostInput({ content: 'hi', category: 'rumores', image: 'data:...' });
+    const r = validatePostInput({ content: 'hi', category: 'quemones', image: 'data:...' });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.image).toBe('data:...');
   });
@@ -72,13 +74,53 @@ describe('validateVoteInput', () => {
 });
 
 describe('validateReportInput', () => {
-  it('accepts empty body', () => expect(validateReportInput(null).ok).toBe(true));
-  it('accepts no reason', () => expect(validateReportInput({}).ok).toBe(true));
-  it('rejects reason > 200 chars', () => {
-    expect(validateReportInput({ reason: 'a'.repeat(201) }).ok).toBe(false);
+  it('rejects empty body', () => expect(validateReportInput(null).ok).toBe(false));
+  it('rejects missing reason', () => expect(validateReportInput({}).ok).toBe(false));
+  it('rejects unknown reason', () => {
+    expect(validateReportInput({ reason: 'because' }).ok).toBe(false);
   });
-  it('accepts valid reason', () => {
-    const r = validateReportInput({ reason: 'spam' });
+  it('accepts spam', () => {
+    expect(validateReportInput({ reason: 'spam' }).ok).toBe(true);
+  });
+  it('accepts inappropriate', () => {
+    expect(validateReportInput({ reason: 'inappropriate' }).ok).toBe(true);
+  });
+  it('rejects detail when reason !== other', () => {
+    expect(validateReportInput({ reason: 'spam', detail: 'meh' }).ok).toBe(false);
+  });
+  it('accepts other with detail', () => {
+    const r = validateReportInput({ reason: 'other', detail: 'me explico' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.detail).toBe('me explico');
+  });
+  it('rejects other with detail > 200 chars', () => {
+    expect(validateReportInput({ reason: 'other', detail: 'a'.repeat(201) }).ok).toBe(false);
+  });
+});
+
+describe('validateEditPostInput', () => {
+  it('rejects empty content', () => {
+    expect(validateEditPostInput({ content: '' }).ok).toBe(false);
+  });
+  it('rejects content > 500 chars', () => {
+    expect(validateEditPostInput({ content: 'a'.repeat(501) }).ok).toBe(false);
+  });
+  it('accepts valid content', () => {
+    const r = validateEditPostInput({ content: 'editado' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.content).toBe('editado');
+  });
+});
+
+describe('validateEditCommentInput', () => {
+  it('rejects empty content', () => {
+    expect(validateEditCommentInput({ content: '' }).ok).toBe(false);
+  });
+  it('rejects content > 300 chars', () => {
+    expect(validateEditCommentInput({ content: 'a'.repeat(301) }).ok).toBe(false);
+  });
+  it('accepts valid content', () => {
+    const r = validateEditCommentInput({ content: 'editado' });
     expect(r.ok).toBe(true);
   });
 });

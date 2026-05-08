@@ -40,7 +40,15 @@ export function FeedStreamProvider({ children }: { children: React.ReactNode }) 
     };
 
     // Suscribir cada tipo de evento (EventSource entrega por nombre).
-    const types: FeedEvent['type'][] = ['post:new', 'post:vote', 'post:hidden', 'comment:new'];
+    const types: FeedEvent['type'][] = [
+      'post:new',
+      'post:vote',
+      'post:hidden',
+      'post:edited',
+      'comment:new',
+      'comment:edited',
+      'comment:deleted',
+    ];
     types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
 
     // EventSource reconecta solo. Solo cerramos en unmount.

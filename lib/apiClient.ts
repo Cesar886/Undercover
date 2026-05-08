@@ -71,3 +71,12 @@ export async function apiPatch<T>(url: string, body: unknown): Promise<ApiResult
     return { ok: false, error: 'Sin conexión, revisa tu red', status: 0 };
   }
 }
+
+export async function apiDelete<T>(url: string): Promise<ApiResult<T>> {
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    return parseResult<T>(res);
+  } catch {
+    return { ok: false, error: 'Sin conexión, revisa tu red', status: 0 };
+  }
+}

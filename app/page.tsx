@@ -8,7 +8,7 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
-import { apiGet, apiPost } from '@/lib/apiClient';
+import { apiGet } from '@/lib/apiClient';
 import { Post, PostCategory } from '@/types';
 
 export default function Home() {
@@ -18,7 +18,15 @@ export default function Home() {
   const [page, setPage]         = useState(1);
   const [hasMore, setHasMore]   = useState(true);
   const [loading, setLoading]   = useState(true);
+  const [username, setUsername] = useState('');
   const { message, showToast }  = useToast();
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setUsername(data.user?.username ?? ''))
+      .catch(() => {});
+  }, []);
 
   const fetchPosts = useCallback(
     async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
@@ -50,14 +58,9 @@ export default function Home() {
     showToast('Post publicado');
   }
 
-  async function handleReport(postId: string) {
-    const r = await apiPost(`/api/posts/${postId}/report`, {});
-    if (r.ok) {
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
-      showToast('Post reportado');
-    } else {
-      showToast(r.error);
-    }
+  function handleDeleted(postId: string) {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    showToast('Post eliminado');
   }
 
   function loadMore() {
@@ -132,9 +135,12 @@ export default function Home() {
             <PostCard
               key={post.id}
               post={post}
-              onReport={handleReport}
+              currentUsername={username}
               onVoted={() => showToast('Voto guardado')}
               onVoteError={(msg) => showToast(msg)}
+              onDeleted={handleDeleted}
+              onActionError={(msg) => showToast(msg)}
+              onReported={() => showToast('Gracias, lo revisaremos.')}
               style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
               className="opacity-0 animate-fade-slide-in"
             />

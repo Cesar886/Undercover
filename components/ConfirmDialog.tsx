@@ -1,0 +1,83 @@
+'use client';
+import { useEffect, useRef } from 'react';
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = 'Eliminar',
+  cancelLabel = 'Cancelar',
+  destructive = true,
+  busy = false,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    confirmRef.current?.focus();
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !busy) onCancel();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, onCancel, busy]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 animate-fade-in"
+      onClick={() => { if (!busy) onCancel(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 animate-fade-slide-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="confirm-title" className="text-base font-semibold text-stone-900 mb-1.5">
+          {title}
+        </h2>
+        {description && (
+          <p className="text-[13px] text-stone-500 leading-relaxed mb-4">{description}</p>
+        )}
+        <div className="flex items-center justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="px-4 py-1.5 text-sm text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-all"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className={`px-4 py-1.5 text-sm font-semibold text-white rounded-full transition-all shadow-sm active:scale-95 disabled:opacity-60 ${
+              destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-stone-900 hover:bg-stone-800'
+            }`}
+          >
+            {busy ? '…' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

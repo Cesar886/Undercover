@@ -1,5 +1,5 @@
 import { sanitize } from './sanitize';
-import { PostCategory, VoteType } from '@/types';
+import { PostCategory, ReportReason, VoteType } from '@/types';
 
 export type Validated<T> =
   | { ok: true; value: T }
@@ -68,6 +68,36 @@ export function validateCommentInput(body: unknown): Validated<CommentInput> {
   return { ok: true, value: { content, parent_id, image } };
 }
 
+export interface EditPostInput {
+  content: string;
+}
+
+export function validateEditPostInput(body: unknown): Validated<EditPostInput> {
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'Body inválido', status: 400 };
+  }
+  const raw = (body as Record<string, unknown>).content;
+  const content = sanitize(typeof raw === 'string' ? raw : '');
+  if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
+  if (content.length > 500) return { ok: false, error: 'Contenido excede 500 caracteres', status: 400 };
+  return { ok: true, value: { content } };
+}
+
+export interface EditCommentInput {
+  content: string;
+}
+
+export function validateEditCommentInput(body: unknown): Validated<EditCommentInput> {
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'Body inválido', status: 400 };
+  }
+  const raw = (body as Record<string, unknown>).content;
+  const content = sanitize(typeof raw === 'string' ? raw : '');
+  if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
+  if (content.length > 300) return { ok: false, error: 'Contenido excede 300 caracteres', status: 400 };
+  return { ok: true, value: { content } };
+}
+
 export interface VoteInput {
   vote_type: VoteType;
 }
@@ -84,18 +114,43 @@ export function validateVoteInput(body: unknown): Validated<VoteInput> {
 }
 
 export interface ReportInput {
-  reason?: string;
+  reason: ReportReason;
+  detail?: string;
 }
 
+const VALID_REASONS: ReportReason[] = [
+  'spam',
+  'inappropriate',
+  'harassment',
+  'misinformation',
+  'other',
+];
+
 export function validateReportInput(body: unknown): Validated<ReportInput> {
-  if (body === null || body === undefined) return { ok: true, value: {} };
-  if (typeof body !== 'object') {
-    return { ok: false, error: 'Body inválido', status: 400 };
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'Razón requerida', status: 400 };
   }
-  const raw = (body as Record<string, unknown>).reason;
-  if (raw === undefined || raw === null || raw === '') return { ok: true, value: {} };
-  if (typeof raw !== 'string') return { ok: false, error: 'reason inválido', status: 400 };
-  const reason = sanitize(raw);
-  if (reason.length > 200) return { ok: false, error: 'reason excede 200 caracteres', status: 400 };
-  return { ok: true, value: { reason } };
+  const b = body as Record<string, unknown>;
+
+  if (typeof b.reason !== 'string' || !VALID_REASONS.includes(b.reason as ReportReason)) {
+    return { ok: false, error: 'Razón inválida', status: 400 };
+  }
+  const reason = b.reason as ReportReason;
+
+  let detail: string | undefined;
+  if (b.detail !== undefined && b.detail !== null && b.detail !== '') {
+    if (reason !== 'other') {
+      return { ok: false, error: 'Detalle sólo permitido con razón "other"', status: 400 };
+    }
+    if (typeof b.detail !== 'string') {
+      return { ok: false, error: 'Detalle inválido', status: 400 };
+    }
+    const cleaned = sanitize(b.detail);
+    if (cleaned.length > 200) {
+      return { ok: false, error: 'Detalle excede 200 caracteres', status: 400 };
+    }
+    detail = cleaned || undefined;
+  }
+
+  return { ok: true, value: detail ? { reason, detail } : { reason } };
 }
