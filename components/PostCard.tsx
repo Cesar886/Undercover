@@ -12,7 +12,6 @@ const accentBar: Record<PostCategory, string> = {
   quemones:    'bg-orange-500',
   infieles:    'bg-pink-500',
   confesiones: 'bg-purple-600',
-  rumores:     'bg-blue-500',
 };
 
 interface PostCardProps {
@@ -49,7 +48,7 @@ export function PostCard({ post, onReport, onVoted, onVoteError, style, classNam
             <span className="text-gray-500 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>
-          <span className="text-gray-400 text-[11px]">{timeAgo}</span>
+          <span className="text-gray-500 text-[11px]">{timeAgo}</span>
         </div>
 
         {/* Content */}
@@ -73,7 +72,7 @@ export function PostCard({ post, onReport, onVoted, onVoteError, style, classNam
               href={`/posts/${post.id}`}
               className="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-xs transition-colors"
             >
-              <MessageCircle size={13} />
+              <MessageCircle size={13} strokeWidth={1.5} />
               <span>{post.comment_count ?? 0}</span>
             </Link>
             <button
@@ -82,7 +81,7 @@ export function PostCard({ post, onReport, onVoted, onVoteError, style, classNam
               title="Reportar"
               aria-label="Reportar post"
             >
-              <Flag size={13} />
+              <Flag size={13} strokeWidth={1.5} />
             </button>
           </div>
         </div>

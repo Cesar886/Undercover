@@ -5,12 +5,17 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts}",
   ],
   theme: {
     extend: {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+      },
+      fontFamily: {
+        sans:    ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
       },
       keyframes: {
         fadeSlideIn: {
@@ -25,11 +30,21 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateX(-50%) translateY(8px)' },
           to:   { opacity: '1', transform: 'translateX(-50%) translateY(0)' },
         },
+        riseIn: {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to:   { opacity: '1' },
+        },
       },
       animation: {
         'fade-slide-in': 'fadeSlideIn 0.2s ease-out',
         'vote-bounce':   'voteBounce 0.3s ease-out',
         'toast-in':      'toastIn 0.2s ease-out',
+        'rise-in':       'riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        'fade-in':       'fadeIn 0.4s ease-out',
       },
     },
   },

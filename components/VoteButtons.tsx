@@ -55,11 +55,11 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
 
   const upClass = voted === 'up'
     ? 'bg-orange-50 border-orange-400 text-orange-500'
-    : 'border-gray-200 text-gray-400 hover:border-orange-300 hover:text-orange-500';
+    : 'border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500';
 
   const downClass = voted === 'down'
     ? 'bg-blue-50 border-blue-400 text-blue-500'
-    : 'border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500';
+    : 'border-gray-200 text-gray-500 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500';
 
   return (
     <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
         className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-not-allowed ${upClass}`}
         aria-label="Upvote"
       >
-        <ThumbsUp size={12} />
+        <ThumbsUp size={12} strokeWidth={1.5} />
         <span className={bounce && voted === 'up' ? 'animate-vote-bounce inline-block' : 'inline-block'}>
           {counts.upvotes}
         </span>
@@ -80,7 +80,7 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
         className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-not-allowed ${downClass}`}
         aria-label="Downvote"
       >
-        <ThumbsDown size={12} />
+        <ThumbsDown size={12} strokeWidth={1.5} />
         <span className={bounce && voted === 'down' ? 'animate-vote-bounce inline-block' : 'inline-block'}>
           {counts.downvotes}
         </span>

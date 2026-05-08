@@ -60,7 +60,7 @@ export default function RegistroPage() {
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-6 pt-6 pb-2">
           <h1 className="text-lg font-bold text-gray-900">Crear cuenta</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Únete a QuemadosUM</p>
+          <p className="text-sm text-gray-400 mt-0.5">Únete a QuemonesUM</p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 pb-6 pt-4 space-y-4">

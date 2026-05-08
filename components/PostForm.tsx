@@ -17,7 +17,6 @@ const CATEGORIES: {
   { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500/10 border-orange-500 text-orange-600', avatarClass: 'bg-orange-100 text-orange-600' },
   { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500/10 border-pink-500 text-pink-600',       avatarClass: 'bg-pink-100 text-pink-600' },
   { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600/10 border-purple-600 text-purple-700', avatarClass: 'bg-purple-100 text-purple-700' },
-  { value: 'rumores',     label: 'Rumores',     activeClass: 'bg-blue-500/10 border-blue-500 text-blue-600',       avatarClass: 'bg-blue-100 text-blue-600' },
 ];
 
 const MAX_CHARS = 500;
@@ -122,21 +121,24 @@ export function PostForm({ onPostCreated }: PostFormProps) {
         </div>
 
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100">
-          <div className="flex gap-1.5 flex-wrap">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCategory(c.value)}
-                className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${
-                  category === c.value
-                    ? c.activeClass
-                    : 'border-gray-200 text-gray-400 hover:border-gray-300'
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-300 font-medium uppercase tracking-wide leading-none">Categoría</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setCategory(c.value)}
+                  className={`text-[11px] px-2.5 py-1 rounded-md border font-medium transition-colors ${
+                    category === c.value
+                      ? c.activeClass
+                      : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2 ml-3 flex-shrink-0">
             {remaining < 100 && (
@@ -147,7 +149,11 @@ export function PostForm({ onPostCreated }: PostFormProps) {
             <button
               type="submit"
               disabled={loading || (!content.trim() && !image)}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                loading || (!content.trim() && !image)
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
             >
               {loading ? '...' : 'Soltar'}
             </button>

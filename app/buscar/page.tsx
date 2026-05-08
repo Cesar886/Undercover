@@ -6,6 +6,7 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
+import { apiGet, apiPost } from '@/lib/apiClient';
 import { Post } from '@/types';
 
 export default function BuscarPage() {
@@ -22,14 +23,18 @@ export default function BuscarPage() {
   useEffect(() => {
     if (!submitted) return;
     setLoading(true);
-    fetch(`/api/posts?q=${encodeURIComponent(submitted)}&sort=recent&page=1`)
-      .then((r) => r.json())
-      .then((data) => {
-        setPosts(data.posts ?? []);
-        setSearched(true);
-      })
-      .finally(() => setLoading(false));
-  }, [submitted]);
+    (async () => {
+      const r = await apiGet<{ posts: Post[] }>(`/api/posts?q=${encodeURIComponent(submitted)}&sort=recent&page=1`);
+      if (r.ok) {
+        setPosts(r.data.posts ?? []);
+      } else {
+        setPosts([]);
+        showToast(r.error);
+      }
+      setSearched(true);
+      setLoading(false);
+    })();
+  }, [submitted, showToast]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,9 +44,13 @@ export default function BuscarPage() {
   }
 
   async function handleReport(postId: string) {
-    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-    showToast('Post reportado');
+    const r = await apiPost(`/api/posts/${postId}/report`, {});
+    if (r.ok) {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      showToast('Post reportado');
+    } else {
+      showToast(r.error);
+    }
   }
 
   // Mantener resultados al día con el stream (votos / hidden / comentarios sobre los visibles).
@@ -77,7 +86,7 @@ export default function BuscarPage() {
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar en QuemadosUM..."
+          placeholder="Buscar en QuemonesUM..."
           className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm"
         />
       </form>

@@ -1,20 +1,29 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Fraunces, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-display',
+  axes: ['SOFT', 'opsz'],
+});
+
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
-  title: 'QuemadosUM',
+  title: 'QuemonesUM',
   description: 'La voz anónima de la universidad',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} bg-gray-50 text-gray-900 min-h-screen pt-12`}>
+    <html lang="es" className={`${fraunces.variable} ${instrumentSans.variable}`}>
+      <body className="font-sans bg-stone-50 text-stone-900 min-h-screen pt-12 antialiased">
         <FeedStreamProvider>
           <Navbar />
           {children}

@@ -8,7 +8,7 @@ import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
 
-const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones', 'rumores'];
+const VALID_CATEGORIES: PostCategory[] = ['quemones', 'infieles', 'confesiones'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 

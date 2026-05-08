@@ -28,7 +28,7 @@ export function AuthModal({ onClose }: AuthModalProps) {
             Para publicar necesitas una cuenta
           </h2>
           <p className="text-sm text-gray-400">
-            Únete a QuemadosUM y suéltalo todo
+            Únete a QuemonesUM y suéltalo todo
           </p>
         </div>
 

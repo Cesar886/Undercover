@@ -6,7 +6,6 @@ const FILTERS: { value: PostCategory | 'all'; label: string; activeClass: string
   { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500 text-white border-orange-500' },
   { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500 text-white border-pink-500' },
   { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600 text-white border-purple-600' },
-  { value: 'rumores',     label: 'Rumores',     activeClass: 'bg-blue-500 text-white border-blue-500' },
 ];
 
 interface CategoryFilterProps {
@@ -16,7 +15,7 @@ interface CategoryFilterProps {
 
 export function CategoryFilter({ active, onChange }: CategoryFilterProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="flex gap-2">
       {FILTERS.map((f) => (
         <button
           key={f.value}

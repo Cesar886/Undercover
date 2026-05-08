@@ -8,6 +8,7 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
+import { apiGet, apiPost } from '@/lib/apiClient';
 import { Post, PostCategory } from '@/types';
 
 export default function Home() {
@@ -22,19 +23,20 @@ export default function Home() {
   const fetchPosts = useCallback(
     async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
       setLoading(true);
-      try {
-        const params = new URLSearchParams({ sort: s, page: String(pg) });
-        if (cat !== 'all') params.set('category', cat);
-        const res = await fetch(`/api/posts?${params}`);
-        const data = await res.json();
-        const fetched: Post[] = data.posts ?? [];
+      const params = new URLSearchParams({ sort: s, page: String(pg) });
+      if (cat !== 'all') params.set('category', cat);
+      const result = await apiGet<{ posts: Post[] }>(`/api/posts?${params}`);
+      if (result.ok) {
+        const fetched = result.data.posts ?? [];
         setPosts((prev) => (replace ? fetched : [...prev, ...fetched]));
         setHasMore(fetched.length === 10);
-      } finally {
-        setLoading(false);
+      } else {
+        showToast(result.error);
+        if (replace) setPosts([]);
       }
+      setLoading(false);
     },
-    []
+    [showToast]
   );
 
   useEffect(() => {
@@ -49,9 +51,13 @@ export default function Home() {
   }
 
   async function handleReport(postId: string) {
-    await fetch(`/api/posts/${postId}/report`, { method: 'POST' });
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-    showToast('Post reportado');
+    const r = await apiPost(`/api/posts/${postId}/report`, {});
+    if (r.ok) {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      showToast('Post reportado');
+    } else {
+      showToast(r.error);
+    }
   }
 
   function loadMore() {
@@ -103,12 +109,14 @@ export default function Home() {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-4 pt-3 pb-2 overflow-x-auto scrollbar-hide">
-          <CategoryFilter active={category} onChange={setCategory} />
-        </div>
-        <div className="px-4 border-t border-gray-100">
-          <SortFilter active={sort} onChange={setSort} />
+      <div className="sticky top-12 z-40 bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+            <CategoryFilter active={category} onChange={setCategory} />
+          </div>
+          <div className="flex-shrink-0 pl-3 border-l border-gray-100">
+            <SortFilter active={sort} onChange={setSort} compact />
+          </div>
         </div>
       </div>
 

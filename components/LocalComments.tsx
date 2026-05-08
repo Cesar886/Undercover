@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CornerDownRight } from 'lucide-react';
+import { CornerDownRight, SendHorizonal, MessageSquare } from 'lucide-react';
 import { colorFor } from '@/lib/avatar';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { ImagePicker } from '@/components/ImagePicker';
@@ -22,13 +22,15 @@ interface Comment {
 }
 
 const MAX_CHARS = 300;
-
+const MAX_VISUAL_DEPTH = 2;
 
 function buildTree(flat: Comment[]): Comment[] {
+  const seen = new Set<string>();
+  const deduped = flat.filter((c) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; });
   const map = new Map<string, Comment & { replies: Comment[] }>();
-  flat.forEach((c) => map.set(c.id, { ...c, replies: [] }));
+  deduped.forEach((c) => map.set(c.id, { ...c, replies: [] }));
   const roots: (Comment & { replies: Comment[] })[] = [];
-  flat.forEach((c) => {
+  deduped.forEach((c) => {
     const node = map.get(c.id)!;
     if (c.parent_id && map.has(c.parent_id)) {
       map.get(c.parent_id)!.replies.push(node);
@@ -37,6 +39,48 @@ function buildTree(flat: Comment[]): Comment[] {
     }
   });
   return roots;
+}
+
+function CharRing({ current, max }: { current: number; max: number }) {
+  const remaining = max - current;
+  if (remaining > 60) return null;
+  const pct = Math.min(current / max, 1);
+  const r = 8;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+  const isDanger = remaining < 10;
+  const isLow = remaining < 20;
+  return (
+    <div className="relative w-5 h-5 flex items-center justify-center">
+      <svg className="-rotate-90 absolute inset-0 w-full h-full" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r={r} fill="none" stroke="#e7e5e4" strokeWidth="2" />
+        <circle
+          cx="10" cy="10" r={r} fill="none"
+          stroke={isDanger ? '#ef4444' : isLow ? '#d97706' : '#f97316'}
+          strokeWidth="2"
+          strokeDasharray={`${circ} ${circ}`}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.25s ease, stroke 0.25s ease' }}
+        />
+      </svg>
+      {remaining <= 15 && (
+        <span className={`relative text-[8px] font-bold tabular-nums ${isDanger ? 'text-red-500' : 'text-amber-600'}`}>
+          {remaining}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AvatarBadge({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
+  const color = colorFor(name || 'AN');
+  const initials = (name || 'AN').slice(0, 2).toUpperCase();
+  return (
+    <div className={`${size === 'md' ? 'w-8 h-8 text-[11px]' : 'w-7 h-7 text-[10px]'} rounded-full flex items-center justify-center font-bold flex-shrink-0 ring-2 ring-white shadow-sm ${color}`}>
+      {initials}
+    </div>
+  );
 }
 
 function ReplyForm({
@@ -66,28 +110,29 @@ function ReplyForm({
     try { await onSubmit(text, image); } finally { setSubmitting(false); }
   }
 
-  const remaining = MAX_CHARS - content.length;
-
   return (
-    <div className="flex gap-2.5 items-start">
-      <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5 ${username ? colorFor(username) : 'bg-gray-100 text-gray-400'}`}>
-        {username ? username.slice(0, 2).toUpperCase() : 'AN'}
-      </div>
+    <div className="flex gap-3 items-start animate-fade-slide-in">
+      <AvatarBadge name={username || 'AN'} size="sm" />
       <form onSubmit={handleSubmit} className="flex-1 min-w-0">
-        <p className="text-[11px] text-gray-400 mb-1">
-          Respondiendo a <span className="font-semibold text-gray-500">{targetAnonId}</span>
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-stone-400 mb-2">
+          Respondiendo a{' '}
+          <span className="text-orange-500 normal-case tracking-normal text-[11px]">{targetAnonId}</span>
         </p>
         <textarea
           ref={ref}
           value={content}
-          onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+          onChange={(e) => {
+            setContent(e.target.value.slice(0, MAX_CHARS));
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          }}
           placeholder="Escribe tu respuesta…"
-          rows={2}
+          rows={1}
           disabled={submitting}
-          className="w-full text-sm text-gray-800 placeholder-gray-300 resize-none focus:outline-none pt-1 pb-1 disabled:opacity-60"
+          className="w-full text-[14px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
         />
-        <div className="h-px bg-orange-400" />
-        <div className="mt-2">
+        <div className="h-px bg-orange-400/60 rounded-full" />
+        <div className="mt-2.5">
           <ImagePicker
             preview={image}
             onPick={(d) => { setImage(d); setImageError(null); }}
@@ -98,22 +143,20 @@ function ReplyForm({
           />
           {imageError && <p className="text-red-500 text-xs mt-1">{imageError}</p>}
         </div>
-        <div className="flex items-center justify-between mt-2.5">
-          <span className={`text-xs tabular-nums ${remaining < 60 ? 'opacity-100' : 'opacity-0'} ${remaining < 20 ? 'text-amber-500' : 'text-gray-400'}`}>
-            {remaining}
-          </span>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between mt-3">
+          <CharRing current={content.length} max={MAX_CHARS} />
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1 text-xs font-semibold text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+              className="px-3 py-1.5 text-xs text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-all"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting || (!content.trim() && !image)}
-              className="px-3 py-1 text-xs font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white rounded-full transition-colors"
+              className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
             >
               {submitting ? 'Enviando…' : 'Responder'}
             </button>
@@ -127,6 +170,7 @@ function ReplyForm({
 function CommentItem({
   comment,
   depth,
+  parentAnonId,
   replyingTo,
   username,
   onReply,
@@ -135,6 +179,7 @@ function CommentItem({
 }: {
   comment: Comment & { replies?: Comment[] };
   depth: number;
+  parentAnonId?: string;
   replyingTo: { id: string; anonId: string } | null;
   username: string;
   onReply: (id: string, anonId: string) => void;
@@ -142,46 +187,51 @@ function CommentItem({
   onCancelReply: () => void;
 }) {
   const timeAgo = formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es });
-  const initials = comment.anon_id.slice(0, 2).toUpperCase();
-  const color = colorFor(comment.anon_id);
   const isReplying = replyingTo?.id === comment.id;
-  const isDepth0 = depth === 0;
 
   return (
     <div>
-      {/* Comment row */}
-      <div className={`flex gap-3 py-3.5 hover:bg-gray-50/60 transition-colors border-b border-gray-50 ${isDepth0 ? 'px-5' : 'px-4'}`}>
-        <div className={`${isDepth0 ? 'w-8 h-8' : 'w-7 h-7'} rounded-full flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5 ${color}`}>
-          {initials}
+      <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80">
+        <div className="mt-0.5">
+          <AvatarBadge name={comment.anon_id} size="sm" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-gray-900">{comment.anon_id}</span>
-            <span className="text-[11px] text-gray-400">{timeAgo}</span>
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-[13px] font-bold text-stone-800 leading-none">{comment.anon_id}</span>
+            <span className="text-[11px] text-stone-400 leading-none">{timeAgo}</span>
           </div>
-          <p className="text-[14px] text-gray-600 leading-relaxed break-words">{comment.content}</p>
+
+          <p className="text-[14px] text-stone-700 leading-relaxed break-words">
+            {parentAnonId && (
+              <span className="text-orange-500 font-semibold mr-1">@{parentAnonId}</span>
+            )}
+            {comment.content}
+          </p>
+
           {comment.image_webp && (
             <div className="mt-2">
-              <PostImage src={comment.image_webp} className="max-h-56 w-auto" />
+              <PostImage src={comment.image_webp} className="max-h-56 w-auto rounded-lg" />
             </div>
           )}
+
           {username && (
             <button
               onClick={() => (isReplying ? onCancelReply() : onReply(comment.id, comment.anon_id))}
-              className={`mt-2 flex items-center gap-1 text-xs font-medium transition-colors ${
-                isReplying ? 'text-orange-400' : 'text-gray-400 hover:text-orange-500'
+              className={`mt-2 inline-flex items-center gap-1 text-[11px] font-medium transition-all ${
+                isReplying
+                  ? 'text-orange-500'
+                  : 'text-stone-300 group-hover:text-stone-500 hover:!text-stone-700'
               }`}
             >
-              <CornerDownRight size={11} strokeWidth={2.5} />
+              <CornerDownRight size={10} strokeWidth={2.5} />
               {isReplying ? 'Cancelar' : 'Responder'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Inline reply compose */}
       {isReplying && (
-        <div className={`py-3 border-b border-gray-50 bg-orange-50/40 ${isDepth0 ? 'pl-16 pr-5' : 'pl-14 pr-4'}`}>
+        <div className="pb-3 pl-10 -mt-1">
           <ReplyForm
             targetAnonId={comment.anon_id}
             username={username}
@@ -191,14 +241,17 @@ function CommentItem({
         </div>
       )}
 
-      {/* Nested replies */}
       {comment.replies && comment.replies.length > 0 && (
-        <div className="border-l-2 border-gray-100 ml-11">
+        <div className={depth < MAX_VISUAL_DEPTH ? 'relative pl-6 ml-3.5' : ''}>
+          {depth < MAX_VISUAL_DEPTH && (
+            <div className="absolute left-0 top-1 bottom-4 w-[1.5px] bg-gradient-to-b from-orange-300 via-orange-100 to-transparent rounded-full" />
+          )}
           {comment.replies.map((reply) => (
             <CommentItem
               key={reply.id}
               comment={reply as Comment & { replies?: Comment[] }}
-              depth={depth + 1}
+              depth={depth < MAX_VISUAL_DEPTH ? depth + 1 : MAX_VISUAL_DEPTH}
+              parentAnonId={depth >= MAX_VISUAL_DEPTH ? comment.anon_id : undefined}
               replyingTo={replyingTo}
               username={username}
               onReply={onReply}
@@ -227,17 +280,17 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
   useEffect(() => {
     fetch(`/api/posts/${postId}/comments`)
       .then((r) => r.json())
-      .then((data) => {
-        const list = data.comments ?? [];
-        setComments(list);
-        onCountChange?.(list.length);
-      })
+      .then((data) => setComments(data.comments ?? []))
       .catch(() => {});
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((data) => setUsername(data.user?.username ?? ''))
       .catch(() => {});
-  }, [postId, onCountChange]);
+  }, [postId]);
+
+  useEffect(() => {
+    onCountChange?.(comments.length);
+  }, [comments.length, onCountChange]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -250,14 +303,11 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
       image: image ?? undefined,
     });
     if (result.ok) {
-      setComments((prev) => {
-        const next = [...prev, result.data.comment];
-        onCountChange?.(next.length);
-        return next;
-      });
+      setComments((prev) => [...prev, result.data.comment]);
       setContent('');
       setImage(null);
       setFocused(false);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
       textareaRef.current?.blur();
     } else {
       if (
@@ -279,11 +329,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
       image: img ?? undefined,
     });
     if (result.ok) {
-      setComments((prev) => {
-        const next = [...prev, result.data.comment];
-        onCountChange?.(next.length);
-        return next;
-      });
+      setComments((prev) => [...prev, result.data.comment]);
       setReplyingTo(null);
     } else {
       showToast(result.error);
@@ -295,60 +341,77 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
     setImage(null);
     setImageError(null);
     setFocused(false);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     textareaRef.current?.blur();
   }
 
-  // Comentarios de otros usuarios llegan por SSE — dedup por id (incluyendo el caso del autor
-  // que ya lo añadió localmente al recibir la respuesta de su POST).
   useFeedEvents(
     useCallback(
       (ev) => {
         if (ev.type !== 'comment:new' || ev.postId !== postId) return;
         setComments((prev) => {
           if (prev.some((c) => c.id === ev.comment.id)) return prev;
-          const next = [...prev, ev.comment];
-          onCountChange?.(next.length);
-          return next;
+          return [...prev, ev.comment];
         });
       },
-      [postId, onCountChange]
+      [postId]
     )
   );
 
-  const remaining = MAX_CHARS - content.length;
   const tree = buildTree(comments);
 
   return (
-    <div>
+    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-md shadow-stone-100/80 overflow-hidden">
+
       {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-800">
-          {comments.length === 0
-            ? 'Sin comentarios'
-            : `${comments.length} comentario${comments.length !== 1 ? 's' : ''}`}
-        </h2>
+      <div className="px-5 py-3.5 border-b border-stone-100 flex items-center gap-2.5">
+        <span className="font-display text-[15px] font-semibold text-stone-800 tracking-tight">Comentarios</span>
+        {comments.length > 0 && (
+          <span className="bg-orange-100 text-orange-600 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
+            {comments.length}
+          </span>
+        )}
       </div>
 
       {/* Compose */}
       {username ? (
-        <div className="flex gap-3.5 px-5 py-4 border-b border-gray-100">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 font-bold text-[11px] ${colorFor(username)}`}>
-            {username.slice(0, 2).toUpperCase()}
+        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 transition-colors duration-300 ${focused ? 'bg-amber-50/20' : ''}`}>
+          <div className="flex-shrink-0 mt-0.5">
+            <AvatarBadge name={username} size="md" />
           </div>
-          <form onSubmit={handleSubmit} className="flex-1 min-w-0">
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
-              onFocus={() => setFocused(true)}
-              placeholder="Escribe un comentario…"
-              rows={focused ? 4 : 1}
-              disabled={submitting}
-              className="w-full text-sm text-gray-800 placeholder-gray-300 resize-none focus:outline-none pt-1.5 pb-1 transition-all duration-150 disabled:opacity-60"
+          <form onSubmit={handleSubmit} className="flex-1 min-w-0" aria-busy={submitting}>
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => {
+                  setContent(e.target.value.slice(0, MAX_CHARS));
+                  e.target.style.height = 'auto';
+                  e.target.style.height = e.target.scrollHeight + 'px';
+                }}
+                onFocus={() => setFocused(true)}
+                placeholder="Comparte tu voz…"
+                rows={1}
+                disabled={submitting}
+                className="w-full text-[15px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none pt-1 pb-1 pr-8 disabled:opacity-60 leading-relaxed"
+              />
+              {!focused && content.trim() && (
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="absolute right-0 top-1 text-orange-500 hover:text-orange-600 active:scale-90 transition-all disabled:opacity-30"
+                  aria-label="Enviar"
+                >
+                  <SendHorizonal size={15} />
+                </button>
+              )}
+            </div>
+            <div
+              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-orange-400' : 'bg-stone-200'}`}
+              style={focused ? { boxShadow: '0 0 6px rgba(249,115,22,0.3)' } : {}}
             />
-            <div className={`h-px transition-colors duration-150 ${focused ? 'bg-orange-400' : 'bg-gray-200'}`} />
             {focused && (
-              <div className="mt-2">
+              <div className="mt-2.5 animate-fade-in">
                 <ImagePicker
                   preview={image}
                   onPick={(d) => { setImage(d); setImageError(null); }}
@@ -361,22 +424,20 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
               </div>
             )}
             {focused && (
-              <div className="flex items-center justify-between mt-3">
-                <span className={`text-xs tabular-nums transition-opacity ${remaining < 60 ? 'opacity-100' : 'opacity-0'} ${remaining < 20 ? 'text-amber-500' : 'text-gray-400'}`}>
-                  {remaining}
-                </span>
-                <div className="flex gap-2">
+              <div className="flex items-center justify-between mt-3 animate-fade-slide-in">
+                <CharRing current={content.length} max={MAX_CHARS} />
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="px-4 py-1.5 text-xs font-semibold text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+                    className="px-3 py-1.5 text-xs text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-all"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || (!content.trim() && !image)}
-                    className="px-4 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white rounded-full transition-colors"
+                    className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
                   >
                     {submitting ? 'Enviando…' : 'Comentar'}
                   </button>
@@ -386,26 +447,28 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
           </form>
         </div>
       ) : (
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
-          <p className="text-sm text-gray-400">
-            Inicia sesión para dejar un comentario.
+        <div className="px-5 py-5 border-b border-stone-100">
+          <p className="font-display italic text-[15px] text-stone-500 mb-3">
+            Únete a la conversación.
           </p>
           <a
             href="/login"
-            className="flex-shrink-0 px-4 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-colors"
+            className="inline-flex items-center px-4 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 active:scale-95 text-white rounded-full transition-all shadow-sm"
           >
-            Iniciar sesión
+            Entrar
           </a>
         </div>
       )}
 
       {/* Comments tree */}
       {comments.length === 0 ? (
-        <div className="py-12 text-center text-sm text-gray-400">
-          Sé el primero en comentar.
+        <div className="py-14 text-center">
+          <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 mb-3" />
+          <p className="font-display italic text-[15px] text-stone-400">Nadie ha comentado todavía.</p>
+          <p className="text-xs text-stone-300 mt-1">Sé el primero.</p>
         </div>
       ) : (
-        <div>
+        <div className="px-4 py-1 divide-y divide-stone-100/80">
           {tree.map((c) => (
             <CommentItem
               key={c.id}
