@@ -240,7 +240,7 @@ export default function PostPage() {
               onVoted={() => showToast('Voto guardado')}
               onError={(msg) => showToast(msg)}
             />
-            <div className="flex items-center gap-4 text-gray-400">
+            <div className="flex items-center gap-4 text-gray-400 dark:text-slate-500">
               <span className="flex items-center gap-1 text-xs">
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>

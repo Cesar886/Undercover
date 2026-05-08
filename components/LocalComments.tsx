@@ -137,7 +137,7 @@ function ReplyForm({
           placeholder="Escribe tu respuesta…"
           rows={1}
           disabled={submitting}
-          className="w-full text-[14px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
+          className="w-full text-[14px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
         />
         <div className="h-px bg-orange-400/60 rounded-full" />
         <div className="mt-2.5">
@@ -234,17 +234,17 @@ function CommentItem({
 
   return (
     <div>
-      <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80">
+      <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80 dark:hover:bg-slate-800/40">
         <div className="mt-0.5">
           <AvatarBadge name={comment.anon_id} size="sm" muted={!!comment.is_deleted} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2 mb-1">
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className={`text-[13px] font-bold leading-none truncate ${comment.is_deleted ? 'text-stone-400' : 'text-stone-800'}`}>
+              <span className={`text-[13px] font-bold leading-none truncate ${comment.is_deleted ? 'text-stone-400 dark:text-slate-500' : 'text-stone-800 dark:text-slate-200'}`}>
                 {comment.is_deleted ? '—' : comment.anon_id}
               </span>
-              <span className="text-[11px] text-stone-400 leading-none">
+              <span className="text-[11px] text-stone-400 dark:text-slate-500 leading-none">
                 {timeAgo}
                 {!comment.is_deleted && comment.updated_at && (
                   <span title={editedTitle} className="text-stone-300"> · editado</span>
@@ -285,10 +285,10 @@ function CommentItem({
               saving={savingEdit}
               onCancel={onCancelEdit}
               onSave={handleSaveEdit}
-              textareaClassName="w-full text-[14px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none border border-stone-200 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
+              textareaClassName="w-full text-[14px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent dark:bg-slate-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-slate-700 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
             />
           ) : (
-            <p className="text-[14px] text-stone-700 leading-relaxed break-words">
+            <p className="text-[14px] text-stone-700 dark:text-slate-300 leading-relaxed break-words">
               {parentAnonId && (
                 <span className="text-orange-500 font-semibold mr-1">@{parentAnonId}</span>
               )}
@@ -533,9 +533,9 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
   const visibleCount = comments.filter((c) => !c.is_deleted).length;
 
   return (
-    <div className="bg-white border border-stone-200/80 rounded-2xl shadow-md shadow-stone-100/80 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-stone-100 flex items-center gap-2.5">
-        <span className="font-display text-[15px] font-semibold text-stone-800 tracking-tight">Comentarios</span>
+    <div className="bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-800/60 rounded-2xl shadow-md shadow-stone-100/80 overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-stone-100 dark:border-slate-800 flex items-center gap-2.5">
+        <span className="font-display text-[15px] font-semibold text-stone-800 dark:text-slate-200 tracking-tight">Comentarios</span>
         {visibleCount > 0 && (
           <span className="bg-orange-100 text-orange-600 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
             {visibleCount}
@@ -544,7 +544,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
       </div>
 
       {username ? (
-        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 transition-colors duration-300 ${focused ? 'bg-amber-50/20' : ''}`}>
+        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 dark:border-slate-800 transition-colors duration-300 ${focused ? 'bg-amber-50/20 dark:bg-orange-500/5' : ''}`}>
           <div className="flex-shrink-0 mt-0.5">
             <AvatarBadge name={username} size="md" />
           </div>
@@ -562,7 +562,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
                 placeholder="Comparte tu voz…"
                 rows={1}
                 disabled={submitting}
-                className="w-full text-[15px] text-stone-800 placeholder-stone-300 resize-none overflow-hidden focus:outline-none pt-1 pb-1 pr-8 disabled:opacity-60 leading-relaxed"
+                className="w-full text-[15px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent resize-none overflow-hidden focus:outline-none pt-1 pb-1 pr-8 disabled:opacity-60 leading-relaxed"
               />
               {!focused && content.trim() && (
                 <button
@@ -576,7 +576,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
               )}
             </div>
             <div
-              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-orange-400' : 'bg-stone-200'}`}
+              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-orange-400' : 'bg-stone-200 dark:bg-slate-700'}`}
               style={focused ? { boxShadow: '0 0 6px rgba(249,115,22,0.3)' } : {}}
             />
             {focused && (
@@ -616,8 +616,8 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
           </form>
         </div>
       ) : (
-        <div className="px-5 py-5 border-b border-stone-100">
-          <p className="font-display italic text-[15px] text-stone-500 mb-3">
+        <div className="px-5 py-5 border-b border-stone-100 dark:border-slate-800">
+          <p className="font-display italic text-[15px] text-stone-500 dark:text-slate-400 mb-3">
             Únete a la conversación.
           </p>
           <a
@@ -631,12 +631,12 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
 
       {comments.length === 0 ? (
         <div className="py-14 text-center">
-          <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 mb-3" />
-          <p className="font-display italic text-[15px] text-stone-400">Nadie ha comentado todavía.</p>
-          <p className="text-xs text-stone-300 mt-1">Sé el primero.</p>
+          <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 dark:text-slate-700 mb-3" />
+          <p className="font-display italic text-[15px] text-stone-400 dark:text-slate-500">Nadie ha comentado todavía.</p>
+          <p className="text-xs text-stone-300 dark:text-slate-600 mt-1">Sé el primero.</p>
         </div>
       ) : (
-        <div className="px-4 py-1 divide-y divide-stone-100/80">
+        <div className="px-4 py-1 divide-y divide-stone-100/80 dark:divide-slate-800/80">
           {tree.map((c) => (
             <CommentItem
               key={c.id}
