@@ -23,7 +23,7 @@ function LoginForm() {
             <p className="text-3xl mb-3">🔥</p>
             <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">QuemonesUM</h1>
             <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
-              Solo para estudiantes de la Universidad de Montemorelos
+              Tu correo verifica. Tu alias publica.
             </p>
           </div>
 
@@ -56,6 +56,10 @@ function LoginForm() {
               </svg>
               Continuar con Google
             </a>
+
+            <p className="text-xs text-center text-gray-400 dark:text-slate-600">
+              Solo usamos tu correo para confirmar que eres alumno. Publicas con un alias anónimo.
+            </p>
           </div>
         </div>
       </div>

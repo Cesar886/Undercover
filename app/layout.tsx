@@ -11,11 +11,13 @@ const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-display',
   axes: ['SOFT', 'opsz'],
+  display: 'optional',
 });
 
 const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'optional',
 });
 
 const theme = createTheme({});

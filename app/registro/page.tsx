@@ -8,9 +8,9 @@ export default function RegistroPage() {
 
           <div className="px-8 pt-8 pb-6 text-center">
             <p className="text-3xl mb-3">🔥</p>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Crear cuenta</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Entrar a QuemonesUM</h1>
             <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
-              Solo para estudiantes de la Universidad de Montemorelos
+              Tu correo verifica. Tu alias publica.
             </p>
           </div>
 
@@ -26,12 +26,16 @@ export default function RegistroPage() {
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                 <path fill="none" d="M0 0h48v48H0z"/>
               </svg>
-              Registrarse con Google
+              Verificar que soy estudiante
             </a>
 
-            <p className="text-center text-xs text-gray-400 dark:text-slate-500 leading-relaxed">
-              Usa tu correo institucional<br />
-              <span className="font-mono text-gray-500 dark:text-slate-400">1234567@alumno.um.edu.mx</span>
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">Solo acepta correos institucionales</p>
+              <p className="font-mono text-xs text-orange-600 dark:text-orange-500 mt-0.5">1234567@alumno.um.edu.mx</p>
+            </div>
+
+            <p className="text-xs text-center text-gray-400 dark:text-slate-600">
+              Solo usamos tu correo para confirmar que eres alumno. Publicas con un alias anónimo.
             </p>
           </div>
         </div>
