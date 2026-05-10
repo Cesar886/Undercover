@@ -22,9 +22,70 @@ const instrumentSans = Instrument_Sans({
 
 const theme = createTheme({});
 
+const SITE_URL = 'https://quemonesum.site';
+
 export const metadata: Metadata = {
-  title: 'QuemonesUM',
-  description: 'La voz anónima de la universidad',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'QuemonesUM – Confesiones Anónimas de la Universidad de Montemorelos',
+    template: '%s | QuemonesUM',
+  },
+  description:
+    'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos, Nuevo León, México.',
+  keywords: [
+    'quemones',
+    'quemones UM',
+    'quemones universidad de montemorelos',
+    'quemones montemorelos',
+    'confesiones universidad montemorelos',
+    'chismes UM Nuevo León',
+    'foro estudiantes montemorelos',
+    'Universidad de Montemorelos',
+    'quemonesum',
+    'anécdotas universitarias montemorelos',
+  ],
+  authors: [{ name: 'QuemonesUM', url: SITE_URL }],
+  creator: 'QuemonesUM',
+  publisher: 'QuemonesUM',
+  category: 'community',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_MX',
+    url: SITE_URL,
+    siteName: 'QuemonesUM',
+    title: 'QuemonesUM – Confesiones Anónimas de la Universidad de Montemorelos',
+    description:
+      'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'QuemonesUM – Foro anónimo de la Universidad de Montemorelos',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'QuemonesUM – Confesiones Anónimas de la UM',
+    description:
+      'El foro anónimo de los estudiantes de la Universidad de Montemorelos, Nuevo León.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
