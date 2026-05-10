@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Fraunces, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import '@mantine/core/styles.css';
-import { ColorSchemeScript, MantineProvider, createTheme, mantineHtmlProps } from '@mantine/core';
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
+import { MantineSetup } from '@/components/MantineSetup';
 import { Navbar } from '@/components/Navbar';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -19,8 +20,6 @@ const instrumentSans = Instrument_Sans({
   variable: '--font-sans',
   display: 'optional',
 });
-
-const theme = createTheme({});
 
 const SITE_URL = 'https://quemonesum.site';
 
@@ -94,14 +93,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head />
       <body className="font-sans bg-stone-50 dark:bg-slate-950 text-stone-900 dark:text-slate-100 min-h-screen pt-12 antialiased transition-colors duration-200">
         <ColorSchemeScript />
-        <MantineProvider theme={theme}>
+        <MantineSetup>
           <ThemeProvider>
             <FeedStreamProvider>
               <Navbar />
               {children}
             </FeedStreamProvider>
           </ThemeProvider>
-        </MantineProvider>
+        </MantineSetup>
       </body>
     </html>
   );
