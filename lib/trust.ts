@@ -51,7 +51,8 @@ export async function applyTrustDelta(
   let newSuspensionEnd: Date | null = suspension_end;
 
   if (newScore < 0) {
-    if (!is_suspended) {
+    const suspensionIsActive = is_suspended && (suspension_end === null || suspension_end > new Date());
+    if (!suspensionIsActive) {
       // User is not currently suspended — apply new suspension
       if (suspension_count >= 1) {
         // Second offence or more → permanent
@@ -66,7 +67,7 @@ export async function applyTrustDelta(
         newIsSuspended = true;
         newSuspensionEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
       }
-    } else if (is_suspended && suspension_end !== null) {
+    } else if (suspensionIsActive && suspension_end !== null) {
       // User is already suspended with a finite end — consider escalation
       if (suspension_count >= 1) {
         // Promote to permanent
