@@ -107,18 +107,26 @@ Lógica interna:
 
 ### 3b. Lógica al aplicar suspensión
 
-Dentro de `applyTrustDelta`, si `newScore < 0` e `is_suspended = false`:
+Dentro de `applyTrustDelta`, después de calcular `newScore`:
 
 ```
-if newScore < 0 AND NOT is_suspended:
-  if suspension_count >= 1 (ya cumplió una de 7 días):
-    is_suspended = true, suspension_end = NULL (permanente)
-  elif newScore <= -11:
-    is_suspended = true
-    suspension_end = NOW() + 7 days
-  else: (newScore entre -1 y -10)
-    is_suspended = true
-    suspension_end = NOW() + 24h
+if newScore < 0:
+  if NOT is_suspended:
+    // Primera suspensión
+    if suspension_count >= 1:
+      is_suspended = true, suspension_end = NULL (permanente)
+    elif newScore <= -11:
+      is_suspended = true, suspension_end = NOW() + 7 days
+    else:
+      is_suspended = true, suspension_end = NOW() + 24h
+
+  else if is_suspended AND suspension_end IS NOT NULL:
+    // Ya suspendido — escalar si el score cayó a un tier mayor
+    if suspension_count >= 1:
+      suspension_end = NULL (promover a permanente)
+    elif newScore <= -11 AND suspension_end < NOW() + 7 days:
+      suspension_end = NOW() + 7 days (extender a 7 días si solo tenía 24h)
+    // Si ya tiene 7 días o más, no se modifica
 ```
 
 ### 3c. Reset al expirar suspensión
@@ -147,7 +155,7 @@ En los endpoints de crear post y crear comentario:
 | `POST /api/posts/[id]/report` | Sin cambio en el delta directo. El delta ocurre cuando el post se oculta (ver siguiente). |
 | `POST /api/posts/[id]/report` (cuando oculta) | Al ocultar el post: `applyTrustDelta(postAuthor, -15)`. Buscar todos los `reporter_id` en `reports` para ese post (formato `user:username`) → extraer username → `applyTrustDelta(reporter, +3)` a cada uno. Solo se recompensa a reportantes con cuenta (`user:` prefix), no a IPs anónimas. |
 | `POST /api/posts/[id]/comments` | Chequear suspensión antes de crear. |
-| `POST /api/posts/[id]/comments/[commentId]/vote` | Nuevo endpoint. Igual lógica que post vote pero sobre `comment_votes` y autor del comentario. |
+| `POST /api/posts/[id]/comments/[commentId]/vote` | Nuevo endpoint. Igual lógica que post vote pero sobre `comment_votes` y autor del comentario. Usa el mismo `checkRateLimit` con key `votes:{voterKey}`. |
 | `GET /api/auth/me` | Incluir `trust_score`, `trust_unlocked`, `is_suspended`, `suspension_end` en la respuesta. Hacer el reset de suspensión expirada aquí. |
 
 ---
@@ -172,8 +180,10 @@ Mostrar al hover sobre el badge de confianza usando el componente `Tooltip` de M
 ### 5c. Mensaje de suspensión
 
 Si el usuario intenta publicar o comentar y está suspendido:
-- Temporal: `"Tu cuenta está suspendida hasta [fecha]. Revisa nuestras reglas."`
-- Permanente: `"Tu cuenta ha sido suspendida permanentemente."`
+- Temporal: `"Tu cuenta está suspendida hasta [fecha]. Revisa nuestras reglas para evitar futuras suspensiones."`
+- Permanente: `"Tu cuenta ha sido suspendida permanentemente por reincidencia."`
+
+La fecha se formatea como `DD/MM/YYYY HH:mm` en zona horaria local.
 
 ---
 
@@ -198,10 +208,10 @@ Usuario A vota 👍 en post de Usuario B
 
 ## 7. Casos borde explícitos
 
-- **Auto-voto:** Un usuario no puede afectar su propio trust score votando su propio post/comentario. Si `voter_username === post.anon_id`, se registra el voto pero no se llama `applyTrustDelta`.
-- **Post con 5 upvotes netos:** Se verifica DESPUÉS de actualizar los contadores. Si `upvotes - downvotes` pasa de 4 a 5 en esa transacción → se aplica el +10. Para evitar doble recompensa, se necesita una columna `milestone_5_rewarded BOOLEAN DEFAULT false` en `posts`.
-- **Reporter_id de anónimos:** Los registros con `reporter_id` que empiezan con `anon:` (IP) no reciben recompensa. Solo `user:{username}`.
-- **Suspensión ya activa:** Si el usuario ya está suspendido (`is_suspended = true` y no expiró), no se aplica una nueva suspensión aunque el score siga bajando.
+- **Auto-voto:** Extraer el username del votante desde la sesión. Si `voterUsername === contentAuthor`, registrar el voto en la tabla pero NO llamar `applyTrustDelta`. Esta lógica vive en una función helper `shouldApplyTrustForVote(voterUsername, authorUsername): boolean` reutilizada tanto en post votes como en comment votes.
+- **Post con 5 upvotes netos:** Se verifica DESPUÉS de actualizar los contadores. Si `upvotes - downvotes` pasa de 4 a ≥5 en esa transacción → se aplica el +10. Para evitar doble recompensa, se necesita una columna `milestone_5_rewarded BOOLEAN DEFAULT false` en `posts`.
+- **Reporter_id de anónimos:** Los registros con `reporter_id` que empiezan con `anon:` (IP) no reciben recompensa de +3. Sus reportes sí se guardan en la tabla `reports` normalmente, y son válidos para ocultar el post. Solo los `user:{username}` reciben el reward.
+- **Suspensión ya activa — escalado:** Si el usuario ya tiene suspensión temporal y su score baja al tier superior (de -10 a -11), se extiende `suspension_end` al nuevo tier (ver sección 3b). Si ya cumplió una suspensión de 7 días y está activa otra → se promueve a permanente.
 
 ---
 
