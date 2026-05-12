@@ -72,13 +72,24 @@ export async function GET(request: NextRequest) {
     );
 
     if (existing.rows.length > 0) {
-      // Existing user → login directly
       const user = existing.rows[0];
-      // Ensure google_id is linked
       await query('UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL', [
         googleUser.id,
         user.id,
       ]);
+      // If user has no username yet, send them to complete registration
+      if (!user.username) {
+        const pending = JSON.stringify({ googleId: googleUser.id, email });
+        const response = NextResponse.redirect(`${baseUrl}/completar-registro`);
+        response.cookies.set('pending_google', pending, {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 60 * 10,
+          sameSite: 'lax',
+        });
+        return response;
+      }
       const safeUser = { id: user.id, username: user.username };
       const response = NextResponse.redirect(`${baseUrl}/`);
       response.cookies.set('session_user', await createSessionValue(safeUser), SESSION_COOKIE_OPTIONS);

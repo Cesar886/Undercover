@@ -16,15 +16,25 @@ async function importKey(): Promise<CryptoKey> {
   );
 }
 
+function toBase64Url(b64: string): string {
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function fromBase64Url(b64url: string): string {
+  const padded = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = padded.length % 4;
+  return pad ? padded + '='.repeat(4 - pad) : padded;
+}
+
 function bufToB64(buf: ArrayBuffer): string {
   const arr = new Uint8Array(buf);
   let binary = '';
   for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
-  return btoa(binary);
+  return toBase64Url(btoa(binary));
 }
 
 function b64ToBuf(b64: string): ArrayBuffer {
-  const binary = atob(b64);
+  const binary = atob(fromBase64Url(b64));
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer as ArrayBuffer;
@@ -34,11 +44,11 @@ function encodePayload(payload: SessionPayload): string {
   const src = ENC.encode(JSON.stringify(payload));
   let binary = '';
   for (let i = 0; i < src.length; i++) binary += String.fromCharCode(src[i]);
-  return btoa(binary);
+  return toBase64Url(btoa(binary));
 }
 
 function decodePayload(encoded: string): unknown {
-  const binary = atob(encoded);
+  const binary = atob(fromBase64Url(encoded));
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return JSON.parse(new TextDecoder().decode(bytes));

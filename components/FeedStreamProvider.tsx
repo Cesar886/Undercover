@@ -11,8 +11,8 @@ interface FeedStreamContextValue {
 const FeedStreamContext = createContext<FeedStreamContextValue | null>(null);
 
 export function FeedStreamProvider({ children }: { children: React.ReactNode }) {
-  // Set de listeners — múltiples componentes pueden suscribirse a una sola conexión.
   const listenersRef = useRef<Set<Handler>>(new Set());
+  const esRef = useRef<EventSource | null>(null);
 
   const subscribe = useCallback((handler: Handler) => {
     listenersRef.current.add(handler);
@@ -22,39 +22,48 @@ export function FeedStreamProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    const es = new EventSource('/api/stream');
+    let aborted = false;
 
-    const dispatch = (raw: MessageEvent) => {
-      try {
-        const ev = JSON.parse(raw.data) as FeedEvent;
-        listenersRef.current.forEach((h) => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => {
+        if (aborted || !data.user) return;
+
+        const es = new EventSource('/api/stream');
+        esRef.current = es;
+
+        const dispatch = (raw: MessageEvent) => {
           try {
-            h(ev);
+            const ev = JSON.parse(raw.data) as FeedEvent;
+            listenersRef.current.forEach((h) => {
+              try {
+                h(ev);
+              } catch {
+                // listener buggy → no romper el resto
+              }
+            });
           } catch {
-            // listener buggy → no romper el resto
+            // payload inválido
           }
-        });
-      } catch {
-        // payload inválido
-      }
-    };
+        };
 
-    // Suscribir cada tipo de evento (EventSource entrega por nombre).
-    const types: FeedEvent['type'][] = [
-      'post:new',
-      'post:vote',
-      'post:hidden',
-      'post:edited',
-      'comment:new',
-      'comment:edited',
-      'comment:deleted',
-    ];
-    types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
+        const types: FeedEvent['type'][] = [
+          'post:new',
+          'post:vote',
+          'post:hidden',
+          'post:edited',
+          'comment:new',
+          'comment:edited',
+          'comment:deleted',
+        ];
+        types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
+      })
+      .catch(() => {});
 
-    // EventSource reconecta solo. Solo cerramos en unmount.
     return () => {
-      types.forEach((t) => es.removeEventListener(t, dispatch as EventListener));
-      es.close();
+      aborted = true;
+      esRef.current?.close();
+      esRef.current = null;
     };
   }, []);
 
