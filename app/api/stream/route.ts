@@ -7,7 +7,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  if (!(await getSessionUsername())) {
+  const currentUsername = await getSessionUsername();
+  if (!currentUsername) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       };
 
       const sendEvent = (ev: FeedEvent) => {
+        if (ev.type === 'notification:new' && ev.recipient !== currentUsername) return;
         safeEnqueue(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`);
       };
 

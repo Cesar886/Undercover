@@ -6,6 +6,7 @@ import { validateCommentInput, isUuid } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { formatSuspensionDate } from '@/lib/trust';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(
   _request: NextRequest,
@@ -92,6 +93,30 @@ export async function POST(
 
   const comment = result.rows[0];
   emitFeed({ type: 'comment:new', postId: params.id, comment });
+
+  // Notificaciones: evitar duplicar si el post author ya fue notificado como parent
+  const notifiedRecipients = new Set<string>();
+
+  if (v.value.parent_id) {
+    const parentRes = await query('SELECT anon_id FROM comments WHERE id = $1', [v.value.parent_id]);
+    const parentAuthor: string | null = parentRes.rows[0]?.anon_id ?? null;
+    if (parentAuthor) {
+      const notif = await createNotification(parentAuthor, 'comment_reply', params.id, comment.id, anonId);
+      if (notif) {
+        emitFeed({ type: 'notification:new', recipient: notif.recipient_username, notification: notif });
+        notifiedRecipients.add(parentAuthor);
+      }
+    }
+  }
+
+  const postRes = await query('SELECT anon_id FROM posts WHERE id = $1', [params.id]);
+  const postAuthor: string | null = postRes.rows[0]?.anon_id ?? null;
+  if (postAuthor && !notifiedRecipients.has(postAuthor)) {
+    const notif = await createNotification(postAuthor, 'post_comment', params.id, comment.id, anonId);
+    if (notif) {
+      emitFeed({ type: 'notification:new', recipient: notif.recipient_username, notification: notif });
+    }
+  }
 
   return NextResponse.json({ comment }, { status: 201 });
 }

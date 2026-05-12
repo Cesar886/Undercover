@@ -55,6 +55,7 @@ export function FeedStreamProvider({ children }: { children: React.ReactNode }) 
           'comment:new',
           'comment:edited',
           'comment:deleted',
+          'notification:new',
         ];
         types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
       })

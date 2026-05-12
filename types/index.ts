@@ -47,3 +47,16 @@ export interface ReportPayload {
   reason: ReportReason;
   detail?: string;
 }
+
+export type NotificationType = 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like';
+
+export interface Notification {
+  id: string;
+  recipient_username: string;
+  type: NotificationType;
+  post_id: string;
+  comment_id: string | null;
+  actor_username: string | null;
+  is_read: boolean;
+  created_at: string;
+}

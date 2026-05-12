@@ -5,6 +5,8 @@ import { validateVoteInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
 import { getVoterKey } from '@/lib/auth';
+import { createNotification } from '@/lib/notifications';
+import { emitFeed } from '@/lib/events';
 import { PoolClient } from 'pg';
 
 export async function PATCH(
@@ -40,8 +42,9 @@ export async function PATCH(
   const col = v.value.vote_type === 'up' ? 'upvotes' : 'downvotes';
 
   let votes: { upvotes: number; downvotes: number };
+  let commentLikeNotif: import('@/types').Notification | null = null;
   try {
-    votes = await withTransaction(async (client: PoolClient) => {
+    ({ votes, commentLikeNotif } = await withTransaction(async (client: PoolClient) => {
       const existing = await client.query(
         'SELECT id FROM comment_votes WHERE comment_id = $1 AND voter_token = $2',
         [params.commentId, voterToken]
@@ -70,12 +73,20 @@ export async function PATCH(
         await applyTrustDelta(commentAuthor, delta, client);
       }
 
-      return { upvotes: res.rows[0].upvotes, downvotes: res.rows[0].downvotes };
-    });
+      const notif = v.value.vote_type === 'up'
+        ? await createNotification(commentAuthor, 'comment_like', params.id, params.commentId, voterUsername, client)
+        : null;
+
+      return { votes: { upvotes: res.rows[0].upvotes, downvotes: res.rows[0].downvotes }, commentLikeNotif: notif };
+    }));
   } catch (err) {
     const e = err as Error & { status?: number };
     const status = e.status ?? 500;
     return NextResponse.json({ error: e.message }, { status });
+  }
+
+  if (commentLikeNotif) {
+    emitFeed({ type: 'notification:new', recipient: commentLikeNotif.recipient_username, notification: commentLikeNotif });
   }
 
   return NextResponse.json({ votes });

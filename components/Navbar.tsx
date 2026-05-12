@@ -4,6 +4,8 @@ import { Search, Sun, Moon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@/components/ThemeProvider';
+import { AnonAvatar } from '@/components/AnonAvatar';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export function Navbar() {
   const [username, setUsername] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 h-12 bg-white/80 dark:bg-[#030303]/80 backdrop-blur-md border-b border-black/[0.04] dark:border-white/5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-none">
       <div className="max-w-[600px] mx-auto px-4 flex items-center justify-between h-full">
         <Link href="/" className="font-bold text-lg">
-          <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-mauve-400 to-mauve-800 bg-clip-text text-transparent">
             Quemones
           </span>
           <span className="text-gray-900 dark:text-zinc-100">UM</span>
@@ -77,17 +79,19 @@ export function Navbar() {
             }
           </button>
 
+          {!authLoading && username && <NotificationBell />}
+
           {authLoading ? (
             <div className="w-20 h-7 rounded-full bg-gray-100 dark:bg-zinc-800 animate-pulse" />
           ) : username ? (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-500 text-white text-sm font-bold uppercase hover:bg-orange-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                className="rounded-full hover:opacity-75 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-mauve-500"
                 aria-label="Menú de usuario"
                 aria-expanded={open}
               >
-                {username[0]}
+                <AnonAvatar name={username} size={32} />
               </button>
 
               {open && (
@@ -119,7 +123,7 @@ export function Navbar() {
               </Link>
               <Link
                 href="/registro"
-                className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-full px-4 py-1.5 transition-colors"
+                className="text-sm font-semibold bg-mauve-600 hover:bg-mauve-700 text-white rounded-full px-4 py-1.5 transition-colors"
               >
                 Regístrate
               </Link>

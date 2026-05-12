@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Comment, Post } from '@/types';
+import { Comment, Notification, Post } from '@/types';
 
 export type FeedEvent =
   | { type: 'post:new'; post: Post }
@@ -12,7 +12,8 @@ export type FeedEvent =
       comment: Comment;
     }
   | { type: 'comment:edited'; postId: string; comment: Comment }
-  | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean };
+  | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean }
+  | { type: 'notification:new'; recipient: string; notification: Notification };
 
 const globalForBus = globalThis as unknown as { __feedBus?: EventEmitter };
 const bus = globalForBus.__feedBus ?? new EventEmitter();

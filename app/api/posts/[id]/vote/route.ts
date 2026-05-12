@@ -6,6 +6,7 @@ import { validateVoteInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
 import { getVoterKey } from '@/lib/auth';
+import { createNotification } from '@/lib/notifications';
 import { PoolClient } from 'pg';
 
 export async function GET(
@@ -67,7 +68,7 @@ export async function PATCH(
 
   // col is safe: derived from validated enum 'up' | 'down', never from raw user input
   const col = v.value.vote_type === 'up' ? 'upvotes' : 'downvotes';
-  const votes = await withTransaction(async (client: PoolClient) => {
+  const { votes, postLikeNotif } = await withTransaction(async (client: PoolClient) => {
     await client.query(
       'INSERT INTO votes (post_id, voter_token, vote_type) VALUES ($1, $2, $3)',
       [postId, voterToken, v.value.vote_type]
@@ -110,7 +111,11 @@ export async function PATCH(
       }
     }
 
-    return res.rows[0];
+    const notif = v.value.vote_type === 'up' && postAuthor
+      ? await createNotification(postAuthor, 'post_like', postId, null, voterUsername, client)
+      : null;
+
+    return { votes: res.rows[0], postLikeNotif: notif };
   });
 
   emitFeed({
@@ -119,6 +124,10 @@ export async function PATCH(
     upvotes: votes.upvotes,
     downvotes: votes.downvotes,
   });
+
+  if (postLikeNotif) {
+    emitFeed({ type: 'notification:new', recipient: postLikeNotif.recipient_username, notification: postLikeNotif });
+  }
 
   return NextResponse.json({ votes });
 }
