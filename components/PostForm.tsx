@@ -7,6 +7,7 @@ import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { AnonAvatar } from '@/components/AnonAvatar';
 import { apiPost } from '@/lib/apiClient';
+import { formatSuspensionDate } from '@/lib/trust';
 
 const CATEGORIES: {
   value: PostCategory;
@@ -24,7 +25,7 @@ const CATEGORIES: {
     border: '#94a3b8',
     text: '#475569',
     glow: '0 0 0 1px #94a3b840, 0 2px 10px rgba(148,163,184,0.30)',
-    avatarClass: 'bg-slate-100 text-slate-600',
+    avatarClass: 'bg-zinc-100 text-zinc-600',
   },
   {
     value: 'quemones',
@@ -67,6 +68,8 @@ export function PostForm({ onPostCreated }: PostFormProps) {
   const [loading, setLoading]       = useState(false);
   const [showModal, setShowModal]   = useState(false);
   const [username, setUsername]     = useState('');
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [suspensionEnd, setSuspensionEnd] = useState<string | null>(null);
   const [image, setImage]           = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const { message, showToast }      = useToast();
@@ -75,7 +78,11 @@ export function PostForm({ onPostCreated }: PostFormProps) {
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((data) => setUsername(data.user?.username ?? ''))
+      .then((data) => {
+        setUsername(data.user?.username ?? '');
+        setIsSuspended(data.user?.is_suspended ?? false);
+        setSuspensionEnd(data.user?.suspension_end ?? null);
+      })
       .catch(() => {});
   }, []);
 
@@ -93,6 +100,17 @@ export function PostForm({ onPostCreated }: PostFormProps) {
     if (!username) {
       setShowModal(true);
       return;
+    }
+
+    if (isSuspended) {
+      const isActive = suspensionEnd === null || new Date(suspensionEnd) > new Date();
+      if (isActive) {
+        const msg = suspensionEnd === null
+          ? 'Tu cuenta ha sido suspendida permanentemente por reincidencia.'
+          : `Tu cuenta está suspendida hasta ${formatSuspensionDate(suspensionEnd)}. Revisa nuestras reglas para evitar futuras suspensiones.`;
+        showToast(msg);
+        return;
+      }
     }
 
     const text = content.trim();
@@ -137,7 +155,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden transition-shadow duration-300 hover:shadow-md hover:shadow-gray-100"
+        className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl shadow-sm overflow-hidden transition-shadow duration-300 hover:shadow-md hover:shadow-gray-100"
         aria-busy={loading}
       >
         {/* Avatar + textarea */}
@@ -149,7 +167,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
           />
 
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold tracking-widest uppercase mb-1.5">
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold tracking-widest uppercase mb-1.5">
               {username || 'Anónimo'}
             </p>
             <textarea
@@ -159,7 +177,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
               placeholder="¿Qué está pasando en la U?"
               rows={3}
               disabled={loading}
-              className="w-full bg-transparent text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 text-[15px] leading-relaxed resize-none focus:ring-0 focus:outline-none disabled:opacity-50 overflow-hidden"
+              className="w-full bg-transparent text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 text-[15px] leading-relaxed resize-none focus:ring-0 focus:outline-none disabled:opacity-50 overflow-hidden"
             />
             {image && (
               <ImagePicker
@@ -178,7 +196,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
         </div>
 
         {/* Gradient divider */}
-        <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-slate-700 to-transparent" />
+        <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-zinc-700 to-transparent" />
 
         {/* Bottom bar — siempre dos filas */}
         <div className="px-4 pt-2 pb-2.5 flex flex-col gap-1.5">
@@ -206,7 +224,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
                     className={`text-[11px] px-2.5 py-1 rounded-full border font-semibold whitespace-nowrap transition-all duration-200 select-none ${
                       active
                         ? ''
-                        : 'border-gray-200 dark:border-slate-700 text-gray-400 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-600 hover:text-gray-500 dark:hover:text-slate-400 hover:bg-gray-50/80 dark:hover:bg-slate-800/60'
+                        : 'border-gray-200 dark:border-zinc-700 text-gray-400 dark:text-zinc-500 hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-500 dark:hover:text-zinc-400 hover:bg-gray-50/80 dark:hover:bg-zinc-800/60'
                     }`}
                   >
                     {c.label}
@@ -243,7 +261,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
                 disabled={isDisabled}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
                   isDisabled
-                    ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-600 cursor-not-allowed'
+                    ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-600 cursor-not-allowed'
                     : 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm hover:shadow-md hover:shadow-orange-200/70 hover:scale-[1.03] active:scale-[0.97]'
                 }`}
               >

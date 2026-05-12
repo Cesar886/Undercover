@@ -19,10 +19,11 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
-  general:     { bar: 'bg-slate-400',  ring: 'ring-slate-300/40' },
+  general:     { bar: 'bg-zinc-400',  ring: 'ring-zinc-300/40' },
   quemones:    { bar: 'bg-orange-500', ring: 'ring-orange-300/40' },
   infieles:    { bar: 'bg-pink-500',   ring: 'ring-pink-300/40' },
   confesiones: { bar: 'bg-purple-600', ring: 'ring-purple-300/40' },
@@ -177,23 +178,38 @@ export default function PostPage() {
         href="/"
         className="group inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors mb-6"
       >
-        <ArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" />
+        <ArrowLeft size={13} className="transition-transform group-hover:-tranzinc-x-0.5" />
         Volver al feed
       </Link>
 
-      <article className={`relative bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm`}>
+      <article className={`relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none`}>
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
-              <span className="text-gray-500 dark:text-slate-400 text-xs">{post.anon_id}</span>
+              <span className="text-gray-500 dark:text-zinc-400 text-xs">{post.anon_id}</span>
               <CategoryPill category={post.category} />
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-gray-400 text-[11px]" title={fullDate}>
-                {timeAgo}
+              <span className="text-gray-400 text-[11px]">
+                <Tooltip
+                  label="La confianza sube con votos positivos y baja con reportes o votos negativos."
+                  withArrow
+                  multiline
+                  w={220}
+                  transitionProps={{ transition: 'fade', duration: 200 }}
+                  classNames={{
+                    tooltip: 'bg-white dark:bg-[#18181b] text-stone-600 dark:text-zinc-300 border border-black/10 dark:border-white/10 shadow-xl text-xs rounded-xl px-3 py-2',
+                    arrow: 'border-l border-t border-black/10 dark:border-white/10'
+                  }}
+                >
+                  <span className="font-medium cursor-help border-b border-dotted border-stone-400 dark:border-zinc-500 hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
+                    {post.trust_unlocked ? `Confianza: ${post.trust_score ?? 0}` : 'Confianza: ?'}
+                  </span>
+                </Tooltip>
+                {' '}· <span title={fullDate}>{timeAgo}</span>
                 {post.updated_at && (
                   <span title={editedTitle} className="text-stone-300"> · editado</span>
                 )}
@@ -219,7 +235,7 @@ export default function PostPage() {
               />
             </div>
           ) : (
-            <p className="text-gray-800 dark:text-slate-200 text-[15px] leading-relaxed break-words mb-4">
+            <p className="text-gray-800 dark:text-zinc-200 text-[15px] leading-relaxed break-words mb-4">
               {post.content}
             </p>
           )}
@@ -230,7 +246,7 @@ export default function PostPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-slate-800">
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-zinc-800">
             <VoteButtons
               postId={post.id}
               upvotes={post.upvotes}
@@ -238,7 +254,7 @@ export default function PostPage() {
               onVoted={() => showToast('Voto guardado')}
               onError={(msg) => showToast(msg)}
             />
-            <div className="flex items-center gap-4 text-gray-400 dark:text-slate-500">
+            <div className="flex items-center gap-4 text-gray-400 dark:text-zinc-500">
               <span className="flex items-center gap-1 text-xs">
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>

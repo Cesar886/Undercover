@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ReportReason } from '@/types';
 
 interface ReportDialogProps {
@@ -20,6 +21,11 @@ const REASONS: { value: ReportReason; label: string; description: string }[] = [
 export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportDialogProps) {
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [detail, setDetail] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -48,22 +54,24 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
     }
   }
 
-  return (
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/40 animate-fade-in"
       onClick={() => { if (!busy) onCancel(); }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-title"
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-5 animate-fade-slide-in"
+        className="bg-[#F9F9F9] dark:bg-[#0c0c0c] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.04] dark:border-white/5 dark:shadow-none w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 animate-fade-slide-in relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="report-title" className="text-base font-semibold text-stone-900 dark:text-slate-100 mb-1">
+        <h2 id="report-title" className="text-base font-semibold text-stone-900 dark:text-zinc-100 mb-1">
           Reportar
         </h2>
-        <p className="text-[13px] text-stone-500 dark:text-slate-400 mb-4">
+        <p className="text-[13px] text-stone-500 dark:text-zinc-400 mb-4">
           Selecciona el motivo. Lo revisará el equipo de moderación.
         </p>
 
@@ -78,14 +86,14 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
                   active
                     ? 'border-orange-400 bg-orange-50/60 dark:bg-orange-500/10'
-                    : 'border-stone-200 dark:border-slate-700 hover:border-stone-300 dark:hover:border-slate-600 hover:bg-stone-50 dark:hover:bg-slate-800'
+                    : 'border-black/[0.06] dark:border-white/5 hover:border-black/[0.08] dark:hover:border-white/10 hover:bg-black/[0.02] dark:hover:bg-[#111111]'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 transition-colors ${
                     active ? 'border-orange-500 bg-orange-500' : 'border-stone-300'
                   }`} />
-                  <span className="text-[13px] font-medium text-stone-800 dark:text-slate-200">{r.label}</span>
+                  <span className="text-[13px] font-medium text-stone-800 dark:text-zinc-200">{r.label}</span>
                 </div>
                 <p className="text-[11px] text-stone-500 mt-0.5 ml-5.5 pl-[22px]">{r.description}</p>
               </button>
@@ -100,7 +108,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
               onChange={(e) => setDetail(e.target.value.slice(0, 200))}
               placeholder="Cuéntanos brevemente (opcional)"
               rows={2}
-              className="w-full text-[13px] text-stone-800 dark:text-slate-200 placeholder-stone-300 dark:placeholder-slate-600 bg-transparent dark:bg-slate-800 resize-none border border-stone-200 dark:border-slate-700 focus:border-orange-400 rounded-lg px-3 py-2 focus:outline-none"
+              className="w-full text-[13px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-[#111111] resize-none border border-black/[0.06] dark:border-white/5 focus:border-orange-400 rounded-lg px-3 py-2 focus:outline-none transition-colors"
             />
             <p className="text-[10px] text-stone-400 text-right mt-0.5">{200 - detail.length}</p>
           </div>
@@ -111,7 +119,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-1.5 text-sm text-stone-500 dark:text-slate-400 hover:text-stone-800 dark:hover:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+            className="px-4 py-1.5 text-sm text-stone-500 dark:text-zinc-400 hover:text-stone-800 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/5 rounded-lg transition-all"
           >
             Cancelar
           </button>
@@ -119,12 +127,13 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="px-4 py-1.5 text-sm font-semibold text-white bg-stone-900 hover:bg-stone-800 active:scale-95 rounded-full transition-all shadow-sm disabled:opacity-40"
+            className="px-4 py-1.5 text-sm font-semibold text-white bg-[#0c0c0c] hover:bg-black dark:bg-[#1f1f1f] dark:hover:bg-[#2a2a2a] dark:text-zinc-200 active:scale-95 rounded-full transition-all shadow-sm disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Enviar reporte'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

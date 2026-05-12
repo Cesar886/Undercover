@@ -64,11 +64,11 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
 
   const upClass = voted === 'up'
     ? 'bg-orange-50 dark:bg-orange-500/10 border-orange-400 text-orange-500'
-    : 'border-stone-200 dark:border-slate-700 text-stone-500 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-300 hover:text-orange-500';
+    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-300 hover:text-orange-500';
 
   const downClass = voted === 'down'
     ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-400 text-sky-500'
-    : 'border-stone-200 dark:border-slate-700 text-stone-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:border-sky-300 hover:text-sky-500';
+    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:border-sky-300 hover:text-sky-500';
 
   return (
     <div className="flex items-center gap-2">

@@ -68,12 +68,12 @@ export default function CompletarRegistroPage() {
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-[440px]">
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
 
           <div className="px-8 pt-8 pb-4 text-center">
             <p className="text-3xl mb-3">👤</p>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Elige tu alias</h1>
-            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Elige tu alias</h1>
+            <p className="text-sm text-gray-400 dark:text-zinc-500 mt-1">
               Este nombre será público en tus posts. No uses tu nombre real.
             </p>
           </div>
@@ -89,20 +89,20 @@ export default function CompletarRegistroPage() {
                   maxLength={30}
                   required
                   autoFocus
-                  className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none transition-colors ${
+                  className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 placeholder-gray-300 dark:placeholder-zinc-500 focus:outline-none transition-colors ${
                     status === 'available' ? 'border-green-400 focus:border-green-500' :
                     status === 'taken'     ? 'border-red-400 focus:border-red-500' :
-                    'border-gray-200 dark:border-slate-700 focus:border-orange-400'
+                    'border-gray-200 dark:border-zinc-700 focus:border-orange-400'
                   }`}
                 />
                 {status === 'checking' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-orange-400 rounded-full animate-spin" />
+                  <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-orange-400 rounded-full animate-spin" />
                 )}
                 {status === 'available' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
+                  <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-green-500">✓</span>
                 )}
                 {status === 'taken' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">✗</span>
+                  <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-red-500">✗</span>
                 )}
               </div>
 

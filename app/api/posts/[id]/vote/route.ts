@@ -5,6 +5,7 @@ import { hashVoterToken } from '@/lib/hash';
 import { emitFeed } from '@/lib/events';
 import { validateVoteInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
 import { PoolClient } from 'pg';
 
 // En IPs compartidas (Wi-Fi de la U), un solo voto bloquearía a todos los demás.
@@ -71,6 +72,11 @@ export async function PATCH(
   const sessionRaw = await readSession();
   const voterKey = buildVoterKey(request, sessionRaw);
 
+  let voterUsername: string | null = null;
+  try {
+    if (sessionRaw) voterUsername = JSON.parse(sessionRaw).username ?? null;
+  } catch { /* ignorar */ }
+
   const rl = checkRateLimit(`votes:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {
     return NextResponse.json(
@@ -103,6 +109,42 @@ export async function PATCH(
       `UPDATE posts SET ${col} = ${col} + 1 WHERE id = $1 RETURNING upvotes, downvotes`,
       [postId]
     );
+
+    // Obtener el autor del post (anon_id ES el username real del autor)
+    const authorRes = await client.query<{ anon_id: string }>(
+      'SELECT anon_id FROM posts WHERE id = $1',
+      [postId]
+    );
+    const postAuthor = authorRes.rows[0]?.anon_id ?? null;
+
+    if (postAuthor && shouldApplyTrustForVote(voterUsername, postAuthor)) {
+      if (v.value.vote_type === 'up') {
+        await applyTrustDelta(postAuthor, 2, client);
+      } else {
+        await applyTrustDelta(postAuthor, -2, client);
+      }
+    }
+
+    // Verificar milestone de 5 upvotes netos (solo en votos positivos)
+    if (v.value.vote_type === 'up' && postAuthor) {
+      const milestoneRes = await client.query<{
+        upvotes: number;
+        downvotes: number;
+        milestone_5_rewarded: boolean;
+      }>(
+        'SELECT upvotes, downvotes, milestone_5_rewarded FROM posts WHERE id = $1',
+        [postId]
+      );
+      const post = milestoneRes.rows[0];
+      if (post && post.upvotes - post.downvotes >= 5 && !post.milestone_5_rewarded) {
+        await client.query(
+          'UPDATE posts SET milestone_5_rewarded = true WHERE id = $1',
+          [postId]
+        );
+        await applyTrustDelta(postAuthor, 10, client);
+      }
+    }
+
     return res.rows[0];
   });
 

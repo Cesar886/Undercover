@@ -20,20 +20,20 @@ const config: Config = {
       },
       keyframes: {
         fadeSlideIn: {
-          from: { opacity: '0', transform: 'translateY(-6px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'tranzincY(-6px)' },
+          to:   { opacity: '1', transform: 'tranzincY(0)' },
         },
         voteBounce: {
           '0%, 100%': { transform: 'scale(1)' },
           '50%':      { transform: 'scale(1.25)' },
         },
         toastIn: {
-          from: { opacity: '0', transform: 'translateX(-50%) translateY(8px)' },
-          to:   { opacity: '1', transform: 'translateX(-50%) translateY(0)' },
+          from: { opacity: '0', transform: 'tranzincX(-50%) tranzincY(8px)' },
+          to:   { opacity: '1', transform: 'tranzincX(-50%) tranzincY(0)' },
         },
         riseIn: {
-          from: { opacity: '0', transform: 'translateY(12px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'tranzincY(12px)' },
+          to:   { opacity: '1', transform: 'tranzincY(0)' },
         },
         fadeIn: {
           from: { opacity: '0' },

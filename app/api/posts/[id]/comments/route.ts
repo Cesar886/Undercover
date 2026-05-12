@@ -5,6 +5,7 @@ import { emitFeed } from '@/lib/events';
 import { validateCommentInput, isUuid } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { formatSuspensionDate } from '@/lib/trust';
 
 export async function GET(
   _request: NextRequest,
@@ -13,7 +14,11 @@ export async function GET(
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
   const result = await query(
-    'SELECT * FROM comments WHERE post_id = $1 ORDER BY created_at ASC',
+    `SELECT c.*, u.trust_score, u.trust_unlocked
+     FROM comments c
+     LEFT JOIN users u ON u.username = c.anon_id
+     WHERE c.post_id = $1
+     ORDER BY c.created_at ASC`,
     [params.id]
   );
   return NextResponse.json({ comments: result.rows });
@@ -33,6 +38,21 @@ export async function POST(
     if (!anonId) return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
   } catch {
     return NextResponse.json({ error: 'Debes iniciar sesión para comentar' }, { status: 401 });
+  }
+
+  const suspCheck = await query(
+    'SELECT is_suspended, suspension_end FROM users WHERE username = $1',
+    [anonId]
+  );
+  const suspUser = suspCheck.rows[0];
+  if (suspUser?.is_suspended) {
+    const isActive = suspUser.suspension_end === null || new Date(suspUser.suspension_end) > new Date();
+    if (isActive) {
+      const msg = suspUser.suspension_end === null
+        ? 'Tu cuenta ha sido suspendida permanentemente por reincidencia.'
+        : `Tu cuenta está suspendida hasta ${formatSuspensionDate(suspUser.suspension_end)}. Revisa nuestras reglas para evitar futuras suspensiones.`;
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
   }
 
   const rl = checkRateLimit(`comments:user:${anonId}`, RATE_LIMITS.comments);

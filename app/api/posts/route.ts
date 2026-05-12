@@ -7,6 +7,7 @@ import { emitFeed } from '@/lib/events';
 import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
+import { formatSuspensionDate } from '@/lib/trust';
 
 const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
@@ -32,8 +33,11 @@ export async function GET(request: NextRequest) {
   const params: unknown[] = [];
   let sql = `
     SELECT p.*,
-      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count,
+      u.trust_score,
+      u.trust_unlocked
     FROM posts p
+    LEFT JOIN users u ON u.username = p.anon_id
     WHERE p.is_hidden = false
   `;
 
@@ -100,6 +104,23 @@ export async function POST(request: NextRequest) {
   }
 
   const anonId = username ?? generateAnonId();
+
+  if (username) {
+    const suspCheck = await query(
+      'SELECT is_suspended, suspension_end FROM users WHERE username = $1',
+      [username]
+    );
+    const user = suspCheck.rows[0];
+    if (user?.is_suspended) {
+      const isActive = user.suspension_end === null || new Date(user.suspension_end) > new Date();
+      if (isActive) {
+        const msg = user.suspension_end === null
+          ? 'Tu cuenta ha sido suspendida permanentemente por reincidencia.'
+          : `Tu cuenta está suspendida hasta ${formatSuspensionDate(user.suspension_end)}. Revisa nuestras reglas para evitar futuras suspensiones.`;
+        return NextResponse.json({ error: msg }, { status: 403 });
+      }
+    }
+  }
 
   const result = await query(
     `INSERT INTO posts (anon_id, content, category, image_webp) VALUES ($1, $2, $3, $4) RETURNING *`,

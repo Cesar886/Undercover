@@ -112,7 +112,7 @@ export default function Home() {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-stone-50/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-gray-200/60 dark:border-slate-800/60">
+      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-[#F9F9F9]/80 dark:bg-[#030303]/80 backdrop-blur-md border-b border-black/[0.04] dark:border-white/5">
         <div className="flex items-center gap-3 max-w-[600px] mx-auto">
           <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             <CategoryFilter active={category} onChange={setCategory} />
@@ -148,10 +148,10 @@ export default function Home() {
         )}
 
         {!loading && posts.length === 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl py-14 text-center shadow-sm">
+          <div className="bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
             <p className="text-2xl mb-2">🔥</p>
-            <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Nada por aquí todavía</p>
-            <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">Sé el primero en quemar algo</p>
+            <p className="text-gray-500 dark:text-zinc-400 text-sm font-medium">Nada por aquí todavía</p>
+            <p className="text-gray-400 dark:text-zinc-500 text-xs mt-1">Sé el primero en quemar algo</p>
           </div>
         )}
       </div>

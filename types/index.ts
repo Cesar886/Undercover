@@ -14,6 +14,8 @@ export interface Post {
   created_at: string;
   updated_at: string | null;
   comment_count?: number;
+  trust_score?: number;
+  trust_unlocked?: boolean;
 }
 
 export interface Comment {
@@ -28,6 +30,10 @@ export interface Comment {
   is_deleted: boolean;
   report_count: number;
   is_hidden: boolean;
+  trust_score?: number;
+  trust_unlocked?: boolean;
+  upvotes?: number;
+  downvotes?: number;
 }
 
 export type ReportReason =

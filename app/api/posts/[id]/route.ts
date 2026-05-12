@@ -25,8 +25,11 @@ export async function GET(
 
   const result = await query(
     `SELECT p.*,
-      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count,
+      u.trust_score,
+      u.trust_unlocked
      FROM posts p
+     LEFT JOIN users u ON u.username = p.anon_id
      WHERE p.id = $1 AND p.is_hidden = false`,
     [params.id]
   );

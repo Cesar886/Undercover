@@ -17,12 +17,12 @@ function LoginForm() {
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-[440px]">
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
 
           <div className="px-8 pt-8 pb-6 text-center">
             <p className="text-3xl mb-3">🔥</p>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">QuemonesUM</h1>
-            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">QuemonesUM</h1>
+            <p className="text-sm text-gray-400 dark:text-zinc-500 mt-1">
               Tu correo verifica. Tu alias publica.
             </p>
           </div>
@@ -45,7 +45,7 @@ function LoginForm() {
 
             <a
               href="/api/auth/google"
-              className="flex items-center justify-center gap-3 w-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-200 transition-colors shadow-sm"
+              className="flex items-center justify-center gap-3 w-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 dark:text-zinc-200 transition-colors shadow-sm"
             >
               <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -57,8 +57,8 @@ function LoginForm() {
               Continuar con Google
             </a>
 
-            <p className="text-xs text-center text-gray-400 dark:text-slate-600">
-              Solo usamos tu correo para confirmar que eres alumno. Publicas con un alias anónimo.
+            <p className="text-xs text-center text-gray-400 dark:text-zinc-600">
+              Solo usamos tu correo para confirmar que eres alumno. Publicas con un alias anónimo. Solo aceptamos estudiantes
             </p>
           </div>
         </div>

@@ -84,13 +84,13 @@ export default function BuscarPage() {
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-5">
       <form onSubmit={handleSubmit} className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={16} className="absolute left-3 top-1/2 -tranzinc-y-1/2 text-gray-400" />
         <input
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar en QuemonesUM..."
-          className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm"
+          className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm"
         />
       </form>
 
@@ -104,7 +104,7 @@ export default function BuscarPage() {
 
       {!loading && posts.length > 0 && (
         <>
-          <p className="text-gray-400 dark:text-slate-500 text-xs">
+          <p className="text-gray-400 dark:text-zinc-500 text-xs">
             {posts.length} resultado{posts.length !== 1 ? 's' : ''} para &ldquo;{submitted}&rdquo;
           </p>
           <div className="space-y-3">

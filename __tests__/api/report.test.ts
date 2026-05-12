@@ -1,7 +1,18 @@
-jest.mock('@/lib/db', () => ({ query: jest.fn() }));
+jest.mock('@/lib/db', () => {
+  const mockQuery = jest.fn();
+  return {
+    query: mockQuery,
+    withTransaction: jest.fn().mockImplementation(
+      async (fn: (client: { query: typeof mockQuery }) => unknown) => fn({ query: mockQuery })
+    ),
+  };
+});
 jest.mock('@/lib/rateLimit', () => ({
   checkRateLimit: jest.fn().mockReturnValue({ ok: true, retryAfter: 0 }),
   RATE_LIMITS: { reports: { windowMs: 1000, max: 20 } },
+}));
+jest.mock('@/lib/trust', () => ({
+  applyTrustDelta: jest.fn().mockResolvedValue(undefined),
 }));
 
 import { POST } from '@/app/api/posts/[id]/report/route';
@@ -51,7 +62,7 @@ describe('POST /api/posts/[id]/report', () => {
 
   it('returns 200 and inserts a report row', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ report_count: 3, is_hidden: false }] })
+      .mockResolvedValueOnce({ rows: [{ report_count: 3, is_hidden: false, anon_id: 'user1' }] })
       .mockResolvedValueOnce({ rows: [] });
     const req = reqWithBody({ reason: 'spam' });
     const res = await POST(req, { params });
@@ -64,8 +75,9 @@ describe('POST /api/posts/[id]/report', () => {
 
   it('sets is_hidden when report_count reaches 10', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ report_count: 10, is_hidden: true }] })
-      .mockResolvedValueOnce({ rows: [] });
+      .mockResolvedValueOnce({ rows: [{ report_count: 10, is_hidden: true, anon_id: 'user1' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] }); // reporters query
     const req = reqWithBody({ reason: 'spam' });
     const res = await POST(req, { params });
     const body = await res.json();

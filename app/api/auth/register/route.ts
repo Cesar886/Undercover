@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
   response.cookies.set('session_user', JSON.stringify(user), {
     path: '/',
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24 * 7,
     sameSite: 'lax',
   });

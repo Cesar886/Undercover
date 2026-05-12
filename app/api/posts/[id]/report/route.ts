@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { query } from '@/lib/db';
+import { withTransaction } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
 import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { applyTrustDelta } from '@/lib/trust';
 
 function buildReporterId(request: NextRequest, sessionRaw: string | undefined): string {
   if (sessionRaw) {
@@ -53,28 +54,61 @@ export async function POST(
   const v = validateReportInput(body);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
-  const result = await query(
-    `UPDATE posts
-     SET report_count = report_count + 1,
-         is_hidden = CASE WHEN report_count + 1 >= 10 THEN true ELSE is_hidden END
-     WHERE id = $1
-     RETURNING report_count, is_hidden`,
-    [params.id]
-  );
+  const postId = params.id;
 
-  if (result.rows.length === 0) {
+  const result = await withTransaction(async (client) => {
+    const updateRes = await client.query(
+      `UPDATE posts
+       SET report_count = report_count + 1,
+           is_hidden = CASE WHEN report_count + 1 >= 10 THEN true ELSE is_hidden END
+       WHERE id = $1
+       RETURNING report_count, is_hidden, anon_id`,
+      [postId]
+    );
+
+    if (updateRes.rows.length === 0) return null;
+
+    await client.query(
+      `INSERT INTO reports (target_type, target_id, reason, detail, reporter_id)
+       VALUES ('post', $1, $2, $3, $4)`,
+      [postId, v.value.reason, v.value.detail ?? null, reporterId]
+    );
+
+    const { report_count, is_hidden, anon_id: postAuthor } = updateRes.rows[0];
+
+    // Apply trust deltas only when the post just crossed the hide threshold
+    if (is_hidden && report_count >= 10) {
+      const prevCount = report_count - 1;
+      const justHidden = prevCount < 10;
+      if (justHidden && postAuthor) {
+        await applyTrustDelta(postAuthor, -15, client);
+
+        // Reward all user: reporters for this post
+        const reportersRes = await client.query<{ reporter_id: string }>(
+          `SELECT DISTINCT reporter_id FROM reports
+           WHERE target_type = 'post' AND target_id = $1
+             AND reporter_id LIKE 'user:%'`,
+          [postId]
+        );
+        for (const row of reportersRes.rows) {
+          const reporterUsername = row.reporter_id.slice('user:'.length);
+          if (reporterUsername) {
+            await applyTrustDelta(reporterUsername, 3, client);
+          }
+        }
+      }
+    }
+
+    return { report_count, is_hidden };
+  });
+
+  if (result === null) {
     return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   }
 
-  await query(
-    `INSERT INTO reports (target_type, target_id, reason, detail, reporter_id)
-     VALUES ('post', $1, $2, $3, $4)`,
-    [params.id, v.value.reason, v.value.detail ?? null, reporterId]
-  );
-
-  if (result.rows[0].is_hidden) {
-    emitFeed({ type: 'post:hidden', postId: params.id });
+  if (result.is_hidden) {
+    emitFeed({ type: 'post:hidden', postId });
   }
 
-  return NextResponse.json({ success: true, ...result.rows[0] });
+  return NextResponse.json({ success: true, ...result });
 }

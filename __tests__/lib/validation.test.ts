@@ -43,6 +43,11 @@ describe('validatePostInput', () => {
     expect(validatePostInput(null).ok).toBe(false);
     expect(validatePostInput('string').ok).toBe(false);
   });
+  it('rejects URLs in content', () => {
+    expect(validatePostInput({ content: 'visita https://google.com', category: 'quemones' }).ok).toBe(false);
+    expect(validatePostInput({ content: 'mi sitio www.ejemplo.com', category: 'quemones' }).ok).toBe(false);
+    expect(validatePostInput({ content: 'hola dominio.com.mx jaja', category: 'quemones' }).ok).toBe(false);
+  });
 });
 
 describe('validateCommentInput', () => {
@@ -63,6 +68,9 @@ describe('validateCommentInput', () => {
   it('accepts null parent_id', () => {
     const r = validateCommentInput({ content: 'hi', parent_id: null });
     expect(r.ok).toBe(true);
+  });
+  it('rejects URLs in content', () => {
+    expect(validateCommentInput({ content: 'visita https://google.com' }).ok).toBe(false);
   });
 });
 
@@ -96,6 +104,9 @@ describe('validateReportInput', () => {
   it('rejects other with detail > 200 chars', () => {
     expect(validateReportInput({ reason: 'other', detail: 'a'.repeat(201) }).ok).toBe(false);
   });
+  it('rejects other with detail containing URL', () => {
+    expect(validateReportInput({ reason: 'other', detail: 'mira esto google.com' }).ok).toBe(false);
+  });
 });
 
 describe('validateEditPostInput', () => {
@@ -110,6 +121,9 @@ describe('validateEditPostInput', () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.content).toBe('editado');
   });
+  it('rejects URLs in content', () => {
+    expect(validateEditPostInput({ content: 'visita https://google.com' }).ok).toBe(false);
+  });
 });
 
 describe('validateEditCommentInput', () => {
@@ -122,5 +136,8 @@ describe('validateEditCommentInput', () => {
   it('accepts valid content', () => {
     const r = validateEditCommentInput({ content: 'editado' });
     expect(r.ok).toBe(true);
+  });
+  it('rejects URLs in content', () => {
+    expect(validateEditCommentInput({ content: 'visita https://google.com' }).ok).toBe(false);
   });
 });
