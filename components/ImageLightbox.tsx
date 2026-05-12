@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ImageLightboxProps {
@@ -17,12 +18,12 @@ export function ImageLightbox({ src, onClose }: ImageLightboxProps) {
 
   if (!src) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+      className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
     >
       <button
         type="button"
@@ -39,6 +40,7 @@ export function ImageLightbox({ src, onClose }: ImageLightboxProps) {
         className="max-w-full max-h-full object-contain rounded-lg"
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body
   );
 }

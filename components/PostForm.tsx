@@ -34,7 +34,7 @@ const CATEGORIES: {
     border: '#f97316',
     text: '#ea580c',
     glow: '0 0 0 1px #f9731630, 0 2px 10px rgba(249,115,22,0.28)',
-    avatarClass: 'bg-orange-100 text-orange-600',
+    avatarClass: 'bg-mauve-100 text-mauve-700',
   },
   {
     value: 'infieles',
@@ -250,7 +250,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
               {remaining < 100 && (
                 <span
                   className={`text-xs tabular-nums font-medium transition-colors duration-200 ${
-                    remaining < 30 ? 'text-amber-500' : 'text-gray-300'
+                    remaining < 30 ? 'text-mauve-500' : 'text-gray-300'
                   }`}
                 >
                   {remaining}
@@ -262,7 +262,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
                   isDisabled
                     ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-600 cursor-not-allowed'
-                    : 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm hover:shadow-md hover:shadow-orange-200/70 hover:scale-[1.03] active:scale-[0.97]'
+                    : 'bg-gradient-to-br from-mauve-600 to-mauve-700 text-white shadow-sm hover:shadow-md hover:shadow-mauve-200/70 hover:scale-[1.03] active:scale-[0.97]'
                 }`}
               >
                 {submitLabel}

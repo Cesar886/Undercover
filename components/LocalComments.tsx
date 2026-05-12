@@ -78,7 +78,7 @@ function CharRing({ current, max }: { current: number; max: number }) {
         />
       </svg>
       {remaining <= 15 && (
-        <span className={`relative text-[8px] font-bold tabular-nums ${isDanger ? 'text-red-500' : 'text-amber-600'}`}>
+        <span className={`relative text-[8px] font-bold tabular-nums ${isDanger ? 'text-red-500' : 'text-mauve-700'}`}>
           {remaining}
         </span>
       )}
@@ -130,7 +130,7 @@ function ReplyForm({
       <form onSubmit={handleSubmit} className="flex-1 min-w-0">
         <p className="text-[10px] font-semibold tracking-widest uppercase text-stone-400 mb-2">
           Respondiendo a{' '}
-          <span className="text-orange-500 normal-case tracking-normal text-[11px]">{targetAnonId}</span>
+          <span className="text-mauve-600 normal-case tracking-normal text-[11px]">{targetAnonId}</span>
         </p>
         <textarea
           ref={ref}
@@ -145,7 +145,7 @@ function ReplyForm({
           disabled={submitting}
           className="w-full text-[14px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
         />
-        <div className="h-px bg-orange-400/60 rounded-full" />
+        <div className="h-px bg-mauve-500/60 rounded-full" />
         <div className="mt-2.5">
           <ImagePicker
             preview={image}
@@ -331,12 +331,12 @@ function CommentItem({
               saving={savingEdit}
               onCancel={onCancelEdit}
               onSave={handleSaveEdit}
-              textareaClassName="w-full text-[14px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-zinc-700 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
+              textareaClassName="w-full text-[14px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-zinc-700 focus:border-mauve-500 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
             />
           ) : (
             <p className="text-[14px] text-stone-700 dark:text-zinc-300 leading-relaxed break-words">
               {parentAnonId && (
-                <span className="text-orange-500 font-semibold mr-1">@{parentAnonId}</span>
+                <span className="text-mauve-600 font-semibold mr-1">@{parentAnonId}</span>
               )}
               {comment.content}
             </p>
@@ -355,7 +355,7 @@ function CommentItem({
                   onClick={() => handleVote('up')}
                   disabled={voting || voted !== null}
                   className={`flex items-center gap-1 text-[11px] transition-colors disabled:cursor-not-allowed ${
-                    voted === 'up' ? 'text-orange-500' : 'text-stone-300 hover:text-orange-500'
+                    voted === 'up' ? 'text-mauve-600' : 'text-stone-300 hover:text-mauve-600'
                   }`}
                   aria-label="Voto positivo"
                 >
@@ -379,7 +379,7 @@ function CommentItem({
                   onClick={() => (isReplying ? onCancelReply() : onReply(comment.id, comment.anon_id))}
                   className={`inline-flex items-center gap-1 text-[11px] font-medium transition-all ${
                     isReplying
-                      ? 'text-orange-500'
+                      ? 'text-mauve-600'
                       : 'text-stone-300 group-hover:text-stone-500 hover:!text-stone-700'
                   }`}
                 >
@@ -406,7 +406,7 @@ function CommentItem({
       {comment.replies && comment.replies.length > 0 && (
         <div className={depth < MAX_VISUAL_DEPTH ? 'relative pl-6 ml-3.5' : ''}>
           {depth < MAX_VISUAL_DEPTH && (
-            <div className="absolute left-0 top-1 bottom-4 w-[1.5px] bg-gradient-to-b from-orange-300 via-orange-100 to-transparent rounded-full" />
+            <div className="absolute left-0 top-1 bottom-4 w-[1.5px] bg-gradient-to-b from-mauve-400 via-mauve-100 to-transparent rounded-full" />
           )}
           {comment.replies.map((reply) => (
             <CommentItem
@@ -611,14 +611,14 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
       <div className="px-5 py-3.5 border-b border-stone-100 dark:border-zinc-800 flex items-center gap-2.5">
         <span className="font-display text-[15px] font-semibold text-stone-800 dark:text-zinc-200 tracking-tight">Comentarios</span>
         {visibleCount > 0 && (
-          <span className="bg-orange-100 text-orange-600 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
+          <span className="bg-mauve-100 text-mauve-700 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
             {visibleCount}
           </span>
         )}
       </div>
 
       {username ? (
-        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 dark:border-zinc-800 transition-colors duration-300 ${focused ? 'bg-amber-50/20 dark:bg-orange-500/5' : ''}`}>
+        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 dark:border-zinc-800 transition-colors duration-300 ${focused ? 'bg-mauve-50/20 dark:bg-mauve-600/5' : ''}`}>
           <div className="flex-shrink-0 mt-0.5">
             <AvatarBadge name={username} size="md" />
           </div>
@@ -642,7 +642,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="absolute right-0 top-1 text-orange-500 hover:text-orange-600 active:scale-90 transition-all disabled:opacity-30"
+                  className="absolute right-0 top-1 text-mauve-600 hover:text-mauve-700 active:scale-90 transition-all disabled:opacity-30"
                   aria-label="Enviar"
                 >
                   <SendHorizonal size={15} />
@@ -650,7 +650,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
               )}
             </div>
             <div
-              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-orange-400' : 'bg-stone-200 dark:bg-zinc-700'}`}
+              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-mauve-500' : 'bg-stone-200 dark:bg-zinc-700'}`}
               style={focused ? { boxShadow: '0 0 6px rgba(249,115,22,0.3)' } : {}}
             />
             {focused && (
@@ -696,7 +696,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
           </p>
           <a
             href="/login"
-            className="inline-flex items-center px-4 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 active:scale-95 text-white rounded-full transition-all shadow-sm"
+            className="inline-flex items-center px-4 py-1.5 text-xs font-semibold bg-mauve-600 hover:bg-mauve-700 active:scale-95 text-white rounded-full transition-all shadow-sm"
           >
             Entrar
           </a>

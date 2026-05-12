@@ -53,7 +53,7 @@ export function CommentForm({ postId }: { postId: string }) {
         placeholder="Añade un comentario anónimo..."
         rows={2}
         disabled={loading}
-        className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:opacity-60"
+        className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-mauve-600 disabled:opacity-60"
       />
       <ImagePicker
         preview={image}
@@ -65,13 +65,13 @@ export function CommentForm({ postId }: { postId: string }) {
       />
       {imageError && <p className="text-red-500 text-xs">{imageError}</p>}
       <div className="flex items-center justify-between">
-        <span className={`text-xs ${MAX_CHARS - content.length < 30 ? 'text-amber-500' : 'text-gray-400'}`}>
+        <span className={`text-xs ${MAX_CHARS - content.length < 30 ? 'text-mauve-500' : 'text-gray-400'}`}>
           {MAX_CHARS - content.length} restantes
         </span>
         <button
           type="submit"
           disabled={loading || (!content.trim() && !image)}
-          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+          className="bg-mauve-600 hover:bg-mauve-700 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
         >
           {loading ? 'Enviando...' : 'Comentar'}
         </button>

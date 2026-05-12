@@ -63,8 +63,8 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
   }
 
   const upClass = voted === 'up'
-    ? 'bg-orange-50 dark:bg-orange-500/10 border-orange-400 text-orange-500'
-    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-300 hover:text-orange-500';
+    ? 'bg-mauve-50 dark:bg-mauve-600/10 border-mauve-500 text-mauve-600'
+    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-mauve-50 dark:hover:bg-mauve-600/10 hover:border-mauve-400 hover:text-mauve-600';
 
   const downClass = voted === 'down'
     ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-400 text-sky-500'

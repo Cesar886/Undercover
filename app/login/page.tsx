@@ -53,11 +53,11 @@ function LoginForm() {
               Verificar que soy estudiante
             </a>
 
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl px-4 py-3 text-center">
-              <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">
+            <div className="bg-mauve-50 dark:bg-mauve-900/20 border border-mauve-200 dark:border-mauve-900/50 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-mauve-800 dark:text-mauve-500 font-medium">
                 Solo acepta correos institucionales
               </p>
-              <p className="font-mono text-xs text-orange-600 dark:text-orange-500 mt-0.5">
+              <p className="font-mono text-xs text-mauve-700 dark:text-mauve-600 mt-0.5">
                 1234567@alumno.um.edu.mx
               </p>
             </div>

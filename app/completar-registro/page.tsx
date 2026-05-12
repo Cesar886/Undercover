@@ -92,11 +92,11 @@ export default function CompletarRegistroPage() {
                   className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 placeholder-gray-300 dark:placeholder-zinc-500 focus:outline-none transition-colors ${
                     status === 'available' ? 'border-green-400 focus:border-green-500' :
                     status === 'taken'     ? 'border-red-400 focus:border-red-500' :
-                    'border-gray-200 dark:border-zinc-700 focus:border-orange-400'
+                    'border-gray-200 dark:border-zinc-700 focus:border-mauve-500'
                   }`}
                 />
                 {status === 'checking' && (
-                  <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-orange-400 rounded-full animate-spin" />
+                  <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-mauve-500 rounded-full animate-spin" />
                 )}
                 {status === 'available' && (
                   <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-green-500">✓</span>
@@ -109,7 +109,7 @@ export default function CompletarRegistroPage() {
               <p className={`text-[11px] mt-1 ${
                 status === 'available' ? 'text-green-500' :
                 status === 'taken'     ? 'text-red-500' :
-                'text-orange-400/80'
+                'text-mauve-500/80'
               }`}>
                 {status === 'available' && '¡Alias disponible!'}
                 {status === 'taken'     && 'Ese alias ya está en uso, elige otro.'}
@@ -126,7 +126,7 @@ export default function CompletarRegistroPage() {
             <button
               type="submit"
               disabled={loading || status !== 'available'}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              className="w-full bg-mauve-600 hover:bg-mauve-700 disabled:opacity-40 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
             >
               {loading ? 'Creando cuenta...' : 'Entrar a QuemonesUM'}
             </button>

@@ -93,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" {...mantineHtmlProps} className={`${fraunces.variable} ${instrumentSans.variable}`}>
       <head />
-      <body className="font-sans bg-[#F9F9F9] dark:bg-[#030303] text-stone-900 dark:text-zinc-100 min-h-screen pt-12 antialiased selection:bg-orange-200 selection:text-orange-900 dark:selection:bg-orange-500/30 dark:selection:text-orange-100 transition-colors duration-200">
+      <body className="font-sans bg-[#F9F9F9] dark:bg-[#030303] text-stone-900 dark:text-zinc-100 min-h-screen pt-12 antialiased selection:bg-mauve-200 selection:text-mauve-900 dark:selection:bg-mauve-600/30 dark:selection:text-mauve-100 transition-colors duration-200">
         <div className="fixed inset-0 z-[-1] pointer-events-none hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/40 via-[#030303] to-[#030303]"></div>
         <ColorSchemeScript />
         <MantineSetup>

@@ -19,7 +19,7 @@ import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 
 const accentBar: Record<PostCategory, string> = {
   general:     'bg-zinc-400',
-  quemones:    'bg-orange-500',
+  quemones:    'bg-mauve-600',
   infieles:    'bg-pink-500',
   confesiones: 'bg-purple-600',
 };
@@ -122,9 +122,14 @@ export function PostCard({
   return (
     <article
       style={style}
-      className={`group relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-black/[0.08] dark:hover:border-white/10 dark:hover:bg-[#111111] transition-all duration-300 ${className ?? ''}`}
+      className={`group relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-black/[0.08] dark:hover:border-white/10 dark:hover:bg-[#111111] transition-all duration-300 cursor-pointer ${className ?? ''}`}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar[post.category]}`} />
+
+      {/* stretched link — cubre toda la card; los elementos interactivos quedan encima con z-[2] */}
+      {!editing && (
+        <Link href={`/posts/${post.id}`} className="absolute inset-0 z-[1]" aria-label="Ver post completo" />
+      )}
 
       <div className="pl-5 pr-4 pt-4 pb-3.5">
         <div className="flex items-center justify-between mb-2.5">
@@ -133,7 +138,7 @@ export function PostCard({
             <span className="text-stone-500 dark:text-zinc-400 text-xs">{post.anon_id}</span>
             <CategoryPill category={post.category} />
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="relative z-[2] flex items-center gap-1.5">
             <span className="text-stone-400 dark:text-zinc-500 text-[11px]">
               <Tooltip
                 label="La confianza sube con votos positivos y baja con reportes o votos negativos."
@@ -167,7 +172,7 @@ export function PostCard({
         </div>
 
         {editing ? (
-          <div className="mb-3">
+          <div className="mb-3 relative z-[2]">
             <InlineEditor
               initial={post.content}
               maxChars={500}
@@ -177,20 +182,18 @@ export function PostCard({
             />
           </div>
         ) : (
-          <Link href={`/posts/${post.id}`} className="block mb-3">
-            <p className="text-stone-800 dark:text-zinc-200 text-[15px] leading-relaxed break-words hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
-              {post.content}
-            </p>
-          </Link>
+          <p className="text-stone-800 dark:text-zinc-200 text-[15px] leading-relaxed break-words mb-3">
+            {post.content}
+          </p>
         )}
 
         {post.image_webp && !editing && (
-          <div className="mb-3">
+          <div className="mb-3 relative z-[2]">
             <PostImage src={post.image_webp} className="max-h-72 w-auto rounded-lg" />
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="relative z-[2] flex items-center justify-between">
           <VoteButtons postId={post.id} upvotes={post.upvotes} downvotes={post.downvotes} onVoted={onVoted} onError={onVoteError} />
           <div className="flex items-center gap-3">
             <Link

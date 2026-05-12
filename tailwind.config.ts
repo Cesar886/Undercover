@@ -13,6 +13,18 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        mauve: {
+          50:  '#FAF9FC',
+          100: '#F2EDF8',
+          200: '#E2D8EE',
+          300: '#C9BBDA',
+          400: '#AA97C2',
+          500: '#8E77AA',
+          600: '#725B90',
+          700: '#5C4875',
+          800: '#43325A',
+          900: '#2C1F3F',
+        },
       },
       fontFamily: {
         sans:    ['var(--font-sans)', 'system-ui', 'sans-serif'],
@@ -20,20 +32,20 @@ const config: Config = {
       },
       keyframes: {
         fadeSlideIn: {
-          from: { opacity: '0', transform: 'tranzincY(-6px)' },
-          to:   { opacity: '1', transform: 'tranzincY(0)' },
+          from: { opacity: '0', transform: 'translateY(-6px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
         },
         voteBounce: {
           '0%, 100%': { transform: 'scale(1)' },
           '50%':      { transform: 'scale(1.25)' },
         },
         toastIn: {
-          from: { opacity: '0', transform: 'tranzincX(-50%) tranzincY(8px)' },
-          to:   { opacity: '1', transform: 'tranzincX(-50%) tranzincY(0)' },
+          from: { opacity: '0', transform: 'translateX(-50%) translateY(8px)' },
+          to:   { opacity: '1', transform: 'translateX(-50%) translateY(0)' },
         },
         riseIn: {
-          from: { opacity: '0', transform: 'tranzincY(12px)' },
-          to:   { opacity: '1', transform: 'tranzincY(0)' },
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
         },
         fadeIn: {
           from: { opacity: '0' },

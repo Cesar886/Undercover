@@ -75,7 +75,7 @@ export function ImagePicker({ preview, onPick, onClear, onError, disabled, uploa
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={disabled}
-        className="text-gray-400 hover:text-orange-500 disabled:opacity-40 transition-colors p-1.5 rounded-full"
+        className="text-gray-400 hover:text-mauve-600 disabled:opacity-40 transition-colors p-1.5 rounded-full"
         aria-label="Adjuntar imagen"
         title="Adjuntar imagen"
       >

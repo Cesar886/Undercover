@@ -90,7 +90,7 @@ export default function BuscarPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar en QuemonesUM..."
-          className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm"
+          className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-mauve-600 shadow-sm"
         />
       </form>
 

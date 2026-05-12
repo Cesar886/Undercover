@@ -60,11 +60,11 @@ export function InlineEditor({
         rows={1}
         className={
           textareaClassName ??
-          'w-full text-[15px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-zinc-700 focus:border-orange-400 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60'
+          'w-full text-[15px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-zinc-700 focus:border-mauve-500 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60'
         }
       />
       <div className="flex items-center justify-between mt-2">
-        <span className={`text-[11px] tabular-nums ${remaining < 20 ? 'text-amber-600' : 'text-stone-400'}`}>
+        <span className={`text-[11px] tabular-nums ${remaining < 20 ? 'text-mauve-700' : 'text-stone-400'}`}>
           {remaining}
         </span>
         <div className="flex items-center gap-1">

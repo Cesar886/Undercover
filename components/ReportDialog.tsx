@@ -85,13 +85,13 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
                 onClick={() => setReason(r.value)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
                   active
-                    ? 'border-orange-400 bg-orange-50/60 dark:bg-orange-500/10'
+                    ? 'border-mauve-500 bg-mauve-50/60 dark:bg-mauve-600/10'
                     : 'border-black/[0.06] dark:border-white/5 hover:border-black/[0.08] dark:hover:border-white/10 hover:bg-black/[0.02] dark:hover:bg-[#111111]'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 transition-colors ${
-                    active ? 'border-orange-500 bg-orange-500' : 'border-stone-300'
+                    active ? 'border-mauve-600 bg-mauve-600' : 'border-stone-300'
                   }`} />
                   <span className="text-[13px] font-medium text-stone-800 dark:text-zinc-200">{r.label}</span>
                 </div>
@@ -108,7 +108,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
               onChange={(e) => setDetail(e.target.value.slice(0, 200))}
               placeholder="Cuéntanos brevemente (opcional)"
               rows={2}
-              className="w-full text-[13px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-[#111111] resize-none border border-black/[0.06] dark:border-white/5 focus:border-orange-400 rounded-lg px-3 py-2 focus:outline-none transition-colors"
+              className="w-full text-[13px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-[#111111] resize-none border border-black/[0.06] dark:border-white/5 focus:border-mauve-500 rounded-lg px-3 py-2 focus:outline-none transition-colors"
             />
             <p className="text-[10px] text-stone-400 text-right mt-0.5">{200 - detail.length}</p>
           </div>

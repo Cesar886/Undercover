@@ -32,7 +32,7 @@ export function AuthModal({ onClose }: AuthModalProps) {
         <div className="space-y-2.5">
           <button
             onClick={() => router.push('/login')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            className="w-full bg-mauve-600 hover:bg-mauve-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             Iniciar sesión
           </button>

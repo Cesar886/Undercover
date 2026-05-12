@@ -24,7 +24,7 @@ import { AnonAvatar } from '@/components/AnonAvatar';
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
   general:     { bar: 'bg-zinc-400',  ring: 'ring-zinc-300/40' },
-  quemones:    { bar: 'bg-orange-500', ring: 'ring-orange-300/40' },
+  quemones:    { bar: 'bg-mauve-600', ring: 'ring-mauve-400/40' },
   infieles:    { bar: 'bg-pink-500',   ring: 'ring-pink-300/40' },
   confesiones: { bar: 'bg-purple-600', ring: 'ring-purple-300/40' },
 };
@@ -103,7 +103,7 @@ export default function PostPage() {
         <p className="text-2xl mb-2">🔥</p>
         <p className="text-xl font-semibold text-gray-700">Este quemón ya no existe.</p>
         <p className="text-sm text-gray-400">Quizá fue reportado, quizá nunca estuvo aquí.</p>
-        <Link href="/" className="inline-block mt-4 text-sm text-orange-600 hover:text-orange-700 underline underline-offset-4">
+        <Link href="/" className="inline-block mt-4 text-sm text-mauve-700 hover:text-mauve-800 underline underline-offset-4">
           Volver al feed
         </Link>
       </main>

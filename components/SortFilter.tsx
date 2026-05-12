@@ -48,7 +48,7 @@ export function SortFilter({ active, onChange, compact }: SortFilterProps) {
                 onClick={() => { onChange(s.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                   active === s.value
-                    ? 'text-orange-600 font-semibold bg-orange-50 dark:bg-orange-500/10'
+                    ? 'text-mauve-700 font-semibold bg-mauve-50 dark:bg-mauve-600/10'
                     : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800'
                 }`}
               >
@@ -69,7 +69,7 @@ export function SortFilter({ active, onChange, compact }: SortFilterProps) {
           onClick={() => onChange(s.value)}
           className={`pb-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
             active === s.value
-              ? 'border-orange-500 text-orange-600'
+              ? 'border-mauve-600 text-mauve-700'
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >

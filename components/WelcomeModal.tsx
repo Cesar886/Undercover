@@ -60,7 +60,7 @@ export function WelcomeModal() {
         <div className="pt-2">
           <button
             onClick={handleClose}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            className="w-full bg-mauve-600 hover:bg-mauve-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             Empezar      
           </button>

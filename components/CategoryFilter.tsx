@@ -2,9 +2,9 @@
 import { PostCategory } from '@/types';
 
 const FILTERS: { value: PostCategory | 'all'; label: string; activeClass: string }[] = [
-  { value: 'all',         label: 'Todo',        activeClass: 'bg-orange-500 text-white border-orange-500' },
+  { value: 'all',         label: 'Todo',        activeClass: 'bg-mauve-600 text-white border-mauve-600' },
   { value: 'general',     label: 'General',     activeClass: 'bg-zinc-500 text-white border-zinc-500' },
-  { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-orange-500 text-white border-orange-500' },
+  { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-mauve-600 text-white border-mauve-600' },
   { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500 text-white border-pink-500' },
   { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600 text-white border-purple-600' },
 ];
