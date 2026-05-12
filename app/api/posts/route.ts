@@ -8,6 +8,7 @@ import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
 import { formatSuspensionDate } from '@/lib/trust';
+import { getSessionUsername, unauthorized } from '@/lib/auth';
 
 const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
@@ -20,6 +21,8 @@ function buildOrderClause(sort: SortOption): string {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await getSessionUsername())) return unauthorized();
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category') as PostCategory | null;
   const rawSort = searchParams.get('sort') ?? 'recent';

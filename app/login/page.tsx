@@ -1,6 +1,7 @@
 'use client';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_cancelled: 'Cancelaste el inicio de sesión con Google.',
@@ -22,26 +23,24 @@ function LoginForm() {
           <div className="px-8 pt-8 pb-6 text-center">
             <p className="text-3xl mb-3">🔥</p>
             <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">QuemonesUM</h1>
-            <p className="text-sm text-gray-400 dark:text-zinc-500 mt-1">
+            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">
               Tu correo verifica. Tu alias publica.
             </p>
           </div>
 
-          <div className="px-8 pb-8 flex flex-col gap-4">
+          <div className="px-8 pb-2">
+            <ul className="flex flex-col gap-2 text-xs text-gray-500 dark:text-zinc-400 text-center">
+              <li>Solo aceptamos estudiantes de la universidad.</li>
+              <li>Publicas con un alias anónimo, nadie sabe quién eres.</li>
+            </ul>
+          </div>
+
+          <div className="px-8 pt-5 pb-8 flex flex-col gap-4">
             {errorMsg && (
               <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-center">
                 {errorMsg}
               </div>
             )}
-
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl px-4 py-3 text-center">
-              <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">
-                Solo acepta correos institucionales
-              </p>
-              <p className="font-mono text-xs text-orange-600 dark:text-orange-500 mt-0.5">
-                1234567@alumno.um.edu.mx
-              </p>
-            </div>
 
             <a
               href="/api/auth/google"
@@ -54,12 +53,30 @@ function LoginForm() {
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                 <path fill="none" d="M0 0h48v48H0z"/>
               </svg>
-              Continuar con Google
+              Verificar que soy estudiante
             </a>
 
-            <p className="text-xs text-center text-gray-400 dark:text-zinc-600">
-              Solo usamos tu correo para confirmar que eres alumno. Publicas con un alias anónimo. Solo aceptamos estudiantes
-            </p>
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">
+                Solo acepta correos institucionales
+              </p>
+              <p className="font-mono text-xs text-orange-600 dark:text-orange-500 mt-0.5">
+                1234567@alumno.um.edu.mx
+              </p>
+            </div>
+
+            <div className="text-center text-sm text-gray-600 dark:text-zinc-400 mt-2">
+              ¿No tienes cuenta?{' '}
+              <Link href="/registro" className="text-orange-600 hover:text-orange-500 font-medium dark:text-orange-500 dark:hover:text-orange-400">
+                Regístrate aquí
+              </Link>
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-zinc-800 pt-4 mt-2">
+              <p className="text-xs text-center text-gray-400 dark:text-zinc-600 leading-relaxed">
+                Un lugar para expresarte libremente como alumno de la UM. Comparte pensamientos, experiencias o secretos bajo total anonimato. Explora y descubre lo que realmente pasa en la universidad.
+              </p>
+            </div>
           </div>
         </div>
       </div>

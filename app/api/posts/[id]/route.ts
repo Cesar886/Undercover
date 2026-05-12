@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { isUuid, validateEditPostInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
-
-async function readSessionUsername(): Promise<string | null> {
-  try {
-    const raw = (await cookies()).get('session_user')?.value;
-    if (!raw) return null;
-    const u = JSON.parse(raw).username;
-    return typeof u === 'string' && u.trim() ? u.trim() : null;
-  } catch {
-    return null;
-  }
-}
+import { getSessionUsername, unauthorized } from '@/lib/auth';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await getSessionUsername())) return unauthorized();
+
   if (!isUuid(params.id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
@@ -49,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await readSessionUsername();
+  const username = await getSessionUsername();
   if (!username) {
     return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
   }
@@ -94,7 +85,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await readSessionUsername();
+  const username = await getSessionUsername();
   if (!username) {
     return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
   }

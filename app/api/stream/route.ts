@@ -1,11 +1,16 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { subscribeFeed, FeedEvent } from '@/lib/events';
+import { getSessionUsername } from '@/lib/auth';
 
 // Streaming requiere runtime Node y respuesta dinámica.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  if (!(await getSessionUsername())) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({

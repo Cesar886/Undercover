@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getSessionUsername, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
 import { validateCommentInput, isUuid } from '@/lib/validation';
@@ -11,6 +12,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await getSessionUsername())) return unauthorized();
+
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
   const result = await query(

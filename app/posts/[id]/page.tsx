@@ -199,14 +199,15 @@ export default function PostPage() {
                   withArrow
                   multiline
                   w={220}
+                  events={{ hover: true, focus: true, touch: true }}
                   transitionProps={{ transition: 'fade', duration: 200 }}
                   classNames={{
                     tooltip: 'bg-white dark:bg-[#18181b] text-stone-600 dark:text-zinc-300 border border-black/10 dark:border-white/10 shadow-xl text-xs rounded-xl px-3 py-2',
                     arrow: 'border-l border-t border-black/10 dark:border-white/10'
                   }}
                 >
-                  <span className="font-medium cursor-help border-b border-dotted border-stone-400 dark:border-zinc-500 hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
-                    {post.trust_unlocked ? `Confianza: ${post.trust_score ?? 0}` : 'Confianza: ?'}
+                  <span className="font-medium cursor-help hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
+                    {post.trust_unlocked ? `[confianza ${post.trust_score ?? 0}]` : '[confianza ?]'}
                   </span>
                 </Tooltip>
                 {' '}· <span title={fullDate}>{timeAgo}</span>
