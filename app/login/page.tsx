@@ -62,13 +62,6 @@ function LoginForm() {
               </p>
             </div>
 
-            <div className="text-center text-sm text-gray-600 dark:text-zinc-400 mt-2">
-              ¿No tienes cuenta?{' '}
-              <Link href="/registro" className="text-orange-600 hover:text-orange-500 font-medium dark:text-orange-500 dark:hover:text-orange-400">
-                Regístrate aquí
-              </Link>
-            </div>
-
             <div className="border-t border-gray-100 dark:border-zinc-800 pt-4 mt-2">
               <p className="text-xs text-center text-gray-400 dark:text-zinc-600 leading-relaxed">
                 Un lugar para expresarte libremente como alumno de la UM. Comparte pensamientos, experiencias o secretos bajo total anonimato. Explora y descubre lo que realmente pasa en la universidad.

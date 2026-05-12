@@ -3,8 +3,10 @@ import { Fraunces, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import '@mantine/core/styles.css';
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
+import { Suspense } from 'react';
 import { MantineSetup } from '@/components/MantineSetup';
 import { Navbar } from '@/components/Navbar';
+import { WelcomeModal } from '@/components/WelcomeModal';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
@@ -98,6 +100,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider>
             <FeedStreamProvider>
               <Navbar />
+              <Suspense fallback={null}>
+                <WelcomeModal />
+              </Suspense>
               {children}
             </FeedStreamProvider>
           </ThemeProvider>

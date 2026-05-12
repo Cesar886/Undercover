@@ -59,7 +59,7 @@ export default function CompletarRegistroPage() {
         setError(data.error ?? 'Error al crear la cuenta');
         return;
       }
-      router.push('/');
+      router.push('/?registered=true');
     } finally {
       setLoading(false);
     }
