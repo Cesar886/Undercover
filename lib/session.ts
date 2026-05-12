@@ -33,11 +33,11 @@ function bufToB64(buf: ArrayBuffer): string {
   return toBase64Url(btoa(binary));
 }
 
-function b64ToBuf(b64: string): ArrayBuffer {
+function b64ToBuf(b64: string): Uint8Array {
   const binary = atob(fromBase64Url(b64));
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer as ArrayBuffer;
+  return bytes;
 }
 
 function encodePayload(payload: SessionPayload): string {
@@ -66,14 +66,15 @@ export async function verifySessionValue(raw: string): Promise<SessionPayload | 
     const dot = raw.lastIndexOf('.');
     if (dot === -1) return null;
     const data = raw.slice(0, dot);
-    const sigBytes = b64ToBuf(raw.slice(dot + 1));
+    const sigBytes = b64ToBuf(raw.slice(dot + 1)) as BufferSource;
     const key = await importKey();
     const valid = await crypto.subtle.verify('HMAC', key, sigBytes, ENC.encode(data));
     if (!valid) return null;
     const parsed = decodePayload(data) as Record<string, unknown>;
     if (typeof parsed?.username !== 'string' || !parsed.username.trim()) return null;
     return parsed as unknown as SessionPayload;
-  } catch {
+  } catch (err) {
+    console.error('Session verification error:', err);
     return null;
   }
 }
