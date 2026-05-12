@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { withTransaction } from '@/lib/db';
 import { hashVoterToken } from '@/lib/hash';
 import { validateVoteInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
+import { getVoterKey } from '@/lib/auth';
 import { PoolClient } from 'pg';
-
-function buildVoterKey(request: NextRequest, sessionRaw: string | undefined): string {
-  if (sessionRaw) {
-    try {
-      const username = JSON.parse(sessionRaw).username;
-      if (typeof username === 'string' && username.trim()) {
-        return `user:${username.trim()}`;
-      }
-    } catch {
-      // cae al IP
-    }
-  }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return `ip:${ip}`;
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -40,19 +25,7 @@ export async function PATCH(
   const v = validateVoteInput(body);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
-  let sessionRaw: string | undefined;
-  try {
-    sessionRaw = (await cookies()).get('session_user')?.value;
-  } catch {
-    sessionRaw = undefined;
-  }
-
-  const voterKey = buildVoterKey(request, sessionRaw);
-
-  let voterUsername: string | null = null;
-  try {
-    if (sessionRaw) voterUsername = JSON.parse(sessionRaw).username ?? null;
-  } catch { /* ignorar */ }
+  const { key: voterKey, username: voterUsername } = await getVoterKey(request);
 
   const rl = checkRateLimit(`votes:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {

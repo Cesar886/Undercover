@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getSessionUsername, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
@@ -33,15 +32,8 @@ export async function POST(
 ) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
-  let anonId: string;
-  try {
-    const raw = (await cookies()).get('session_user')?.value;
-    if (!raw) return NextResponse.json({ error: 'Debes iniciar sesión para comentar' }, { status: 401 });
-    anonId = JSON.parse(raw).username;
-    if (!anonId) return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
-  } catch {
-    return NextResponse.json({ error: 'Debes iniciar sesión para comentar' }, { status: 401 });
-  }
+  const anonId = await getSessionUsername();
+  if (!anonId) return unauthorized();
 
   const suspCheck = await query(
     'SELECT is_suspended, suspension_end FROM users WHERE username = $1',

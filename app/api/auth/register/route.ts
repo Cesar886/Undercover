@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { sanitize } from '@/lib/sanitize';
 import { hashPassword } from '@/lib/hash';
+import { createSessionValue, SESSION_COOKIE_OPTIONS } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -50,12 +51,6 @@ export async function POST(request: NextRequest) {
 
   const user = { id: result.rows[0].id, username: result.rows[0].username };
   const response = NextResponse.json({ user }, { status: 201 });
-  response.cookies.set('session_user', JSON.stringify(user), {
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: 'lax',
-  });
+  response.cookies.set('session_user', await createSessionValue(user), SESSION_COOKIE_OPTIONS);
   return response;
 }

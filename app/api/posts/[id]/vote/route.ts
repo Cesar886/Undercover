@@ -1,37 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query, withTransaction } from '@/lib/db';
 import { hashVoterToken } from '@/lib/hash';
 import { emitFeed } from '@/lib/events';
 import { validateVoteInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
+import { getVoterKey } from '@/lib/auth';
 import { PoolClient } from 'pg';
-
-// En IPs compartidas (Wi-Fi de la U), un solo voto bloquearía a todos los demás.
-// Si hay sesión, la key usa el username; si no, cae al IP como último recurso.
-function buildVoterKey(request: NextRequest, sessionRaw: string | undefined): string {
-  if (sessionRaw) {
-    try {
-      const username = JSON.parse(sessionRaw).username;
-      if (typeof username === 'string' && username.trim()) {
-        return `user:${username.trim()}`;
-      }
-    } catch {
-      // cae al IP
-    }
-  }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return `ip:${ip}`;
-}
-
-async function readSession(): Promise<string | undefined> {
-  try {
-    return (await cookies()).get('session_user')?.value;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -39,11 +14,9 @@ export async function GET(
 ) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
-  const raw = await readSession();
-  if (!raw) return NextResponse.json({ voted: null });
-
+  const { key: voterKey } = await getVoterKey(request);
   const salt = process.env.ANON_SALT ?? 'default-salt';
-  const voterToken = hashVoterToken(buildVoterKey(request, raw), params.id, salt);
+  const voterToken = hashVoterToken(voterKey, params.id, salt);
 
   const result = await query(
     'SELECT vote_type FROM votes WHERE post_id = $1 AND voter_token = $2',
@@ -69,13 +42,7 @@ export async function PATCH(
   const v = validateVoteInput(body);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
-  const sessionRaw = await readSession();
-  const voterKey = buildVoterKey(request, sessionRaw);
-
-  let voterUsername: string | null = null;
-  try {
-    if (sessionRaw) voterUsername = JSON.parse(sessionRaw).username ?? null;
-  } catch { /* ignorar */ }
+  const { key: voterKey, username: voterUsername } = await getVoterKey(request);
 
   const rl = checkRateLimit(`votes:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {
@@ -110,7 +77,6 @@ export async function PATCH(
       [postId]
     );
 
-    // Obtener el autor del post (anon_id ES el username real del autor)
     const authorRes = await client.query<{ anon_id: string }>(
       'SELECT anon_id FROM posts WHERE id = $1',
       [postId]
@@ -125,7 +91,6 @@ export async function PATCH(
       }
     }
 
-    // Verificar milestone de 5 upvotes netos (solo en votos positivos)
     if (v.value.vote_type === 'up' && postAuthor) {
       const milestoneRes = await client.query<{
         upvotes: number;

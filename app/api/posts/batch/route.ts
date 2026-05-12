@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getSessionUsername, unauthorized } from '@/lib/auth';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
+  if (!(await getSessionUsername())) return unauthorized();
+
   const raw = request.nextUrl.searchParams.get('ids') ?? '';
   const ids = raw.split(',').filter((id) => UUID_RE.test(id));
 

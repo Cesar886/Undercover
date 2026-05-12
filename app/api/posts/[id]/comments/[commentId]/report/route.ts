@@ -1,23 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
-
-function buildReporterId(request: NextRequest, sessionRaw: string | undefined): string {
-  if (sessionRaw) {
-    try {
-      const username = JSON.parse(sessionRaw).username;
-      if (typeof username === 'string' && username.trim()) {
-        return `user:${username.trim()}`;
-      }
-    } catch {
-      // cae al IP
-    }
-  }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return `anon:${ip}`;
-}
+import { getReporterId } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
@@ -27,14 +12,7 @@ export async function POST(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  let sessionRaw: string | undefined;
-  try {
-    sessionRaw = (await cookies()).get('session_user')?.value;
-  } catch {
-    sessionRaw = undefined;
-  }
-
-  const reporterId = buildReporterId(request, sessionRaw);
+  const reporterId = await getReporterId(request);
   const rl = checkRateLimit(`reports:${reporterId}`, RATE_LIMITS.reports);
   if (!rl.ok) {
     return NextResponse.json(

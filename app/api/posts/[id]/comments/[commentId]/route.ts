@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query, withTransaction } from '@/lib/db';
 import { isUuid, validateEditCommentInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
-
-async function readSessionUsername(): Promise<string | null> {
-  try {
-    const raw = (await cookies()).get('session_user')?.value;
-    if (!raw) return null;
-    const u = JSON.parse(raw).username;
-    return typeof u === 'string' && u.trim() ? u.trim() : null;
-  } catch {
-    return null;
-  }
-}
+import { getSessionUsername, unauthorized } from '@/lib/auth';
 
 export async function PATCH(
   request: NextRequest,
@@ -23,10 +12,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await readSessionUsername();
-  if (!username) {
-    return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
-  }
+  const username = await getSessionUsername();
+  if (!username) return unauthorized();
 
   let body: unknown;
   try {
@@ -77,10 +64,8 @@ export async function DELETE(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await readSessionUsername();
-  if (!username) {
-    return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
-  }
+  const username = await getSessionUsername();
+  if (!username) return unauthorized();
 
   const result = await withTransaction(async (client) => {
     const lock = await client.query(

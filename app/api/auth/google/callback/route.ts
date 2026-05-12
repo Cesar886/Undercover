@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { createSessionValue, SESSION_COOKIE_OPTIONS } from '@/lib/session';
 
 const ALLOWED_EMAIL = /^\d{7}@alumno\.um\.edu\.mx$/;
 
@@ -80,13 +81,7 @@ export async function GET(request: NextRequest) {
       ]);
       const safeUser = { id: user.id, username: user.username };
       const response = NextResponse.redirect(`${baseUrl}/`);
-      response.cookies.set('session_user', JSON.stringify(safeUser), {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: 'lax',
-      });
+      response.cookies.set('session_user', await createSessionValue(safeUser), SESSION_COOKIE_OPTIONS);
       return response;
     }
 

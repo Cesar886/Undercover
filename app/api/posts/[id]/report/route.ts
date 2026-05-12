@@ -1,25 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { withTransaction } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
 import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta } from '@/lib/trust';
-
-function buildReporterId(request: NextRequest, sessionRaw: string | undefined): string {
-  if (sessionRaw) {
-    try {
-      const username = JSON.parse(sessionRaw).username;
-      if (typeof username === 'string' && username.trim()) {
-        return `user:${username.trim()}`;
-      }
-    } catch {
-      // cae al IP
-    }
-  }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return `anon:${ip}`;
-}
+import { getReporterId } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
@@ -27,14 +12,7 @@ export async function POST(
 ) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
-  let sessionRaw: string | undefined;
-  try {
-    sessionRaw = (await cookies()).get('session_user')?.value;
-  } catch {
-    sessionRaw = undefined;
-  }
-
-  const reporterId = buildReporterId(request, sessionRaw);
+  const reporterId = await getReporterId(request);
   const rl = checkRateLimit(`reports:${reporterId}`, RATE_LIMITS.reports);
   if (!rl.ok) {
     return NextResponse.json(
@@ -76,14 +54,12 @@ export async function POST(
 
     const { report_count, is_hidden, anon_id: postAuthor } = updateRes.rows[0];
 
-    // Apply trust deltas only when the post just crossed the hide threshold
     if (is_hidden && report_count >= 10) {
       const prevCount = report_count - 1;
       const justHidden = prevCount < 10;
       if (justHidden && postAuthor) {
         await applyTrustDelta(postAuthor, -15, client);
 
-        // Reward all user: reporters for this post
         const reportersRes = await client.query<{ reporter_id: string }>(
           `SELECT DISTINCT reporter_id FROM reports
            WHERE target_type = 'post' AND target_id = $1

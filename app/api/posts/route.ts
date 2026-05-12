@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
-import { generateAnonId } from '@/lib/hash';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { emitFeed } from '@/lib/events';
 import { validatePostInput } from '@/lib/validation';
@@ -66,21 +64,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Sesión requerida y usada como clave de rate-limit (no IP — todos comparten IP en la uni).
-  let username: string | null = null;
-  try {
-    const sessionRaw = (await cookies()).get('session_user')?.value;
-    if (sessionRaw) {
-      const parsed = JSON.parse(sessionRaw);
-      if (typeof parsed.username === 'string' && parsed.username.trim()) {
-        username = parsed.username.trim();
-      }
-    }
-  } catch {
-    // sin sesión válida
-  }
+  const username = await getSessionUsername();
+  if (!username) return unauthorized();
 
-  const rateKey = username ? `posts:user:${username}` : `posts:anon:${request.headers.get('x-forwarded-for') ?? '0.0.0.0'}`;
+  const rateKey = `posts:user:${username}`;
   const rl = checkRateLimit(rateKey, RATE_LIMITS.posts);
   if (!rl.ok) {
     return NextResponse.json(
@@ -106,7 +93,7 @@ export async function POST(request: NextRequest) {
     imageWebp = img.webpDataUrl;
   }
 
-  const anonId = username ?? generateAnonId();
+  const anonId = username;
 
   if (username) {
     const suspCheck = await query(

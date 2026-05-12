@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySessionValue } from '@/lib/session';
 
-function hasValidSession(request: NextRequest): boolean {
+export async function middleware(request: NextRequest) {
   const raw = request.cookies.get('session_user')?.value;
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed?.username === 'string' && parsed.username.trim().length > 0;
-  } catch {
-    return false;
-  }
-}
+  const session = raw ? await verifySessionValue(raw) : null;
 
-export function middleware(request: NextRequest) {
-  if (!hasValidSession(request)) {
+  if (!session) {
     if (request.nextUrl.pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }

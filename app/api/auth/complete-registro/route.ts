@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { sanitize } from '@/lib/sanitize';
+import { createSessionValue, SESSION_COOKIE_OPTIONS } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,14 +49,8 @@ export async function POST(request: NextRequest) {
     const user = { id: result.rows[0].id, username: result.rows[0].username };
     const response = NextResponse.json({ user }, { status: 201 });
 
-    response.cookies.set('session_user', JSON.stringify(user), {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7,
-      sameSite: 'lax',
-    });
-    response.cookies.set('pending_google', '', { 
+    response.cookies.set('session_user', await createSessionValue(user), SESSION_COOKIE_OPTIONS);
+    response.cookies.set('pending_google', '', {
       path: '/', 
       maxAge: 0,
       httpOnly: true,

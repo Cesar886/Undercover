@@ -23,9 +23,6 @@ function LoginForm() {
           <div className="px-8 pt-8 pb-6 text-center">
             <p className="text-3xl mb-3">🔥</p>
             <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">QuemonesUM</h1>
-            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">
-              Tu correo verifica. Tu alias publica.
-            </p>
           </div>
 
           <div className="px-8 pb-2">
