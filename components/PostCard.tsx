@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,6 +16,7 @@ import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from './AnonAvatar';
 import { useFeedEvents } from './FeedStreamProvider';
 import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
+import { ShareImageButton } from './ShareImageButton';
 
 const accentBar: Record<PostCategory, string> = {
   general:     'bg-zinc-400',
@@ -55,6 +56,7 @@ export function PostCard({
   const [deleting, setDeleting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
+  const articleRef = useRef<HTMLDivElement>(null);
 
   const isAuthor = !!currentUsername && currentUsername === post.anon_id;
 
@@ -121,6 +123,7 @@ export function PostCard({
 
   return (
     <article
+      ref={articleRef}
       style={style}
       className={`group relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-black/[0.08] dark:hover:border-white/10 dark:hover:bg-[#111111] transition-all duration-300 cursor-pointer ${className ?? ''}`}
     >
@@ -203,6 +206,11 @@ export function PostCard({
               <MessageCircle size={13} strokeWidth={1.5} />
               <span>{commentCount}</span>
             </Link>
+            <ShareImageButton
+              targetRef={articleRef}
+              postId={post.id}
+              onError={(msg) => onActionError?.(msg)}
+            />
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
               target="_blank"
