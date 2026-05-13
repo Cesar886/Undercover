@@ -20,7 +20,8 @@ export function ShareImageButton({ targetRef, postId, className, onError }: Shar
       const canvas = await html2canvas(targetRef.current, {
         useCORS: true,
         scale: 2,
-        backgroundColor: '#ffffff',
+        logging: false,
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#0c0c0c' : '#ffffff',
       });
 
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -52,6 +53,7 @@ export function ShareImageButton({ targetRef, postId, className, onError }: Shar
 
   return (
     <button
+      type="button"
       onClick={handleShare}
       disabled={generating}
       className={`text-stone-300 dark:text-zinc-600 hover:text-stone-500 dark:hover:text-zinc-400 transition-colors disabled:opacity-50 ${className ?? ''}`}

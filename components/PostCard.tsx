@@ -209,7 +209,7 @@ export function PostCard({
             <ShareImageButton
               targetRef={articleRef}
               postId={post.id}
-              onError={(msg) => onActionError?.(msg)}
+              onError={onActionError}
             />
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
