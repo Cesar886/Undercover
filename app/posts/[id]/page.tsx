@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -17,6 +17,7 @@ import { InlineEditor } from '@/components/InlineEditor';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
+import { ShareImageButton } from '@/components/ShareImageButton';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { Tooltip } from '@mantine/core';
@@ -44,6 +45,7 @@ export default function PostPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const { message, showToast } = useToast();
+  const articleRef = useRef<HTMLDivElement>(null);
 
   const loadPost = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -182,7 +184,7 @@ export default function PostPage() {
         Volver al feed
       </Link>
 
-      <article className={`relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none`}>
+      <article ref={articleRef} className={`relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none`}>
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
@@ -260,6 +262,11 @@ export default function PostPage() {
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>
               </span>
+              <ShareImageButton
+                targetRef={articleRef}
+                postId={post.id}
+                onError={(msg) => showToast(msg)}
+              />
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
                 target="_blank"
