@@ -7,19 +7,20 @@ interface ShareImageButtonProps {
   targetRef: React.RefObject<HTMLElement | null>;
   postId: string;
   className?: string;
+  onError?: (msg: string) => void;
 }
 
-export function ShareImageButton({ targetRef, postId, className }: ShareImageButtonProps) {
+export function ShareImageButton({ targetRef, postId, className, onError }: ShareImageButtonProps) {
   const [generating, setGenerating] = useState(false);
 
   async function handleShare() {
     if (!targetRef.current || generating) return;
     setGenerating(true);
     try {
-      const canvas = await html2canvas(targetRef.current as HTMLElement, {
+      const canvas = await html2canvas(targetRef.current, {
         useCORS: true,
         scale: 2,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
       });
 
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -35,8 +36,14 @@ export function ShareImageButton({ targetRef, postId, className }: ShareImageBut
         const a = document.createElement('a');
         a.href = url;
         a.download = `quemados-${postId}.png`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        onError?.('No se pudo generar la imagen');
       }
     } finally {
       setGenerating(false);
