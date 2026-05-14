@@ -175,7 +175,7 @@ export function PostForm({ onPostCreated }: PostFormProps) {
               value={content}
               onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
               placeholder="¿Qué está pasando en la U?"
-              rows={3}
+              rows={2}
               disabled={loading}
               className="w-full bg-transparent text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-300 dark:placeholder:text-zinc-600 text-[15px] leading-relaxed resize-none focus:ring-0 focus:outline-none disabled:opacity-50 overflow-hidden"
             />
@@ -198,11 +198,11 @@ export function PostForm({ onPostCreated }: PostFormProps) {
         {/* Gradient divider */}
         <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-zinc-700 to-transparent" />
 
-        {/* Bottom bar — siempre dos filas */}
-        <div className="px-4 pt-2 pb-2.5 flex flex-col gap-1.5">
+        {/* Bottom bar */}
+        <div className="px-4 pt-2 pb-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5">
 
-          {/* Fila 1: categorías con scroll horizontal */}
-          <div className="overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {/* Categorías con scroll horizontal */}
+          <div className="overflow-x-auto flex-1 min-w-0" style={{ scrollbarWidth: 'none' }}>
             <div className="flex gap-1.5 w-max">
               {CATEGORIES.map((c) => {
                 const active = category === c.value;
@@ -234,8 +234,8 @@ export function PostForm({ onPostCreated }: PostFormProps) {
             </div>
           </div>
 
-          {/* Fila 2: imagen (izq) — contador + publicar (der) */}
-          <div className="flex items-center justify-between">
+          {/* Controles: imagen (izq en mobile) — contador + publicar (der) */}
+          <div className="flex items-center justify-between sm:justify-start sm:flex-shrink-0 sm:gap-2">
             <div className="flex-shrink-0">
               <ImagePicker
                 preview={null}

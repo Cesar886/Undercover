@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const session = raw ? await verifySessionValue(raw) : null;
 
   const { pathname } = request.nextUrl;
-  const isAuthPage = pathname === '/login' || pathname === '/registro' || pathname === '/completar-registro';
+  const isAuthPage = pathname === '/login' || pathname === '/completar-registro';
 
   if (session && isAuthPage) {
     const homeUrl = request.nextUrl.clone();

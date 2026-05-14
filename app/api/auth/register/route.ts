@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { sanitize } from '@/lib/sanitize';
 import { hashPassword } from '@/lib/hash';
+import { validateUsername } from '@/lib/validateUsername';
 import { createSessionValue, SESSION_COOKIE_OPTIONS } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
       { error: 'El alias debe tener entre 1 y 30 caracteres' },
       { status: 400 }
     );
+  }
+
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    return NextResponse.json({ error: usernameError }, { status: 400 });
   }
 
   if (password.length < 4) {

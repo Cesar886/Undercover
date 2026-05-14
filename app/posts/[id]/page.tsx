@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory, ReportReason } from '@/types';
@@ -22,6 +22,17 @@ import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
+
+function timeAgoCompact(date: Date): string {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 60)    return 'ahora';
+  if (secs < 3600)  return `${Math.floor(secs / 60)}m`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+  if (secs < 604800) return `${Math.floor(secs / 86400)}d`;
+  if (secs < 2592000) return `${Math.floor(secs / 604800)}sem`;
+  if (secs < 31536000) return `${Math.floor(secs / 2592000)}mes`;
+  return `${Math.floor(secs / 31536000)}a`;
+}
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
   general:     { bar: 'bg-zinc-400',  ring: 'ring-zinc-300/40' },
@@ -130,7 +141,7 @@ export default function PostPage() {
   const post = state.post;
   const cat = accent[post.category];
   const created = new Date(post.created_at);
-  const timeAgo = formatDistanceToNow(created, { addSuffix: true, locale: es });
+  const timeAgo = timeAgoCompact(created);
   const fullDate = format(created, "d 'de' MMMM, HH:mm", { locale: es });
   const editedTitle = post.updated_at
     ? `Editado el ${format(new Date(post.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
@@ -262,11 +273,11 @@ export default function PostPage() {
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>
               </span>
-              <ShareImageButton
+              {/* <ShareImageButton
                 targetRef={articleRef}
                 postId={post.id}
                 onError={(msg) => showToast(msg)}
-              />
+              /> */}
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
                 target="_blank"

@@ -1,13 +1,15 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { validateUsername } from '@/lib/validateUsername';
 
-type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken';
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 export default function CompletarRegistroPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState<UsernameStatus>('idle');
+  const [validationMsg, setValidationMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -23,12 +25,20 @@ export default function CompletarRegistroPage() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (username.trim().length === 0) { setStatus('idle'); return; }
+    const trimmed = username.trim();
+    if (trimmed.length === 0) { setStatus('idle'); setValidationMsg(''); return; }
 
+    const valErr = validateUsername(trimmed);
+    if (valErr) {
+      setStatus('invalid');
+      setValidationMsg(valErr);
+      return;
+    }
+    setValidationMsg('');
     setStatus('checking');
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username.trim())}`);
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(trimmed)}`);
         const data = await res.json();
         setStatus(data.available ? 'available' : 'taken');
       } catch {
@@ -59,7 +69,7 @@ export default function CompletarRegistroPage() {
         setError(data.error ?? 'Error al crear la cuenta');
         return;
       }
-      router.push('/?registered=true');
+      window.location.replace('/?registered=true');
     } finally {
       setLoading(false);
     }
@@ -91,7 +101,7 @@ export default function CompletarRegistroPage() {
                   autoFocus
                   className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 placeholder-gray-300 dark:placeholder-zinc-500 focus:outline-none transition-colors ${
                     status === 'available' ? 'border-green-400 focus:border-green-500' :
-                    status === 'taken'     ? 'border-red-400 focus:border-red-500' :
+                    status === 'taken' || status === 'invalid' ? 'border-red-400 focus:border-red-500' :
                     'border-gray-200 dark:border-zinc-700 focus:border-mauve-500'
                   }`}
                 />
@@ -101,18 +111,19 @@ export default function CompletarRegistroPage() {
                 {status === 'available' && (
                   <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-green-500">✓</span>
                 )}
-                {status === 'taken' && (
+                {(status === 'taken' || status === 'invalid') && (
                   <span className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-red-500">✗</span>
                 )}
               </div>
 
               <p className={`text-[11px] mt-1 ${
                 status === 'available' ? 'text-green-500' :
-                status === 'taken'     ? 'text-red-500' :
+                status === 'taken' || status === 'invalid' ? 'text-red-500' :
                 'text-mauve-500/80'
               }`}>
                 {status === 'available' && '¡Alias disponible!'}
                 {status === 'taken'     && 'Ese alias ya está en uso, elige otro.'}
+                {status === 'invalid'   && validationMsg}
                 {(status === 'idle' || status === 'checking') && 'Sin espacios — este alias será visible en tus posts.'}
               </p>
             </div>

@@ -1,8 +1,19 @@
 'use client';
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+function timeAgoCompact(date: Date): string {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 60)   return 'ahora';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+  if (secs < 604800) return `${Math.floor(secs / 86400)}d`;
+  if (secs < 2592000) return `${Math.floor(secs / 604800)}sem`;
+  if (secs < 31536000) return `${Math.floor(secs / 2592000)}mes`;
+  return `${Math.floor(secs / 31536000)}a`;
+}
 import { Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory, ReportReason } from '@/types';
 import { CategoryPill } from './CategoryPill';
@@ -61,7 +72,7 @@ export function PostCard({
   const isAuthor = !!currentUsername && currentUsername === post.anon_id;
 
   const created = new Date(post.created_at);
-  const timeAgo = formatDistanceToNow(created, { addSuffix: true, locale: es });
+  const timeAgo = timeAgoCompact(created);
   const editedTitle = post.updated_at
     ? `Editado el ${format(new Date(post.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
     : undefined;
@@ -206,11 +217,11 @@ export function PostCard({
               <MessageCircle size={13} strokeWidth={1.5} />
               <span>{commentCount}</span>
             </Link>
-            <ShareImageButton
+            {/* <ShareImageButton
               targetRef={articleRef}
               postId={post.id}
               onError={onActionError}
-            />
+            /> */}
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
               target="_blank"

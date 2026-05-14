@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { sanitize } from '@/lib/sanitize';
 import { createSessionValue, SESSION_COOKIE_OPTIONS } from '@/lib/session';
+import { validateUsername } from '@/lib/validateUsername';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +30,11 @@ export async function POST(request: NextRequest) {
     }
     if (username.length < 1 || username.length > 30) {
       return NextResponse.json({ error: 'El alias debe tener entre 1 y 30 caracteres' }, { status: 400 });
+    }
+
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      return NextResponse.json({ error: usernameError }, { status: 400 });
     }
 
     const taken = await query('SELECT id FROM users WHERE username = $1', [username]);

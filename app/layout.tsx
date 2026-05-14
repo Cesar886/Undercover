@@ -9,6 +9,7 @@ import { Navbar } from '@/components/Navbar';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { Footer } from '@/components/Footer';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -104,6 +105,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <WelcomeModal />
               </Suspense>
               {children}
+              <Footer />
             </FeedStreamProvider>
           </ThemeProvider>
         </MantineSetup>
