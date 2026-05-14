@@ -10,6 +10,7 @@ export default function CompletarRegistroPage() {
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState<UsernameStatus>('idle');
   const [validationMsg, setValidationMsg] = useState('');
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -128,6 +129,26 @@ export default function CompletarRegistroPage() {
               </p>
             </div>
 
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 dark:border-zinc-600 accent-mauve-600 cursor-pointer"
+              />
+              <span className="text-xs text-gray-500 dark:text-zinc-400">
+                He leído y acepto la{' '}
+                <a
+                  href="/privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-mauve-600 hover:text-mauve-700"
+                >
+                  política de privacidad
+                </a>
+              </span>
+            </label>
+
             {error && (
               <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl px-3 py-2">
                 {error}
@@ -136,7 +157,7 @@ export default function CompletarRegistroPage() {
 
             <button
               type="submit"
-              disabled={loading || status !== 'available'}
+              disabled={loading || status !== 'available' || !accepted}
               className="w-full bg-mauve-600 hover:bg-mauve-700 disabled:opacity-40 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
             >
               {loading ? 'Creando cuenta...' : 'Entrar a QuemonesUM'}
