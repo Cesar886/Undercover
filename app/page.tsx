@@ -1,174 +1,123 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { PostForm } from '@/components/PostForm';
 import { PostCard } from '@/components/PostCard';
-import { CategoryFilter } from '@/components/CategoryFilter';
-import { SortFilter, SortOption } from '@/components/SortFilter';
 import { PostSkeleton } from '@/components/PostSkeleton';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
-import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
-import { useAnonId } from '@/hooks/useAnonId';
-import { Post, PostCategory } from '@/types';
+import { BOARDS } from '@/lib/boards';
+import { Post } from '@/types';
+
+interface BoardPreview {
+  slug: string;
+  posts: Post[];
+  loading: boolean;
+}
 
 export default function Home() {
-  const [posts, setPosts]         = useState<Post[]>([]);
-  const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
-  const [category, setCategory]   = useState<PostCategory | 'all'>('all');
-  const [sort, setSort]           = useState<SortOption>('recent');
-  const [page, setPage]           = useState(1);
-  const [hasMore, setHasMore]     = useState(true);
-  const [loading, setLoading]     = useState(true);
-  const { message, showToast } = useToast();
-  const { anonId: username }   = useAnonId();
-
-
-  const fetchPosts = useCallback(
-    async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
-      setLoading(true);
-      const params = new URLSearchParams({ sort: s, page: String(pg) });
-      if (cat !== 'all') params.set('category', cat);
-      const result = await apiGet<{ posts: Post[] }>(`/api/posts?${params}`);
-      if (result.ok) {
-        const fetched = result.data.posts ?? [];
-        setPosts((prev) => (replace ? fetched : [...prev, ...fetched]));
-        setHasMore(fetched.length === 10);
-      } else {
-        showToast(result.error);
-        if (replace) setPosts([]);
-      }
-      setLoading(false);
-    },
-    [showToast]
+  const [previews, setPreviews] = useState<BoardPreview[]>(
+    BOARDS.map((b) => ({ slug: b.slug, posts: [], loading: true }))
   );
+  const { message, showToast } = useToast();
+
+  const fetchPreview = useCallback(async (slug: string) => {
+    const result = await apiGet<{ posts: Post[] }>(
+      `/api/posts?category=${slug}&sort=recent&page=1`
+    );
+    const posts = result.ok ? (result.data.posts ?? []).slice(0, 3) : [];
+    setPreviews((prev) =>
+      prev.map((p) => (p.slug === slug ? { ...p, posts, loading: false } : p))
+    );
+  }, []);
 
   useEffect(() => {
-    setPage(1);
-    fetchPosts(category, sort, 1, true);
-  }, [category, sort, fetchPosts]);
+    BOARDS.forEach((b) => fetchPreview(b.slug));
+  }, [fetchPreview]);
 
   function handlePostCreated() {
-    setPage(1);
-    fetchPosts(category, sort, 1, true);
+    BOARDS.forEach((b) => fetchPreview(b.slug));
     showToast('Post publicado');
   }
 
-  function handleDeleted(postId: string) {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-    showToast('Post eliminado');
-  }
-
-  function loadMore() {
-    const next = page + 1;
-    setPage(next);
-    fetchPosts(category, sort, next, false);
-  }
-
-  // Reactividad en vivo vía SSE.
-  useFeedEvents(
-    useCallback(
-      (ev) => {
-        if (ev.type === 'post:new') {
-          if (sort !== 'recent') return;
-          if (category !== 'all' && ev.post.category !== category) return;
-          setPosts((prev) => {
-            if (prev.some((p) => p.id === ev.post.id)) return prev;
-            setNewPostIds((ids) => new Set([...ids, ev.post.id]));
-            setTimeout(() => {
-              setNewPostIds((ids) => { const n = new Set(ids); n.delete(ev.post.id); return n; });
-            }, 600);
-            return [ev.post, ...prev];
-          });
-          return;
-        }
-        if (ev.type === 'post:vote') {
-          setPosts((prev) =>
-            prev.map((p) =>
-              p.id === ev.postId ? { ...p, upvotes: ev.upvotes, downvotes: ev.downvotes } : p
-            )
-          );
-          return;
-        }
-        if (ev.type === 'post:hidden') {
-          setPosts((prev) => prev.filter((p) => p.id !== ev.postId));
-          return;
-        }
-        if (ev.type === 'comment:new') {
-          setPosts((prev) =>
-            prev.map((p) =>
-              p.id === ev.postId
-                ? { ...p, comment_count: (p.comment_count ?? 0) + 1 }
-                : p
-            )
-          );
-        }
-      },
-      [category, sort]
-    )
-  );
-
-  const isInitialLoad = loading && posts.length === 0;
-
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
+    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-6">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-[#F9F9F9]/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10">
-        <div className="flex items-center gap-3 max-w-[600px] mx-auto">
-          <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-            <CategoryFilter active={category} onChange={setCategory} />
-          </div>
-          <div className="flex-shrink-0 pl-3 border-l border-gray-200/70">
-            <SortFilter active={sort} onChange={setSort} compact />
-          </div>
-        </div>
+      <div className="space-y-4">
+        {BOARDS.map((board) => {
+          const preview = previews.find((p) => p.slug === board.slug)!;
+          return (
+            <section
+              key={board.slug}
+              className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden"
+            >
+              {/* Board header */}
+              <div className="px-4 pt-4 pb-3 flex items-baseline justify-between border-b border-black/[0.03] dark:border-violet-500/10">
+                <div className="flex items-baseline gap-2">
+                  <Link
+                    href={`/${board.slug}`}
+                    className="font-bold text-base font-mono hover:underline transition-colors"
+                    style={{ color: board.text }}
+                  >
+                    /{board.slug}/
+                  </Link>
+                  <span className="text-xs text-gray-400 dark:text-[#4a4870]">
+                    {board.description}
+                  </span>
+                </div>
+                <Link
+                  href={`/${board.slug}`}
+                  className="text-xs text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 transition-colors whitespace-nowrap"
+                >
+                  Ver todos →
+                </Link>
+              </div>
+
+              {/* Thread previews */}
+              <div className="divide-y divide-black/[0.03] dark:divide-violet-500/10">
+                {preview.loading ? (
+                  <div className="px-4 py-3">
+                    <PostSkeleton />
+                  </div>
+                ) : preview.posts.length === 0 ? (
+                  <p className="px-4 py-4 text-xs text-gray-400 dark:text-[#4a4870] text-center">
+                    Sin hilos aún —{' '}
+                    <Link href={`/${board.slug}`} className="underline hover:text-gray-600">
+                      sé el primero
+                    </Link>
+                  </p>
+                ) : (
+                  preview.posts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/posts/${post.id}`}
+                      className="block px-4 py-3 hover:bg-gray-50/80 dark:hover:bg-violet-500/5 transition-colors"
+                    >
+                      <p className="text-sm text-gray-700 dark:text-[#c8c4ee] line-clamp-2 leading-snug">
+                        {post.content || '📎 imagen'}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400 dark:text-[#4a4870]">
+                        <span>↑{post.upvotes}</span>
+                        <span>💬 {post.comment_count ?? 0}</span>
+                        <span className="ml-auto">
+                          {new Date(post.last_bumped_at).toLocaleDateString('es-MX', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
-
-      <div className="space-y-3">
-        {isInitialLoad ? (
-          <>
-            <PostSkeleton />
-            <PostSkeleton />
-            <PostSkeleton />
-          </>
-        ) : (
-          posts.map((post, index) => {
-            const isNew = newPostIds.has(post.id);
-            return (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUsername={username}
-                onVoted={() => showToast('Voto guardado')}
-                onVoteError={(msg) => showToast(msg)}
-                onDeleted={handleDeleted}
-                onActionError={(msg) => showToast(msg)}
-                onReported={() => showToast('Gracias, lo revisaremos.')}
-                style={isNew ? undefined : { animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
-                className={isNew ? 'animate-new-post-slide' : 'opacity-0 animate-fade-slide-in'}
-              />
-            );
-          })
-        )}
-
-        {!loading && posts.length === 0 && (
-          <div className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
-            <p className="text-2xl mb-2">🔥</p>
-            <p className="text-gray-500 dark:text-[#6b6a8f] text-sm font-medium">Nada por aquí todavía</p>
-            <p className="text-gray-400 dark:text-[#4a4870] text-xs mt-1">Sé el primero en quemar algo</p>
-          </div>
-        )}
-      </div>
-
-      {hasMore && !loading && posts.length > 0 && (
-        <button
-          onClick={loadMore}
-          className="w-full py-3 text-gray-400 hover:text-gray-600 text-sm transition-colors"
-        >
-          Cargar más
-        </button>
-      )}
 
       <Toast message={message} />
     </main>

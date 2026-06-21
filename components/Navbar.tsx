@@ -2,13 +2,15 @@
 import Link from 'next/link';
 import { Search, Sun, Moon, Archive } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
+import { BOARDS } from '@/lib/boards';
 
 export function Navbar() {
   const { theme, toggle } = useTheme();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 h-12 bg-white/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_0_rgba(124,58,237,0.08)]">
-      <div className="max-w-[600px] mx-auto px-4 flex items-center justify-between h-full">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_0_rgba(124,58,237,0.08)]">
+      {/* Main bar */}
+      <div className="max-w-[600px] mx-auto px-4 flex items-center justify-between h-12">
         <Link href="/" className="font-bold text-lg">
           <span className="bg-gradient-to-r from-mauve-400 to-mauve-800 dark:from-violet-400 dark:to-violet-700 bg-clip-text text-transparent">
             Deep
@@ -46,6 +48,19 @@ export function Navbar() {
             }
           </button>
         </div>
+      </div>
+
+      {/* Board quick-links bar */}
+      <div className="max-w-[600px] mx-auto px-4 h-8 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {BOARDS.map((board) => (
+          <Link
+            key={board.slug}
+            href={`/${board.slug}`}
+            className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded whitespace-nowrap transition-colors text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 hover:bg-gray-100/80 dark:hover:bg-violet-500/10"
+          >
+            /{board.slug}/
+          </Link>
+        ))}
       </div>
     </nav>
   );

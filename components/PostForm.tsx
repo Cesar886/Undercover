@@ -54,11 +54,13 @@ const MAX_CHARS = 500;
 
 interface PostFormProps {
   onPostCreated: () => void;
+  defaultCategory?: PostCategory;
+  lockedCategory?: boolean;
 }
 
-export function PostForm({ onPostCreated }: PostFormProps) {
+export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCategory = false }: PostFormProps) {
   const [content, setContent]   = useState('');
-  const [category, setCategory] = useState<PostCategory>('general');
+  const [category, setCategory] = useState<PostCategory>(defaultCategory);
   const [loading, setLoading]   = useState(false);
   const [image, setImage]       = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -154,37 +156,39 @@ export function PostForm({ onPostCreated }: PostFormProps) {
         <div className="h-px mx-4 bg-gradient-to-r from-transparent via-gray-200 dark:via-violet-500/20 to-transparent" />
 
         <div className="px-4 pt-2 pb-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5">
-          <div className="overflow-x-auto flex-1 min-w-0" style={{ scrollbarWidth: 'none' }}>
-            <div className="flex gap-1.5 w-max">
-              {CATEGORIES.map((c) => {
-                const active = category === c.value;
-                return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    style={
-                      active
-                        ? {
-                            backgroundColor: c.bg,
-                            borderColor: c.border,
-                            color: c.text,
-                            boxShadow: c.glow,
-                          }
-                        : {}
-                    }
-                    className={`text-[11px] px-2.5 py-1 rounded-full border font-semibold whitespace-nowrap transition-all duration-200 select-none ${
-                      active
-                        ? ''
-                        : 'border-gray-200 dark:border-violet-500/20 text-gray-400 dark:text-[#4a4870] hover:border-gray-300 dark:hover:border-violet-400/40 hover:text-gray-500 dark:hover:text-violet-300 hover:bg-gray-50/80 dark:hover:bg-violet-500/10'
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
+          {!lockedCategory && (
+            <div className="overflow-x-auto flex-1 min-w-0" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex gap-1.5 w-max">
+                {CATEGORIES.map((c) => {
+                  const active = category === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCategory(c.value)}
+                      style={
+                        active
+                          ? {
+                              backgroundColor: c.bg,
+                              borderColor: c.border,
+                              color: c.text,
+                              boxShadow: c.glow,
+                            }
+                          : {}
+                      }
+                      className={`text-[11px] px-2.5 py-1 rounded-full border font-semibold whitespace-nowrap transition-all duration-200 select-none ${
+                        active
+                          ? ''
+                          : 'border-gray-200 dark:border-violet-500/20 text-gray-400 dark:text-[#4a4870] hover:border-gray-300 dark:hover:border-violet-400/40 hover:text-gray-500 dark:hover:text-violet-300 hover:bg-gray-50/80 dark:hover:bg-violet-500/10'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex items-center justify-between sm:justify-start sm:flex-shrink-0 sm:gap-2">
             <div className="flex-shrink-0">
