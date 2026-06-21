@@ -29,6 +29,7 @@ import { anonDisplayName } from '@/lib/anonDisplay';
 import { useFeedEvents } from './FeedStreamProvider';
 import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 import { ShareImageButton } from './ShareImageButton';
+import { PollView } from './PollView';
 
 const accentBar: Record<PostCategory, string> = {
   general:     'bg-zinc-400 dark:bg-violet-900',
@@ -204,7 +205,19 @@ export function PostCard({
 
         {post.image_webp && !editing && (
           <div className="mb-3 relative z-[2]">
-            <PostImage src={post.image_webp} className="max-h-72 w-auto rounded-lg" />
+            <PostImage src={post.image_webp} />
+          </div>
+        )}
+
+        {post.poll && !editing && (
+          <div className="mb-3 relative z-[2]">
+            <PollView
+              postId={post.id}
+              poll={post.poll}
+              disabled={post.archived}
+              onChange={(poll) => setPost((p) => ({ ...p, poll }))}
+              onError={onActionError}
+            />
           </div>
         )}
 

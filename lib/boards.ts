@@ -14,7 +14,7 @@ export const BOARDS: Board[] = [
   {
     slug: 'general',
     name: 'General',
-    description: 'Cualquier cosa que pase en la U',
+    description: 'Que esta pasando en la U',
     bg: 'rgba(100,116,139,0.07)',
     border: '#94a3b8',
     text: '#475569',
@@ -23,7 +23,7 @@ export const BOARDS: Board[] = [
   {
     slug: 'quemones',
     name: 'Quemones',
-    description: 'Dramas, quemas y chismes universitarios',
+    description: 'Quememos a todos',
     bg: 'rgba(249,115,22,0.07)',
     border: '#f97316',
     text: '#ea580c',
@@ -32,7 +32,7 @@ export const BOARDS: Board[] = [
   {
     slug: 'infieles',
     name: 'Infieles',
-    description: 'Lo que pasa cuando nadie está mirando',
+    description: 'Entre todos nos cuidamos',
     bg: 'rgba(236,72,153,0.07)',
     border: '#ec4899',
     text: '#db2777',

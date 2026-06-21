@@ -4,10 +4,11 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { emitFeed } from '@/lib/events';
 import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
-import { PostCategory } from '@/types';
+import { Post, PostCategory } from '@/types';
 import { getAnonId, setAnonCookie } from '@/lib/anon';
 import { pruneCategory } from '@/lib/ephemeral';
 import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
+import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost } from '@/lib/polls';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,8 +67,10 @@ export async function GET(request: NextRequest) {
   params.push(limit, offset);
 
   const result = await query(sql, params);
-  console.log('[GET /api/posts] archived:', archived, '| count:', result.rows.length, '| ids:', result.rows.map((r: {id:string}) => r.id.slice(0,8)).join(','));
-  return NextResponse.json({ posts: result.rows, page, limit });
+  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
+  const posts = await attachPollsToPosts(result.rows as Post[], viewerAnonId);
+  console.log('[GET /api/posts] archived:', archived, '| count:', posts.length, '| ids:', posts.map((r: {id:string}) => r.id.slice(0,8)).join(','));
+  return NextResponse.json({ posts, page, limit });
 }
 
 export async function POST(request: NextRequest) {
@@ -125,23 +128,35 @@ export async function POST(request: NextRequest) {
     console.log('[POST /api/posts] image ok');
   }
 
-  let post: unknown;
+  let post: Post | null = null;
   try {
     ({ post } = await withTransaction(async (client) => {
+      await ensurePollSchema(client);
       console.log('[POST /api/posts] inserting...');
-      const insertRes = await client.query(
+      const insertRes = await client.query<Post>(
         `INSERT INTO posts (anon_id, content, category, image_webp, poster_ip)
          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
         [anonId, v.value.content, v.value.category, imageWebp, ip]
       );
-      const post = { ...insertRes.rows[0], comment_count: 0 };
+      let post: Post = { ...insertRes.rows[0], comment_count: 0, poll: null };
       console.log('[POST /api/posts] inserted, id:', post.id);
+
+      if (v.value.poll_options?.length) {
+        await createPollForPost(client, post.id, v.value.poll_options, v.value.poll_question ?? '');
+        post = { ...post, poll: await getPollForPost(post.id, anonId, client) };
+        console.log('[POST /api/posts] poll created, options:', v.value.poll_options.length);
+      }
+
       await pruneCategory(v.value.category, client);
       console.log('[POST /api/posts] pruneCategory done');
       return { post };
     }));
   } catch (err) {
     console.error('[POST /api/posts] DB error:', err);
+    return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
+  }
+
+  if (!post) {
     return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   }
 

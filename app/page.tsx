@@ -11,6 +11,7 @@ import { BOARDS } from '@/lib/boards';
 import { Post } from '@/types';
 import { QuemaCountdown } from '@/components/QuemaCountdown';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
+import { RulesCard } from '@/components/RulesCard';
 
 interface BoardPreview {
   slug: string;
@@ -53,85 +54,91 @@ export default function Home() {
   );
 
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-6">
-      <QuemaCountdown />
-      <PostForm onPostCreated={handlePostCreated} />
-
+    <main className="max-w-[600px] lg:max-w-[900px] mx-auto px-4 py-6 lg:grid lg:grid-cols-[minmax(0,600px)_260px] lg:items-start lg:gap-5">
       <div className="space-y-4">
-        {BOARDS.map((board) => {
-          const preview = previews.find((p) => p.slug === board.slug)!;
-          return (
-            <section
-              key={board.slug}
-              className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden"
-            >
-              {/* Board header */}
-              <div className="px-4 pt-4 pb-3 flex items-baseline justify-between border-b border-black/[0.03] dark:border-violet-500/10">
-                <div className="flex items-baseline gap-2">
+        <div className="space-y-1">
+          <PostForm onPostCreated={handlePostCreated} />
+          <QuemaCountdown />
+        </div>
+
+        <div className="space-y-4">
+          {BOARDS.map((board) => {
+            const preview = previews.find((p) => p.slug === board.slug)!;
+            return (
+              <section
+                key={board.slug}
+                className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden"
+              >
+                <div className="px-4 pt-4 pb-3 flex items-baseline justify-between border-b border-black/[0.03] dark:border-violet-500/10">
+                  <div className="flex items-baseline gap-2">
+                    <Link
+                      href={`/${board.slug}`}
+                      className="font-bold text-base hover:underline transition-colors"
+                      style={{ color: board.text }}
+                    >
+                      {board.name}
+                    </Link>
+                    <span className="text-xs text-gray-400 dark:text-[#4a4870]">
+                      {board.description}
+                    </span>
+                  </div>
                   <Link
                     href={`/${board.slug}`}
-                    className="font-bold text-base hover:underline transition-colors"
-                    style={{ color: board.text }}
+                    className="text-xs text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 transition-colors whitespace-nowrap"
                   >
-                    {board.name}
+                    Ver todos →
                   </Link>
-                  <span className="text-xs text-gray-400 dark:text-[#4a4870]">
-                    {board.description}
-                  </span>
                 </div>
-                <Link
-                  href={`/${board.slug}`}
-                  className="text-xs text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 transition-colors whitespace-nowrap"
-                >
-                  Ver todos →
-                </Link>
-              </div>
 
-              {/* Thread previews */}
-              <div className="divide-y divide-black/[0.03] dark:divide-violet-500/10">
-                {preview.loading ? (
-                  <div className="px-4 py-3">
-                    <PostSkeleton />
-                  </div>
-                ) : preview.posts.length === 0 ? (
-                  <p className="px-4 py-4 text-xs text-gray-400 dark:text-[#4a4870] text-center">
-                    Sin hilos aún —{' '}
-                    <Link href={`/${board.slug}`} className="underline hover:text-gray-600">
-                      sé el primero
-                    </Link>
-                  </p>
-                ) : (
-                  preview.posts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/posts/${post.id}`}
-                      className="block px-4 py-3 hover:bg-gray-50/80 dark:hover:bg-violet-500/5 transition-colors"
-                    >
-                      <p className="text-sm text-gray-700 dark:text-[#c8c4ee] line-clamp-2 leading-snug">
-                        {post.content || '📎 imagen'}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400 dark:text-[#4a4870]">
-                        <span>↑{post.upvotes}</span>
-                        <span>💬 {post.comment_count ?? 0}</span>
-                        <span className="ml-auto">
-                          {new Date(post.last_bumped_at).toLocaleDateString('es-MX', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </section>
-          );
-        })}
+                <div className="divide-y divide-black/[0.03] dark:divide-violet-500/10">
+                  {preview.loading ? (
+                    <div className="px-4 py-3">
+                      <PostSkeleton />
+                    </div>
+                  ) : preview.posts.length === 0 ? (
+                    <p className="px-4 py-4 text-xs text-gray-400 dark:text-[#4a4870] text-center">
+                      Sin hilos aún —{' '}
+                      <Link href={`/${board.slug}`} className="underline hover:text-gray-600">
+                        sé el primero
+                      </Link>
+                    </p>
+                  ) : (
+                    preview.posts.map((post) => (
+                      <Link
+                        key={post.id}
+                        href={`/posts/${post.id}`}
+                        className="block px-4 py-3 hover:bg-gray-50/80 dark:hover:bg-violet-500/5 transition-colors"
+                      >
+                        <p className="text-sm text-gray-700 dark:text-[#c8c4ee] line-clamp-2 leading-snug">
+                          {post.content || '📎 imagen'}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400 dark:text-[#4a4870]">
+                          <span>↑{post.upvotes}</span>
+                          <span>💬 {post.comment_count ?? 0}</span>
+                          <span className="ml-auto">
+                            {new Date(post.last_bumped_at).toLocaleDateString('es-MX', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <Toast message={message} />
       </div>
 
-      <Toast message={message} />
+      <div className="mt-6 lg:mt-0">
+        <RulesCard />
+      </div>
     </main>
   );
 }

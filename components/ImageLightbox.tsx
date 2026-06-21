@@ -1,11 +1,16 @@
 'use client';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 
 interface ImageLightboxProps {
   src: string | null;
   onClose: () => void;
+}
+
+function shouldSkipOptimization(src: string): boolean {
+  return src.startsWith('data:') || src.startsWith('blob:');
 }
 
 export function ImageLightbox({ src, onClose }: ImageLightboxProps) {
@@ -33,13 +38,19 @@ export function ImageLightbox({ src, onClose }: ImageLightboxProps) {
       >
         <X size={20} />
       </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt=""
-        className="max-w-full max-h-full object-contain rounded-lg"
+      <div
+        className="relative h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-6xl"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <Image
+          src={src}
+          alt=""
+          fill
+          sizes="100vw"
+          unoptimized={shouldSkipOptimization(src)}
+          className="object-contain rounded-lg"
+        />
+      </div>
     </div>,
     document.body
   );

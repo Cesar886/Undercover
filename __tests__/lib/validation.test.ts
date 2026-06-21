@@ -1,3 +1,5 @@
+import { containsUrl } from '@/lib/linkDetection';
+
 import {
   validatePostInput,
   validateCommentInput,
@@ -9,6 +11,24 @@ import {
 } from '@/lib/validation';
 
 const A_UUID = '11111111-1111-1111-1111-111111111111';
+
+
+describe('containsUrl', () => {
+  it('detects common and obfuscated URLs', () => {
+    expect(containsUrl('mira https://example.com')).toBe(true);
+    expect(containsUrl('mira hxxps://example.com')).toBe(true);
+    expect(containsUrl('mira http : // example.com')).toBe(true);
+    expect(containsUrl('mira www . ejemplo . com')).toBe(true);
+    expect(containsUrl('mira ejemplo dot com')).toBe(true);
+    expect(containsUrl('mira ejemplo punto mx')).toBe(true);
+    expect(containsUrl('correo test@example.com')).toBe(true);
+  });
+
+  it('does not reject normal text without URLs', () => {
+    expect(containsUrl('hoy tengo clase a las 10.5 y no quiero ir')).toBe(false);
+    expect(containsUrl('me gusta programar pero no pongo links')).toBe(false);
+  });
+});
 
 describe('isUuid', () => {
   it('accepts a valid uuid', () => expect(isUuid(A_UUID)).toBe(true));
@@ -39,6 +59,37 @@ describe('validatePostInput', () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.image).toBe('data:...');
   });
+  it('accepts a poll with 2 to 6 options', () => {
+    const r = validatePostInput({
+      content: 'voten',
+      category: 'general',
+      poll_options: ['uno', 'dos', 'tres', 'cuatro', 'cinco'],
+      poll_question: '¿Cuál prefieres?',
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.poll_options).toHaveLength(5);
+  });
+  it('rejects polls without pregunta', () => {
+    const r = validatePostInput({ content: 'voten', category: 'general', poll_options: ['uno', 'dos'] });
+    expect(r.ok).toBe(false);
+  });
+  it('rejects polls with fewer than 2 options', () => {
+    const r = validatePostInput({ content: 'voten', category: 'general', poll_options: ['uno'], poll_question: '¿Cuál?' });
+    expect(r.ok).toBe(false);
+  });
+  it('rejects polls with more than 6 options', () => {
+    const r = validatePostInput({
+      content: 'voten',
+      category: 'general',
+      poll_options: ['1', '2', '3', '4', '5', '6', '7'],
+      poll_question: '¿Cuál?',
+    });
+    expect(r.ok).toBe(false);
+  });
+  it('rejects duplicate or URL poll options', () => {
+    expect(validatePostInput({ content: 'voten', category: 'general', poll_options: ['uno', 'Uno'], poll_question: '¿Cuál?' }).ok).toBe(false);
+    expect(validatePostInput({ content: 'voten', category: 'general', poll_options: ['uno', 'google.com'], poll_question: '¿Cuál?' }).ok).toBe(false);
+  });
   it('rejects non-object body', () => {
     expect(validatePostInput(null).ok).toBe(false);
     expect(validatePostInput('string').ok).toBe(false);
@@ -47,6 +98,8 @@ describe('validatePostInput', () => {
     expect(validatePostInput({ content: 'visita https://google.com', category: 'quemones' }).ok).toBe(false);
     expect(validatePostInput({ content: 'mi sitio www.ejemplo.com', category: 'quemones' }).ok).toBe(false);
     expect(validatePostInput({ content: 'hola dominio.com.mx jaja', category: 'quemones' }).ok).toBe(false);
+    expect(validatePostInput({ content: 'hola dominio punto com jaja', category: 'quemones' }).ok).toBe(false);
+    expect(validatePostInput({ content: 'hola test@example.com jaja', category: 'quemones' }).ok).toBe(false);
   });
 });
 

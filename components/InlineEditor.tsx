@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { containsUrl } from '@/lib/linkDetection';
 
 interface InlineEditorProps {
   initial: string;
@@ -33,7 +34,8 @@ export function InlineEditor({
   const remaining = maxChars - content.length;
   const trimmed = content.trim();
   const dirty = trimmed !== initial.trim();
-  const canSave = !!trimmed && dirty && !saving;
+  const hasBlockedUrl = containsUrl(content);
+  const canSave = !!trimmed && dirty && !saving && !hasBlockedUrl;
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Escape') {
@@ -63,6 +65,9 @@ export function InlineEditor({
           'w-full text-[15px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent dark:bg-violet-950/30 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-violet-500/20 focus:border-violet-500 dark:focus:border-violet-500 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60'
         }
       />
+      {hasBlockedUrl && (
+        <p className="text-red-500 text-xs mt-1">No se permiten enlaces ni URLs.</p>
+      )}
       <div className="flex items-center justify-between mt-2">
         <span className={`text-[11px] tabular-nums ${remaining < 20 ? 'text-mauve-700' : 'text-stone-400'}`}>
           {remaining}

@@ -1,5 +1,6 @@
 import { sanitize } from './sanitize';
 import { PostCategory, ReportReason, VoteType } from '@/types';
+import { containsUrl } from './linkDetection';
 
 export type Validated<T> =
   | { ok: true; value: T }
@@ -7,7 +8,10 @@ export type Validated<T> =
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
-const CONTAINS_LINK_RE = /(?:https?:\/\/|www\.|[a-zA-Z0-9-]+\.(?:com|net|org|io|me|co|es|mx|lat|info|biz|tv|us|dev|app|site|online|store|xxx|porn)\b)/i;
+const MIN_POLL_OPTIONS = 2;
+const MAX_POLL_OPTIONS = 6;
+const MAX_POLL_OPTION_CHARS = 80;
+const MAX_POLL_QUESTION_CHARS = 150;
 
 export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value);
@@ -17,6 +21,46 @@ export interface PostInput {
   content: string;
   category: PostCategory;
   image?: string;
+  poll_options?: string[];
+  poll_question?: string;
+}
+
+function validatePollOptions(raw: unknown): Validated<string[] | undefined> {
+  if (raw === undefined || raw === null) return { ok: true, value: undefined };
+
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: 'Opciones de encuesta inválidas', status: 400 };
+  }
+
+  const options = raw
+    .map((option) => sanitize(typeof option === 'string' ? option : ''))
+    .filter(Boolean);
+
+  if (options.length === 0) return { ok: true, value: undefined };
+
+  if (options.length < MIN_POLL_OPTIONS) {
+    return { ok: false, error: 'La encuesta necesita al menos 2 opciones', status: 400 };
+  }
+
+  if (options.length > MAX_POLL_OPTIONS) {
+    return { ok: false, error: 'La encuesta permite máximo 6 opciones', status: 400 };
+  }
+
+  for (const option of options) {
+    if (option.length > MAX_POLL_OPTION_CHARS) {
+      return { ok: false, error: 'Cada opción de encuesta debe tener máximo 80 caracteres', status: 400 };
+    }
+    if (containsUrl(option)) {
+      return { ok: false, error: 'No se permiten enlaces ni URLs en la encuesta', status: 400 };
+    }
+  }
+
+  const normalized = options.map((option) => option.toLocaleLowerCase('es-MX'));
+  if (new Set(normalized).size !== normalized.length) {
+    return { ok: false, error: 'Las opciones de encuesta no pueden repetirse', status: 400 };
+  }
+
+  return { ok: true, value: options };
 }
 
 export function validatePostInput(body: unknown): Validated<PostInput> {
@@ -29,15 +73,40 @@ export function validatePostInput(body: unknown): Validated<PostInput> {
   const content = sanitize(rawContent);
   if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
   if (content.length > 500) return { ok: false, error: 'Contenido excede 500 caracteres', status: 400 };
-  if (CONTAINS_LINK_RE.test(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
+  if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
 
   if (!VALID_CATEGORIES.includes(b.category as PostCategory)) {
     return { ok: false, error: 'Categoría inválida', status: 400 };
   }
 
   const image = typeof b.image === 'string' && b.image.length > 0 ? b.image : undefined;
+  const pollOptions = validatePollOptions(b.poll_options);
+  if (!pollOptions.ok) return pollOptions;
 
-  return { ok: true, value: { content, category: b.category as PostCategory, image } };
+  let poll_question: string | undefined;
+  if (pollOptions.value) {
+    const rawQuestion = typeof b.poll_question === 'string' ? sanitize(b.poll_question) : '';
+    if (!rawQuestion) {
+      return { ok: false, error: 'La encuesta necesita una pregunta', status: 400 };
+    }
+    if (rawQuestion.length > MAX_POLL_QUESTION_CHARS) {
+      return { ok: false, error: `La pregunta de la encuesta debe tener máximo ${MAX_POLL_QUESTION_CHARS} caracteres`, status: 400 };
+    }
+    if (containsUrl(rawQuestion)) {
+      return { ok: false, error: 'No se permiten enlaces ni URLs en la pregunta', status: 400 };
+    }
+    poll_question = rawQuestion;
+  }
+
+  return {
+    ok: true,
+    value: {
+      content,
+      category: b.category as PostCategory,
+      image,
+      ...(pollOptions.value ? { poll_options: pollOptions.value, poll_question } : {}),
+    },
+  };
 }
 
 export interface CommentInput {
@@ -56,7 +125,7 @@ export function validateCommentInput(body: unknown): Validated<CommentInput> {
   const content = sanitize(rawContent);
   if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
   if (content.length > 300) return { ok: false, error: 'Contenido excede 300 caracteres', status: 400 };
-  if (CONTAINS_LINK_RE.test(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
+  if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
 
   let parent_id: string | null = null;
   if (b.parent_id !== undefined && b.parent_id !== null) {
@@ -83,7 +152,7 @@ export function validateEditPostInput(body: unknown): Validated<EditPostInput> {
   const content = sanitize(typeof raw === 'string' ? raw : '');
   if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
   if (content.length > 500) return { ok: false, error: 'Contenido excede 500 caracteres', status: 400 };
-  if (CONTAINS_LINK_RE.test(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
+  if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
   return { ok: true, value: { content } };
 }
 
@@ -99,7 +168,7 @@ export function validateEditCommentInput(body: unknown): Validated<EditCommentIn
   const content = sanitize(typeof raw === 'string' ? raw : '');
   if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
   if (content.length > 300) return { ok: false, error: 'Contenido excede 300 caracteres', status: 400 };
-  if (CONTAINS_LINK_RE.test(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
+  if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
   return { ok: true, value: { content } };
 }
 
@@ -154,7 +223,7 @@ export function validateReportInput(body: unknown): Validated<ReportInput> {
     if (cleaned.length > 200) {
       return { ok: false, error: 'Detalle excede 200 caracteres', status: 400 };
     }
-    if (CONTAINS_LINK_RE.test(cleaned)) {
+    if (containsUrl(cleaned)) {
       return { ok: false, error: 'No se permiten enlaces ni URLs en el detalle', status: 400 };
     }
     detail = cleaned || undefined;

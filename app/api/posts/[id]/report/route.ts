@@ -3,9 +3,8 @@ import { withTransaction } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
 import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
-import { applyTrustDelta } from '@/lib/trust';
 import { getReporterId } from '@/lib/auth';
-import { applyBan } from '@/lib/ipban';
+import { evaluatePostAutoHideAfterReport } from '@/lib/reportAutoHide';
 
 export async function POST(
   request: NextRequest,
@@ -35,62 +34,53 @@ export async function POST(
 
   const postId = params.id;
 
-  const result = await withTransaction(async (client) => {
-    const updateRes = await client.query(
-      `UPDATE posts
-       SET report_count = report_count + 1,
-           is_hidden = CASE WHEN report_count + 1 >= 10 THEN true ELSE is_hidden END
-       WHERE id = $1
-       RETURNING report_count, is_hidden, anon_id, poster_ip`,
-      [postId]
-    );
+  try {
+    const result = await withTransaction(async (client) => {
+      const postRes = await client.query<{ is_hidden: boolean }>(
+        `SELECT is_hidden
+         FROM posts
+         WHERE id = $1
+         FOR UPDATE`,
+        [postId]
+      );
 
-    if (updateRes.rows.length === 0) return null;
+      if (postRes.rows.length === 0) return null;
 
-    await client.query(
-      `INSERT INTO reports (target_type, target_id, reason, detail, reporter_id)
-       VALUES ('post', $1, $2, $3, $4)`,
-      [postId, v.value.reason, v.value.detail ?? null, reporterId]
-    );
+      await client.query(
+        `INSERT INTO reports (target_type, target_id, reason, detail, reporter_id)
+         VALUES ('post', $1, $2, $3, $4)`,
+        [postId, v.value.reason, v.value.detail ?? null, reporterId]
+      );
 
-    const { report_count, is_hidden, anon_id: postAuthor, poster_ip } = updateRes.rows[0];
+      const hiddenByReport = await evaluatePostAutoHideAfterReport(client, postId, reporterId);
 
-    if (is_hidden && report_count >= 10) {
-      const prevCount = report_count - 1;
-      const justHidden = prevCount < 10;
-      if (justHidden && postAuthor) {
-        await applyTrustDelta(postAuthor, -15, client);
+      const finalRes = await client.query<{ report_count: number; is_hidden: boolean }>(
+        `UPDATE posts
+         SET report_count = (
+           SELECT COUNT(DISTINCT reporter_id)::int
+           FROM reports
+           WHERE target_type = 'post'
+             AND target_id = $1
+         )
+         WHERE id = $1
+         RETURNING report_count, is_hidden`,
+        [postId]
+      );
 
-        // Auto-ban the poster's IP
-        if (poster_ip) {
-          await applyBan(poster_ip, `post con ${report_count} reportes`);
-        }
+      return { ...finalRes.rows[0], hiddenByReport };
+    });
 
-        const reportersRes = await client.query<{ reporter_id: string }>(
-          `SELECT DISTINCT reporter_id FROM reports
-           WHERE target_type = 'post' AND target_id = $1
-             AND reporter_id LIKE 'user:%'`,
-          [postId]
-        );
-        for (const row of reportersRes.rows) {
-          const reporterUsername = row.reporter_id.slice('user:'.length);
-          if (reporterUsername) {
-            await applyTrustDelta(reporterUsername, 3, client);
-          }
-        }
-      }
+    if (result === null) {
+      return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
     }
 
-    return { report_count, is_hidden };
-  });
+    if (result.hiddenByReport) {
+      emitFeed({ type: 'post:hidden', postId });
+    }
 
-  if (result === null) {
-    return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+    return NextResponse.json({ success: true, report_count: result.report_count, is_hidden: result.is_hidden });
+  } catch (error) {
+    console.error('REPORT API ERROR:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-
-  if (result.is_hidden) {
-    emitFeed({ type: 'post:hidden', postId });
-  }
-
-  return NextResponse.json({ success: true, ...result });
 }

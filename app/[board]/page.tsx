@@ -1,6 +1,8 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { PostForm } from '@/components/PostForm';
 import { PostCard } from '@/components/PostCard';
 import { PostSkeleton } from '@/components/PostSkeleton';
@@ -12,6 +14,19 @@ import { useAnonId } from '@/hooks/useAnonId';
 import { isValidBoard, getBoard } from '@/lib/boards';
 import { Post, PostCategory } from '@/types';
 import { QuemaCountdown } from '@/components/QuemaCountdown';
+import { RulesCard } from '@/components/RulesCard';
+
+function BackHomeLink({ className = '' }: { className?: string }) {
+  return (
+    <Link
+      href="/"
+      className={`group inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition-colors hover:text-stone-900 dark:bg-[#0d0b1a]/85 dark:text-[#9d98c8] dark:hover:text-violet-100 ${className}`}
+    >
+      <ArrowLeft size={13} strokeWidth={1.8} className="transition-transform group-hover:-translate-x-0.5" />
+      Volver al inicio
+    </Link>
+  );
+}
 
 export default function BoardPage({ params }: { params: { board: string } }) {
   const { board } = params;
@@ -114,72 +129,83 @@ export default function BoardPage({ params }: { params: { board: string } }) {
   const isInitialLoad = loading && posts.length === 0;
 
   return (
-    <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
-      <QuemaCountdown />
-      <div className="flex items-baseline gap-2 mb-1">
-        <h1
-          className="font-bold text-xl"
-          style={{ color: boardMeta.text }}
-        >
-          {boardMeta.name}
-        </h1>
-        <span className="text-sm text-gray-400 dark:text-[#4a4870]">
-          {boardMeta.description}
-        </span>
-      </div>
-
-      <PostForm
-        onPostCreated={handlePostCreated}
-        defaultCategory={board as PostCategory}
-        lockedCategory
-      />
-
-      <div className="space-y-3">
-        {isInitialLoad ? (
-          <>
-            <PostSkeleton />
-            <PostSkeleton />
-            <PostSkeleton />
-          </>
-        ) : (
-          posts.map((post, index) => {
-            const isNew = newPostIds.has(post.id);
-            return (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUsername={username}
-                onVoted={() => showToast('Voto guardado')}
-                onVoteError={(msg) => showToast(msg)}
-                onDeleted={handleDeleted}
-                onActionError={(msg) => showToast(msg)}
-                onReported={() => showToast('Gracias, lo revisaremos.')}
-                style={isNew ? undefined : { animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
-                className={isNew ? 'animate-new-post-slide' : 'opacity-0 animate-fade-slide-in'}
-              />
-            );
-          })
-        )}
-
-        {!loading && posts.length === 0 && (
-          <div className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
-            <p className="text-2xl mb-2">🔥</p>
-            <p className="text-gray-500 dark:text-[#6b6a8f] text-sm font-medium">Nada por aquí todavía</p>
-            <p className="text-gray-400 dark:text-[#4a4870] text-xs mt-1">Sé el primero en quemar algo</p>
+    <main className="max-w-[600px] lg:max-w-[900px] mx-auto px-4 py-6 lg:grid lg:grid-cols-[minmax(0,600px)_260px] lg:items-start lg:gap-5">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <BackHomeLink />
+          <div className="flex items-baseline gap-2">
+            <h1
+              className="font-bold text-xl"
+              style={{ color: boardMeta.text }}
+            >
+              {boardMeta.name}
+            </h1>
+            <span className="text-sm text-gray-400 dark:text-[#4a4870]">
+              {boardMeta.description}
+            </span>
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <PostForm
+            onPostCreated={handlePostCreated}
+            defaultCategory={board as PostCategory}
+            lockedCategory
+          />
+          <QuemaCountdown />
+        </div>
+
+        <div className="space-y-3">
+          {isInitialLoad ? (
+            <>
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
+            </>
+          ) : (
+            posts.map((post, index) => {
+              const isNew = newPostIds.has(post.id);
+              return (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUsername={username}
+                  onVoted={() => showToast('Voto guardado')}
+                  onVoteError={(msg) => showToast(msg)}
+                  onDeleted={handleDeleted}
+                  onActionError={(msg) => showToast(msg)}
+                  onReported={() => showToast('Gracias, lo revisaremos.')}
+                  style={isNew ? undefined : { animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
+                  className={isNew ? 'animate-new-post-slide' : 'opacity-0 animate-fade-slide-in'}
+                />
+              );
+            })
+          )}
+
+          {!loading && posts.length === 0 && (
+            <div className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
+              <p className="text-2xl mb-2">🔥</p>
+              <p className="text-gray-500 dark:text-[#6b6a8f] text-sm font-medium">Nada por aquí todavía</p>
+              <p className="text-gray-400 dark:text-[#4a4870] text-xs mt-1">Sé el primero en quemar algo</p>
+            </div>
+          )}
+        </div>
+
+        {hasMore && !loading && posts.length > 0 && (
+          <button
+            onClick={loadMore}
+            className="w-full py-3 text-gray-400 hover:text-gray-600 text-sm transition-colors"
+          >
+            Cargar más
+          </button>
         )}
+
+        <Toast message={message} />
       </div>
 
-      {hasMore && !loading && posts.length > 0 && (
-        <button
-          onClick={loadMore}
-          className="w-full py-3 text-gray-400 hover:text-gray-600 text-sm transition-colors"
-        >
-          Cargar más
-        </button>
-      )}
-
-      <Toast message={message} />
+      <div className="mt-6 lg:mt-0">
+        <RulesCard />
+      </div>
     </main>
   );
 }

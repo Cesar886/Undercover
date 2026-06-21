@@ -33,7 +33,7 @@ export function CommentList({ comments }: { comments: Comment[] }) {
           </div>
           <p className="text-gray-700 text-sm leading-relaxed break-words">{comment.content}</p>
           {comment.image_webp && (
-            <PostImage src={comment.image_webp} className="max-h-56 w-auto mt-2" />
+            <PostImage src={comment.image_webp} />
           )}
         </div>
       ))}

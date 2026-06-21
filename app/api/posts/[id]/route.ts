@@ -3,6 +3,8 @@ import { query } from '@/lib/db';
 import { isUuid, validateEditPostInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
 import { getAnonId } from '@/lib/anon';
+import { attachPollsToPosts, getPollForPost } from '@/lib/polls';
+import { Post } from '@/types';
 
 export async function GET(
   _request: NextRequest,
@@ -24,7 +26,10 @@ export async function GET(
     return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   }
 
-  return NextResponse.json({ post: result.rows[0] });
+  const viewerAnonId = _request.cookies.get('anon_pub')?.value ?? null;
+  const [post] = await attachPollsToPosts(result.rows as Post[], viewerAnonId);
+
+  return NextResponse.json({ post });
 }
 
 export async function PATCH(
@@ -60,7 +65,10 @@ export async function PATCH(
     [v.value.content, params.id]
   );
 
-  const post = result.rows[0];
+  const post: Post = {
+    ...result.rows[0],
+    poll: await getPollForPost(params.id, anonId),
+  };
   emitFeed({ type: 'post:edited', post });
 
   return NextResponse.json({ post });

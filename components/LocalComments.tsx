@@ -19,6 +19,7 @@ import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 import { ReportReason } from '@/types';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
+import { containsUrl } from '@/lib/linkDetection';
 
 interface Comment {
   id: string;
@@ -123,9 +124,12 @@ function ReplyForm({
     e.preventDefault();
     const text = content.trim();
     if ((!text && !image) || submitting) return;
+    if (containsUrl(text)) return;
     setSubmitting(true);
     try { await onSubmit(text, image); } finally { setSubmitting(false); }
   }
+
+  const hasBlockedUrl = containsUrl(content);
 
   return (
     <div className="flex gap-3 items-start animate-fade-slide-in">
@@ -149,6 +153,9 @@ function ReplyForm({
           className="w-full text-[14px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
         />
         <div className="h-px bg-violet-500/60 dark:shadow-[0_0_6px_rgba(124,58,237,0.4)] rounded-full" />
+        {hasBlockedUrl && (
+          <p className="text-red-500 text-xs mt-1">No se permiten enlaces ni URLs.</p>
+        )}
         <div className="mt-2.5">
           <ImagePicker
             preview={image}
@@ -172,7 +179,7 @@ function ReplyForm({
             </button>
             <button
               type="submit"
-              disabled={submitting || (!content.trim() && !image)}
+              disabled={submitting || (!content.trim() && !image) || hasBlockedUrl}
               className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
             >
               {submitting ? 'Enviando…' : 'Responder'}
@@ -328,7 +335,7 @@ function CommentItem({
 
           {comment.image_webp && !comment.is_deleted && !isEditing && (
             <div className="mt-2">
-              <PostImage src={comment.image_webp} className="max-h-56 w-auto rounded-lg" />
+              <PostImage src={comment.image_webp} />
             </div>
           )}
 
@@ -436,6 +443,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
     e.preventDefault();
     const text = content.trim();
     if ((!text && !image) || submitting) return;
+    if (containsUrl(text)) {
+      showToast('No se permiten enlaces ni URLs.');
+      return;
+    }
     setSubmitting(true);
     setImageError(null);
     const result = await apiPost<{ comment: Comment }>(`/api/posts/${postId}/comments`, {
@@ -463,6 +474,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
   }
 
   async function handleReplySubmit(parentId: string, text: string, img: string | null) {
+    if (containsUrl(text)) {
+      showToast('No se permiten enlaces ni URLs.');
+      return;
+    }
     const result = await apiPost<{ comment: Comment }>(`/api/posts/${postId}/comments`, {
       content: text,
       parent_id: parentId,
@@ -571,6 +586,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
 
   const tree = buildTree(comments);
   const visibleCount = comments.filter((c) => !c.is_deleted).length;
+  const hasBlockedUrl = containsUrl(content);
 
   return (
     <div className="bg-white dark:bg-[#0d0b1a] border border-stone-200/80 dark:border-violet-500/12 rounded-2xl shadow-md shadow-stone-100/80 dark:shadow-[0_4px_24px_rgba(124,58,237,0.1)] overflow-hidden">
@@ -614,7 +630,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
               {!focused && content.trim() && (
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || hasBlockedUrl}
                   className="absolute right-0 top-1 text-mauve-600 hover:text-mauve-700 active:scale-90 transition-all disabled:opacity-30"
                   aria-label="Enviar"
                 >
@@ -622,6 +638,9 @@ export function LocalComments({ postId, archived, onCountChange }: {
                 </button>
               )}
             </div>
+            {hasBlockedUrl && (
+              <p className="text-red-500 text-xs mt-1">No se permiten enlaces ni URLs.</p>
+            )}
             <div
               className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-violet-500' : 'bg-stone-200 dark:bg-violet-900/40'}`}
               style={focused ? { boxShadow: '0 0 8px rgba(124,58,237,0.4)' } : {}}
@@ -652,7 +671,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting || (!content.trim() && !image)}
+                    disabled={submitting || (!content.trim() && !image) || hasBlockedUrl}
                     className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 dark:bg-violet-700 dark:hover:bg-violet-600 dark:shadow-[0_0_12px_rgba(124,58,237,0.35)] active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
                   >
                     {submitting ? 'Enviando…' : 'Comentar'}

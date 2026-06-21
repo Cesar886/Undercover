@@ -11,11 +11,19 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    console.error('[cron/cleanup] CRON_SECRET not configured');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+  const auth = request.headers.get('authorization') ?? '';
+  const expected = `Bearer ${secret}`;
+  const secretBuf = Buffer.from(expected);
+  const authBuf = Buffer.from(auth);
+  const valid =
+    secretBuf.length === authBuf.length &&
+    require('crypto').timingSafeEqual(secretBuf, authBuf);
+  if (!valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

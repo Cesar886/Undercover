@@ -3,6 +3,22 @@ export type VoteType = 'up' | 'down';
 export type ReactionEmoji = '❤️' | '😂' | '🤯' | '🫶' | '🙃' | '🫪';
 export type ReactionCounts = Partial<Record<ReactionEmoji, number>>;
 
+export interface PollOption {
+  id: string;
+  label: string;
+  votes: number;
+  position: number;
+}
+
+export interface PostPoll {
+  id: string;
+  post_id: string;
+  question: string;
+  options: PollOption[];
+  total_votes: number;
+  user_vote_option_id?: string | null;
+}
+
 export interface Post {
   id: string;
   anon_id: string;
@@ -20,6 +36,7 @@ export interface Post {
   comment_count?: number;
   trust_score?: number;
   trust_unlocked?: boolean;
+  poll?: PostPoll | null;
 }
 
 export interface Comment {

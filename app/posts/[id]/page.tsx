@@ -18,6 +18,7 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { ShareImageButton } from '@/components/ShareImageButton';
 import { ReactionsPanel } from '@/components/ReactionsPanel';
+import { PollView } from '@/components/PollView';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { Tooltip } from '@mantine/core';
@@ -42,6 +43,27 @@ const accent: Record<PostCategory, { bar: string; ring: string }> = {
   infieles:    { bar: 'bg-pink-500 dark:bg-violet-500',  ring: 'ring-pink-300/40 dark:ring-violet-400/40' },
   confesiones: { bar: 'bg-purple-600 dark:bg-violet-700', ring: 'ring-purple-300/40 dark:ring-violet-600/40' },
 };
+
+const BOARD_NAMES: Record<PostCategory, string> = {
+  general:     'General',
+  quemones:    'Quemones',
+  infieles:    'Infieles',
+  confesiones: 'Confesiones',
+};
+
+function BackLink({ category, className = '' }: { category?: PostCategory; className?: string }) {
+  const href  = category ? `/${category}` : '/';
+  const label = category ? `Volver a ${BOARD_NAMES[category]}` : 'Volver al inicio';
+  return (
+    <Link
+      href={href}
+      className={`group inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition-colors hover:text-stone-900 dark:bg-[#0d0b1a]/85 dark:text-[#9d98c8] dark:hover:text-violet-100 ${className}`}
+    >
+      <ArrowLeft size={13} strokeWidth={1.8} className="transition-transform group-hover:-translate-x-0.5" />
+      {label}
+    </Link>
+  );
+}
 
 type LoadState = { kind: 'loading' } | { kind: 'ok'; post: Post } | { kind: 'notfound' } | { kind: 'error'; msg: string };
 
@@ -99,7 +121,7 @@ export default function PostPage() {
   if (state.kind === 'loading') {
     return (
       <main className="max-w-[600px] mx-auto px-4 pt-6 pb-16 space-y-5">
-        <div className="h-4 w-20 rounded-full bg-gray-200 animate-pulse" />
+        <BackLink />
         <PostSkeleton />
       </main>
     );
@@ -111,9 +133,7 @@ export default function PostPage() {
         <p className="text-2xl mb-2">🔥</p>
         <p className="text-xl font-semibold text-gray-700">Este quemón ya no existe.</p>
         <p className="text-sm text-gray-400">Quizá fue reportado, quizá nunca estuvo aquí.</p>
-        <Link href="/" className="inline-block mt-4 text-sm text-mauve-700 hover:text-mauve-800 underline underline-offset-4">
-          Volver al feed
-        </Link>
+        <BackLink className="mt-4" />
       </main>
     );
   }
@@ -123,12 +143,15 @@ export default function PostPage() {
       <main className="max-w-[600px] mx-auto px-6 pt-32 text-center space-y-4 animate-fade-in">
         <p className="text-xl font-semibold text-gray-700">Algo se atoró cargando este quemón.</p>
         <p className="text-sm text-gray-500">{state.msg}</p>
-        <button
-          onClick={loadPost}
-          className="mt-2 px-4 py-1.5 text-sm bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
-        >
-          Reintentar
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <BackLink />
+          <button
+            onClick={loadPost}
+            className="px-4 py-1.5 text-sm bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
       </main>
     );
   }
@@ -182,13 +205,7 @@ export default function PostPage() {
 
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 animate-fade-in">
-      <Link
-        href="/"
-        className="group inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors mb-6"
-      >
-        <ArrowLeft size={13} className="transition-transform group-hover:-tranzinc-x-0.5" />
-        Volver al feed
-      </Link>
+      <BackLink category={post.category} className="mb-5" />
 
       <article ref={articleRef} className={`relative bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/12 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_24px_rgba(124,58,237,0.1)]`}>
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
@@ -251,7 +268,19 @@ export default function PostPage() {
 
           {post.image_webp && !editing && (
             <div className="mb-4">
-              <PostImage src={post.image_webp} className="max-h-[520px] w-full object-cover rounded-xl" />
+              <PostImage src={post.image_webp} />
+            </div>
+          )}
+
+          {post.poll && !editing && (
+            <div className="mb-4">
+              <PollView
+                postId={post.id}
+                poll={post.poll}
+                disabled={post.archived}
+                onChange={(poll) => setState((s) => s.kind === 'ok' ? { kind: 'ok', post: { ...s.post, poll } } : s)}
+                onError={(msg) => showToast(msg)}
+              />
             </div>
           )}
 

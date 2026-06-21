@@ -35,7 +35,7 @@ export function FeedStreamProvider({ children }: { children: React.ReactNode }) 
     };
 
     const types: FeedEvent['type'][] = [
-      'post:new', 'post:vote', 'post:hidden', 'post:edited', 'post:reaction',
+      'post:new', 'post:vote', 'post:hidden', 'post:edited', 'post:reaction', 'post:poll',
       'comment:new', 'comment:edited', 'comment:deleted', 'notification:new', 'quema:total',
     ];
     types.forEach((t) => es.addEventListener(t, dispatch as EventListener));

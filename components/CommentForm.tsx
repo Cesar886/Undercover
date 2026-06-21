@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImagePicker } from '@/components/ImagePicker';
 import { apiPost } from '@/lib/apiClient';
+import { containsUrl } from '@/lib/linkDetection';
 
 const MAX_CHARS = 300;
 
@@ -18,6 +19,10 @@ export function CommentForm({ postId }: { postId: string }) {
     e.preventDefault();
     const text = content.trim();
     if ((!text && !image) || loading) return;
+    if (containsUrl(text)) {
+      setError('No se permiten enlaces ni URLs.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -45,6 +50,8 @@ export function CommentForm({ postId }: { postId: string }) {
     setLoading(false);
   }
 
+  const hasBlockedUrl = containsUrl(content);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-2" aria-busy={loading}>
       <textarea
@@ -55,6 +62,7 @@ export function CommentForm({ postId }: { postId: string }) {
         disabled={loading}
         className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-mauve-600 disabled:opacity-60"
       />
+      {hasBlockedUrl && <p className="text-red-500 text-xs">No se permiten enlaces ni URLs.</p>}
       <ImagePicker
         preview={image}
         onPick={(d) => { setImage(d); setImageError(null); }}
@@ -70,7 +78,7 @@ export function CommentForm({ postId }: { postId: string }) {
         </span>
         <button
           type="submit"
-          disabled={loading || (!content.trim() && !image)}
+          disabled={loading || (!content.trim() && !image) || hasBlockedUrl}
           className="bg-mauve-600 hover:bg-mauve-700 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
         >
           {loading ? 'Enviando...' : 'Comentar'}

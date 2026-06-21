@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSessionUsername, unauthorized } from '@/lib/auth';
+import { attachPollsToPosts } from '@/lib/polls';
+import { Post } from '@/types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,5 +23,8 @@ export async function GET(request: NextRequest) {
     [ids]
   );
 
-  return NextResponse.json({ posts: result.rows });
+  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
+  const posts = await attachPollsToPosts(result.rows as Post[], viewerAnonId);
+
+  return NextResponse.json({ posts });
 }

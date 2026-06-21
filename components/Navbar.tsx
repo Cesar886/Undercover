@@ -1,11 +1,13 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Search, Sun, Moon, Archive } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import { BOARDS } from '@/lib/boards';
 
 export function Navbar() {
   const { theme, toggle } = useTheme();
+  const pathname = usePathname();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_0_rgba(124,58,237,0.08)]">
@@ -50,17 +52,31 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Board quick-links bar */}
-      <div className="max-w-[600px] mx-auto px-4 h-8 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        {BOARDS.map((board) => (
-          <Link
-            key={board.slug}
-            href={`/${board.slug}`}
-            className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap transition-colors text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 hover:bg-gray-100/80 dark:hover:bg-violet-500/10"
-          >
-            {board.name}
-          </Link>
-        ))}
+      {/* Board tabs */}
+      <div className="max-w-[600px] mx-auto px-3 h-9 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {BOARDS.map((board) => {
+          const active = pathname === `/${board.slug}`;
+          return (
+            <Link
+              key={board.slug}
+              href={`/${board.slug}`}
+              className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-semibold transition-all duration-200 select-none ${
+                active
+                  ? ''
+                  : 'border-transparent text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 hover:border-gray-200 dark:hover:border-violet-500/20 hover:bg-gray-50 dark:hover:bg-violet-500/8'
+              }`}
+              style={active ? {
+                backgroundColor: board.bg,
+                borderColor: board.border,
+                color: board.text,
+                boxShadow: board.glow,
+              } : {}}
+              aria-current={active ? 'page' : undefined}
+            >
+              {board.name}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

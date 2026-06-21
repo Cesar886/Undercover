@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fraunces, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import '@mantine/core/styles.css';
@@ -46,7 +46,21 @@ export const metadata: Metadata = {
   authors: [{ name: 'DeepUM', url: SITE_URL }],
   creator: 'DeepUM',
   publisher: 'DeepUM',
+  applicationName: 'DeepUM',
   category: 'community',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'DeepUM',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   robots: {
     index: true,
     follow: true,
@@ -87,13 +101,22 @@ export const metadata: Metadata = {
   },
 };
 
+
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F9F9F9' },
+    { media: '(prefers-color-scheme: dark)', color: '#06050f' },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" data-mantine-color-scheme="auto" suppressHydrationWarning className={`${fraunces.variable} ${instrumentSans.variable}`}>
       <body suppressHydrationWarning className="font-sans bg-[#F9F9F9] dark:bg-[#06050f] text-stone-900 dark:text-[#e9e5ff] min-h-screen pt-20 antialiased selection:bg-mauve-200 selection:text-mauve-900 dark:selection:bg-violet-600/30 dark:selection:text-violet-100 transition-colors duration-200">
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var s=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';if((s||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();" }} />
         <div className="fixed inset-0 z-[-1] pointer-events-none hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/50 via-[#06050f] to-[#06050f]"></div>
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] z-[-1] pointer-events-none hidden dark:block" style={{background: 'radial-gradient(ellipse at 50% 100%, rgba(124,58,237,0.08) 0%, transparent 70%)'}}></div>
+        <div className="fixed bottom-0 left-1/2 z-[-1] hidden h-[300px] w-[600px] -translate-x-1/2 bg-app-bottom-glow-dark pointer-events-none dark:block"></div>
         <MantineSetup>
           <ThemeProvider>
             <FeedStreamProvider>

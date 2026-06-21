@@ -1,0 +1,1 @@
+import "dotenv/config"; import { query } from "./lib/db"; async function main() { try { await query("SELECT * FROM reports LIMIT 1"); console.log("Reports exist"); } catch(e) { console.error(e); } process.exit(); } main();

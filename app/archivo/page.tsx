@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import { Archive } from 'lucide-react';
+import { Archive, ArrowLeft } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { PostSkeleton } from '@/components/PostSkeleton';
@@ -51,9 +51,18 @@ export default function ArchivoPage() {
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center gap-3 mb-2">
-        <Archive size={18} className="text-violet-500" strokeWidth={1.5} />
-        <h1 className="font-bold text-lg text-gray-900 dark:text-[#e9e5ff]">Archivo</h1>
-        <span className="text-xs text-gray-400 dark:text-[#4a4870]">— hilos populares, solo lectura</span>
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition-colors hover:text-stone-900 dark:bg-[#0d0b1a]/85 dark:text-[#9d98c8] dark:hover:text-violet-100"
+        >
+          <ArrowLeft size={13} strokeWidth={1.8} className="transition-transform group-hover:-translate-x-0.5" />
+          Inicio
+        </Link>
+        <div className="flex items-center gap-2">
+          <Archive size={16} className="text-violet-500" strokeWidth={1.5} />
+          <h1 className="font-bold text-base text-gray-900 dark:text-[#e9e5ff]">Archivo</h1>
+          <span className="text-xs text-gray-400 dark:text-[#4a4870]">solo lectura</span>
+        </div>
       </div>
 
       <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-[#F9F9F9]/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10">

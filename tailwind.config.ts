@@ -30,6 +30,17 @@ const config: Config = {
         sans:    ['var(--font-sans)', 'system-ui', 'sans-serif'],
         display: ['var(--font-display)', 'Georgia', 'serif'],
       },
+      backgroundImage: {
+        'footer-glow-light': 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(114,91,144,0.07) 0%, transparent 70%)',
+        'footer-glow-dark': 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(124,58,237,0.14) 0%, transparent 70%)',
+        'footer-line-light': 'linear-gradient(90deg, transparent 0%, rgba(170,151,194,0.25) 30%, rgba(114,91,144,0.45) 50%, rgba(170,151,194,0.25) 70%, transparent 100%)',
+        'footer-line-dark': 'linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.2) 30%, rgba(167,139,250,0.5) 50%, rgba(139,92,246,0.2) 70%, transparent 100%)',
+        'footer-wordmark': 'linear-gradient(135deg, #aa97c2 0%, #725b90 45%, #43325a 100%)',
+        'footer-divider-left': 'linear-gradient(90deg, transparent, rgba(139,92,246,0.15))',
+        'footer-divider-right': 'linear-gradient(270deg, transparent, rgba(139,92,246,0.15))',
+        'footer-link-underline': 'linear-gradient(90deg, #7c3aed, #a78bfa)',
+        'app-bottom-glow-dark': 'radial-gradient(ellipse at 50% 100%, rgba(124,58,237,0.08) 0%, transparent 70%)',
+      },
       keyframes: {
         fadeSlideIn: {
           from: { opacity: '0', transform: 'translateY(-6px)' },

@@ -50,7 +50,7 @@ export function QuemaCountdown() {
   const urgent = ms < 3_600_000; // less than 1 hour
 
   return (
-    <div className="flex items-center justify-center gap-1.5 py-1.5 text-[11px]">
+    <div className="flex items-center justify-center gap-1.5 py-0.5 text-[11px] leading-tight">
       <span className={urgent ? 'text-orange-500 animate-pulse' : 'text-orange-400/70 dark:text-orange-500/50'}>
         🔥
       </span>
