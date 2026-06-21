@@ -1,5 +1,5 @@
 const SITE_URL = 'https://quemonesum.site';
-const SITE_NAME = 'QuemonesUM';
+const SITE_NAME = 'DeepUM';
 
 // JSON.stringify alone does not escape <, >, & which can break out of <script> tags.
 function safeJsonLd(data: object): string {

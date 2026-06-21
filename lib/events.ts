@@ -1,11 +1,12 @@
 import { EventEmitter } from 'events';
-import { Comment, Notification, Post } from '@/types';
+import { Comment, Notification, Post, ReactionCounts } from '@/types';
 
 export type FeedEvent =
   | { type: 'post:new'; post: Post }
   | { type: 'post:vote'; postId: string; upvotes: number; downvotes: number }
   | { type: 'post:hidden'; postId: string }
   | { type: 'post:edited'; post: Post }
+  | { type: 'post:reaction'; postId: string; counts: ReactionCounts }
   | {
       type: 'comment:new';
       postId: string;

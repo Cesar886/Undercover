@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { isUuid, validateEditCommentInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
-import { getSessionUsername, unauthorized } from '@/lib/auth';
+import { getAnonId } from '@/lib/anon';
 
 export async function PATCH(
   request: NextRequest,
@@ -12,8 +12,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await getSessionUsername();
-  if (!username) return unauthorized();
+  const { anonId } = getAnonId(request);
 
   let body: unknown;
   try {
@@ -32,7 +31,7 @@ export async function PATCH(
   if (owner.rows.length === 0) {
     return NextResponse.json({ error: 'Comentario no encontrado' }, { status: 404 });
   }
-  if (owner.rows[0].anon_id !== username) {
+  if (owner.rows[0].anon_id !== anonId) {
     return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
   }
   if (owner.rows[0].is_deleted) {
@@ -43,10 +42,7 @@ export async function PATCH(
   }
 
   const result = await query(
-    `UPDATE comments
-     SET content = $1, updated_at = NOW()
-     WHERE id = $2 AND is_deleted = false
-     RETURNING *`,
+    `UPDATE comments SET content = $1, updated_at = NOW() WHERE id = $2 AND is_deleted = false RETURNING *`,
     [v.value.content, params.commentId]
   );
 
@@ -57,15 +53,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string; commentId: string } }
 ) {
   if (!isUuid(params.id) || !isUuid(params.commentId)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const username = await getSessionUsername();
-  if (!username) return unauthorized();
+  const { anonId } = getAnonId(request);
 
   const result = await withTransaction(async (client) => {
     const lock = await client.query(
@@ -73,7 +68,7 @@ export async function DELETE(
       [params.commentId, params.id]
     );
     if (lock.rows.length === 0) return { kind: 'notfound' as const };
-    if (lock.rows[0].anon_id !== username) return { kind: 'forbidden' as const };
+    if (lock.rows[0].anon_id !== anonId) return { kind: 'forbidden' as const };
 
     const replies = await client.query(
       'SELECT EXISTS(SELECT 1 FROM comments WHERE parent_id = $1) AS has_replies',
@@ -83,9 +78,7 @@ export async function DELETE(
 
     if (hasReplies) {
       await client.query(
-        `UPDATE comments
-         SET is_deleted = true, content = '', image_webp = NULL
-         WHERE id = $1`,
+        `UPDATE comments SET is_deleted = true, content = '', image_webp = NULL WHERE id = $1`,
         [params.commentId]
       );
       return { kind: 'soft' as const };

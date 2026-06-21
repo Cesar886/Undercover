@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Aviso de Privacidad',
-  description: 'Aviso de privacidad de QuemonesUM.',
+  description: 'Aviso de privacidad de DeepUM.',
 };
 
 export default function PrivacidadPage() {
@@ -28,7 +28,7 @@ export default function PrivacidadPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">Limitación de responsabilidad</h2>
           <p>
-            QuemonesUM no se hace responsable del mal uso que los usuarios puedan dar a esta plataforma.
+            DeepUM no se hace responsable del mal uso que los usuarios puedan dar a esta plataforma.
             El contenido publicado es responsabilidad exclusiva de quien lo genera. Cualquier uso indebido
             del sitio recae únicamente sobre el usuario que lo realice.
           </p>

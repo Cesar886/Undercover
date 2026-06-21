@@ -22,47 +22,25 @@ export function FeedStreamProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    let aborted = false;
+    const es = new EventSource('/api/stream');
+    esRef.current = es;
 
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((data) => {
-        if (aborted || !data.user) return;
+    const dispatch = (raw: MessageEvent) => {
+      try {
+        const ev = JSON.parse(raw.data) as FeedEvent;
+        listenersRef.current.forEach((h) => {
+          try { h(ev); } catch { /* listener error */ }
+        });
+      } catch { /* invalid payload */ }
+    };
 
-        const es = new EventSource('/api/stream');
-        esRef.current = es;
-
-        const dispatch = (raw: MessageEvent) => {
-          try {
-            const ev = JSON.parse(raw.data) as FeedEvent;
-            listenersRef.current.forEach((h) => {
-              try {
-                h(ev);
-              } catch {
-                // listener buggy → no romper el resto
-              }
-            });
-          } catch {
-            // payload inválido
-          }
-        };
-
-        const types: FeedEvent['type'][] = [
-          'post:new',
-          'post:vote',
-          'post:hidden',
-          'post:edited',
-          'comment:new',
-          'comment:edited',
-          'comment:deleted',
-          'notification:new',
-        ];
-        types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
-      })
-      .catch(() => {});
+    const types: FeedEvent['type'][] = [
+      'post:new', 'post:vote', 'post:hidden', 'post:edited', 'post:reaction',
+      'comment:new', 'comment:edited', 'comment:deleted', 'notification:new',
+    ];
+    types.forEach((t) => es.addEventListener(t, dispatch as EventListener));
 
     return () => {
-      aborted = true;
       esRef.current?.close();
       esRef.current = null;
     };

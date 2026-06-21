@@ -70,7 +70,7 @@ export function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={handleToggle}
-        className="relative text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-200 transition-colors p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800"
+        className="relative text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 transition-colors p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-violet-500/10"
         aria-label="Notificaciones"
       >
         <Bell size={18} strokeWidth={1.5} />
@@ -82,13 +82,13 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg text-sm z-50">
-          <div className="px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#0d0b1a] border border-gray-200 dark:border-violet-500/20 rounded-xl shadow-lg dark:shadow-[0_8px_32px_rgba(124,58,237,0.15)] text-sm z-50">
+          <div className="px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#4a4870] border-b border-gray-100 dark:border-violet-500/10">
             Notificaciones
           </div>
 
           {notifications.length === 0 ? (
-            <p className="px-4 py-6 text-center text-gray-400 dark:text-zinc-500 text-xs">
+            <p className="px-4 py-6 text-center text-gray-400 dark:text-[#3a3860] text-xs">
               Sin notificaciones aún
             </p>
           ) : (
@@ -97,14 +97,14 @@ export function NotificationBell() {
                 key={n.id}
                 href={`/posts/${n.post_id}`}
                 onClick={() => setOpen(false)}
-                className={`flex flex-col gap-0.5 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors border-b border-gray-50 dark:border-zinc-800/50 last:border-0 ${
-                  !n.is_read ? 'bg-mauve-50/60 dark:bg-mauve-900/10' : ''
+                className={`flex flex-col gap-0.5 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-violet-500/8 transition-colors border-b border-gray-50 dark:border-violet-500/8 last:border-0 ${
+                  !n.is_read ? 'bg-mauve-50/60 dark:bg-violet-900/15' : ''
                 }`}
               >
-                <span className={`text-gray-800 dark:text-zinc-200 leading-snug ${!n.is_read ? 'font-medium' : ''}`}>
+                <span className={`text-gray-800 dark:text-[#e9e5ff] leading-snug ${!n.is_read ? 'font-medium' : ''}`}>
                   {notificationText(n)}
                 </span>
-                <span className="text-[11px] text-gray-400 dark:text-zinc-500">
+                <span className="text-[11px] text-gray-400 dark:text-[#4a4870]">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
                 </span>
               </Link>

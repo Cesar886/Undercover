@@ -34,20 +34,20 @@ export function WelcomeModal() {
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+      <div className="relative bg-white dark:bg-[#0d0b1a] dark:border dark:border-violet-500/20 dark:shadow-[0_8px_40px_rgba(124,58,237,0.2)] rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors text-lg leading-none"
+          className="absolute top-4 right-4 text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 transition-colors text-lg leading-none"
         >
           ✕
         </button>
 
         <div className="text-center space-y-4 pt-2">
           <p className="text-4xl">🔥</p>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100 font-display">
-            Bienvenido a QuemonesUM!
+          <h2 className="text-xl font-bold text-gray-900 dark:text-[#e9e5ff] font-display">
+            Bienvenido a DeepUM
           </h2>
-          <div className="text-sm text-gray-600 dark:text-zinc-400 space-y-3 text-justify">
+          <div className="text-sm text-gray-600 dark:text-[#6b6a8f] space-y-3 text-justify">
             <p>
               En nuestra web, creemos que todos necesitamos un lugar donde expresarnos libremente. Esta plataforma está diseñada exclusivamente para los alumnos de la UM, donde puedes compartir tus pensamientos, experiencias o secretos bajo total anonimato.
             </p>

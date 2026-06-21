@@ -35,9 +35,37 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(-6px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
         },
-        voteBounce: {
-          '0%, 100%': { transform: 'scale(1)' },
-          '50%':      { transform: 'scale(1.25)' },
+        newPostSlide: {
+          from: { opacity: '0', transform: 'translateY(-10px) scale(0.98)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        // Pop suave al seleccionar — spring con ligero overshoot
+        fbPop: {
+          '0%':   { transform: 'scale(1)' },
+          '25%':  { transform: 'scale(1.28)' },
+          '55%':  { transform: 'scale(0.94)' },
+          '75%':  { transform: 'scale(1.06)' },
+          '90%':  { transform: 'scale(0.98)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        // Fantasma que sube con fade-out y leve rotación aleatoria
+        fbFloat: {
+          '0%':   { opacity: '1',  transform: 'translateY(0)    scale(1.15)' },
+          '40%':  { opacity: '0.9' },
+          '100%': { opacity: '0',  transform: 'translateY(-42px) scale(0.85)' },
+        },
+        // Picker: entrada con spring suave desde abajo
+        pickerIn: {
+          '0%':   { opacity: '0', transform: 'scale(0.85) translateY(10px)' },
+          '60%':  { opacity: '1', transform: 'scale(1.02) translateY(-2px)' },
+          '100%': { opacity: '1', transform: 'scale(1)    translateY(0)' },
+        },
+        // Cada emoji: aparece con spring y rebote
+        emojiEnter: {
+          '0%':   { opacity: '0', transform: 'scale(0.4)  translateY(8px)' },
+          '60%':  { opacity: '1', transform: 'scale(1.12) translateY(-2px)' },
+          '80%':  { opacity: '1', transform: 'scale(0.96) translateY(1px)' },
+          '100%': { opacity: '1', transform: 'scale(1)    translateY(0)' },
         },
         toastIn: {
           from: { opacity: '0', transform: 'translateX(-50%) translateY(8px)' },
@@ -53,11 +81,15 @@ const config: Config = {
         },
       },
       animation: {
-        'fade-slide-in': 'fadeSlideIn 0.2s ease-out',
-        'vote-bounce':   'voteBounce 0.3s ease-out',
-        'toast-in':      'toastIn 0.2s ease-out',
-        'rise-in':       'riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
-        'fade-in':       'fadeIn 0.4s ease-out',
+        'fade-slide-in':      'fadeSlideIn 0.2s ease-out',
+        'new-post-slide':     'newPostSlide 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        'fb-pop':             'fbPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'fb-float':           'fbFloat 0.55s ease-out forwards',
+        'picker-in':          'pickerIn 0.25s cubic-bezier(0.34, 1.4, 0.64, 1) both',
+        'emoji-enter':        'emojiEnter 0.3s cubic-bezier(0.34, 1.5, 0.64, 1) both',
+        'toast-in':           'toastIn 0.2s ease-out',
+        'rise-in':            'riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        'fade-in':            'fadeIn 0.4s ease-out',
       },
     },
   },

@@ -7,7 +7,6 @@ import { es } from 'date-fns/locale';
 import { ArrowLeft, Flag, MessageCircle } from 'lucide-react';
 import { Post, PostCategory, ReportReason } from '@/types';
 import { CategoryPill } from '@/components/CategoryPill';
-import { VoteButtons } from '@/components/VoteButtons';
 import { LocalComments } from '@/components/LocalComments';
 import { PostSkeleton } from '@/components/PostSkeleton';
 import { PostImage } from '@/components/PostImage';
@@ -18,10 +17,13 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { ShareImageButton } from '@/components/ShareImageButton';
+import { ReactionsPanel } from '@/components/ReactionsPanel';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
+import { anonDisplayName } from '@/lib/anonDisplay';
+import { useAnonId } from '@/hooks/useAnonId';
 
 function timeAgoCompact(date: Date): string {
   const secs = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -35,10 +37,10 @@ function timeAgoCompact(date: Date): string {
 }
 
 const accent: Record<PostCategory, { bar: string; ring: string }> = {
-  general:     { bar: 'bg-zinc-400',  ring: 'ring-zinc-300/40' },
-  quemones:    { bar: 'bg-mauve-600', ring: 'ring-mauve-400/40' },
-  infieles:    { bar: 'bg-pink-500',   ring: 'ring-pink-300/40' },
-  confesiones: { bar: 'bg-purple-600', ring: 'ring-purple-300/40' },
+  general:     { bar: 'bg-zinc-400 dark:bg-violet-900',  ring: 'ring-zinc-300/40 dark:ring-violet-800/40' },
+  quemones:    { bar: 'bg-mauve-600 dark:bg-violet-600', ring: 'ring-mauve-400/40 dark:ring-violet-500/40' },
+  infieles:    { bar: 'bg-pink-500 dark:bg-violet-500',  ring: 'ring-pink-300/40 dark:ring-violet-400/40' },
+  confesiones: { bar: 'bg-purple-600 dark:bg-violet-700', ring: 'ring-purple-300/40 dark:ring-violet-600/40' },
 };
 
 type LoadState = { kind: 'loading' } | { kind: 'ok'; post: Post } | { kind: 'notfound' } | { kind: 'error'; msg: string };
@@ -48,7 +50,7 @@ export default function PostPage() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [commentCount, setCommentCount] = useState(0);
-  const [username, setUsername] = useState('');
+  const { anonId: username } = useAnonId();
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -75,13 +77,6 @@ export default function PostPage() {
   }, [id]);
 
   useEffect(() => { loadPost(); }, [loadPost]);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((data) => setUsername(data.user?.username ?? ''))
-      .catch(() => {});
-  }, []);
 
   const handleCommentCount = useCallback((n: number) => setCommentCount(n), []);
 
@@ -195,14 +190,14 @@ export default function PostPage() {
         Volver al feed
       </Link>
 
-      <article ref={articleRef} className={`relative bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none`}>
+      <article ref={articleRef} className={`relative bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/12 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_24px_rgba(124,58,237,0.1)]`}>
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
-              <span className="text-gray-500 dark:text-zinc-400 text-xs">{post.anon_id}</span>
+              <span className="text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
               <CategoryPill category={post.category} />
             </div>
             <div className="flex items-center gap-1.5">
@@ -215,12 +210,12 @@ export default function PostPage() {
                   events={{ hover: true, focus: true, touch: true }}
                   transitionProps={{ transition: 'fade', duration: 200 }}
                   classNames={{
-                    tooltip: 'bg-white dark:bg-[#18181b] text-stone-600 dark:text-zinc-300 border border-black/10 dark:border-white/10 shadow-xl text-xs rounded-xl px-3 py-2',
-                    arrow: 'border-l border-t border-black/10 dark:border-white/10'
+                    tooltip: 'bg-white dark:bg-[#0d0b1a] text-stone-600 dark:text-violet-200 border border-black/10 dark:border-violet-500/20 shadow-xl text-xs rounded-xl px-3 py-2',
+                    arrow: 'border-l border-t border-black/10 dark:border-violet-500/20'
                   }}
                 >
-                  <span className="font-medium cursor-help hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
-                    {post.trust_unlocked ? `[confianza ${post.trust_score ?? 0}]` : '[confianza ?]'}
+                  <span className="font-mono cursor-help hover:text-stone-600 dark:hover:text-violet-400 transition-colors">
+                    {post.trust_unlocked ? `[trust:${post.trust_score ?? 0}]` : '[trust:?]'}
                   </span>
                 </Tooltip>
                 {' '}· <span title={fullDate}>{timeAgo}</span>
@@ -249,7 +244,7 @@ export default function PostPage() {
               />
             </div>
           ) : (
-            <p className="text-gray-800 dark:text-zinc-200 text-[15px] leading-relaxed break-words mb-4">
+            <p className="text-gray-800 dark:text-[#e9e5ff] text-[15px] leading-relaxed break-words mb-4">
               {post.content}
             </p>
           )}
@@ -260,15 +255,15 @@ export default function PostPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-zinc-800">
-            <VoteButtons
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-violet-500/10">
+            <ReactionsPanel
               postId={post.id}
               upvotes={post.upvotes}
               downvotes={post.downvotes}
               onVoted={() => showToast('Voto guardado')}
-              onError={(msg) => showToast(msg)}
+              onVoteError={(msg) => showToast(msg)}
             />
-            <div className="flex items-center gap-4 text-gray-400 dark:text-zinc-500">
+            <div className="flex items-center gap-4 text-gray-400 dark:text-[#4a4870]">
               <span className="flex items-center gap-1 text-xs">
                 <MessageCircle size={13} />
                 <span>{commentCount}</span>
@@ -306,7 +301,7 @@ export default function PostPage() {
       </article>
 
       <section className="mt-6">
-        <LocalComments postId={post.id} onCountChange={handleCommentCount} />
+        <LocalComments postId={post.id} archived={post.archived} onCountChange={handleCommentCount} />
       </section>
 
       <ConfirmDialog

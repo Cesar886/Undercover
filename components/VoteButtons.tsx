@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { apiGet, apiPatch } from '@/lib/apiClient';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 
@@ -19,7 +18,7 @@ interface VoteResponse {
 export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: VoteButtonsProps) {
   const [counts, setCounts] = useState({ upvotes, downvotes });
   const [voted, setVoted]   = useState<'up' | 'down' | null>(null);
-  const [bounce, setBounce] = useState(false);
+  const [popping, setPopping] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
     apiGet<{ voted: 'up' | 'down' | null }>(`/api/posts/${postId}/vote`).then((r) => {
@@ -27,7 +26,6 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
     });
   }, [postId]);
 
-  // Actualización en tiempo real: cuando otro usuario vota, los conteos se actualizan sin recarga.
   useFeedEvents(
     useCallback(
       (ev) => {
@@ -47,8 +45,8 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
       downvotes: prev.downvotes + (voteType === 'down' ? 1 : 0),
     }));
     setVoted(voteType);
-    setBounce(true);
-    setTimeout(() => setBounce(false), 300);
+    setPopping(voteType);
+    setTimeout(() => setPopping(null), 400);
 
     const result = await apiPatch<VoteResponse>(`/api/posts/${postId}/vote`, { vote_type: voteType });
 
@@ -63,34 +61,34 @@ export function VoteButtons({ postId, upvotes, downvotes, onVoted, onError }: Vo
   }
 
   const upClass = voted === 'up'
-    ? 'bg-mauve-50 dark:bg-mauve-600/10 border-mauve-500 text-mauve-600'
-    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-mauve-50 dark:hover:bg-mauve-600/10 hover:border-mauve-400 hover:text-mauve-600';
+    ? 'bg-mauve-500 dark:bg-violet-600 border-mauve-500 dark:border-violet-600 text-white font-semibold scale-105'
+    : 'border-stone-200 dark:border-violet-500/20 text-stone-500 dark:text-[#6b6a8f] hover:bg-mauve-50 dark:hover:bg-violet-600/10 hover:border-mauve-400 dark:hover:border-violet-400 hover:text-mauve-600 dark:hover:text-violet-400';
 
   const downClass = voted === 'down'
-    ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-400 text-sky-500'
-    : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:border-sky-300 hover:text-sky-500';
+    ? 'bg-sky-500 dark:bg-sky-600 border-sky-500 dark:border-sky-600 text-white font-semibold scale-105'
+    : 'border-stone-200 dark:border-violet-500/20 text-stone-500 dark:text-[#6b6a8f] hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:border-sky-300 hover:text-sky-500';
 
   return (
     <div className="flex items-center gap-2">
       <button
         onClick={() => handleVote('up')}
         disabled={!!voted}
-        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all active:scale-95 disabled:cursor-not-allowed ${upClass}`}
+        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all disabled:cursor-not-allowed ${upClass} ${popping === 'up' ? 'animate-vote-pop' : ''}`}
         aria-label="Upvote"
       >
-        <ThumbsUp size={12} strokeWidth={1.5} />
-        <span className={bounce && voted === 'up' ? 'animate-vote-bounce inline-block' : 'inline-block'}>
+        <span className="text-[10px] leading-none">▲</span>
+        <span className={`inline-block tabular-nums ${popping === 'up' ? 'animate-vote-bounce' : ''}`}>
           {counts.upvotes}
         </span>
       </button>
       <button
         onClick={() => handleVote('down')}
         disabled={!!voted}
-        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all active:scale-95 disabled:cursor-not-allowed ${downClass}`}
+        className={`flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs transition-all disabled:cursor-not-allowed ${downClass} ${popping === 'down' ? 'animate-vote-pop' : ''}`}
         aria-label="Downvote"
       >
-        <ThumbsDown size={12} strokeWidth={1.5} />
-        <span className={bounce && voted === 'down' ? 'animate-vote-bounce inline-block' : 'inline-block'}>
+        <span className="text-[10px] leading-none">▼</span>
+        <span className={`inline-block tabular-nums ${popping === 'down' ? 'animate-vote-bounce' : ''}`}>
           {counts.downvotes}
         </span>
       </button>

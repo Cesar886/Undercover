@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { hashVoterToken } from '@/lib/hash';
 import { emitFeed } from '@/lib/events';
-import { validateVoteInput, isUuid } from '@/lib/validation';
+import { isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
 import { getVoterKey } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { PoolClient } from 'pg';
+import type { Notification } from '@/types';
+
+type VoteType = 'up' | 'down';
 
 export async function GET(
   request: NextRequest,
@@ -40,8 +43,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const v = validateVoteInput(body);
-  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+  const vt = (body as Record<string, unknown>).vote_type;
+  if (vt !== 'up' && vt !== 'down' && vt !== null) {
+    return NextResponse.json({ error: 'Tipo de voto inválido' }, { status: 400 });
+  }
+  const next: VoteType | null = vt;
 
   const { key: voterKey, username: voterUsername } = await getVoterKey(request);
 
@@ -57,26 +63,12 @@ export async function PATCH(
   const salt = process.env.ANON_SALT ?? 'default-salt';
   const voterToken = hashVoterToken(voterKey, postId, salt);
 
-  const existingVote = await query(
-    'SELECT id FROM votes WHERE post_id = $1 AND voter_token = $2',
-    [postId, voterToken]
-  );
-
-  if (existingVote.rows.length > 0) {
-    return NextResponse.json({ error: 'Ya votaste en este post' }, { status: 409 });
-  }
-
-  // col is safe: derived from validated enum 'up' | 'down', never from raw user input
-  const col = v.value.vote_type === 'up' ? 'upvotes' : 'downvotes';
   const { votes, postLikeNotif } = await withTransaction(async (client: PoolClient) => {
-    await client.query(
-      'INSERT INTO votes (post_id, voter_token, vote_type) VALUES ($1, $2, $3)',
-      [postId, voterToken, v.value.vote_type]
+    const existing = await client.query<{ vote_type: VoteType }>(
+      'SELECT vote_type FROM votes WHERE post_id = $1 AND voter_token = $2 FOR UPDATE',
+      [postId, voterToken]
     );
-    const res = await client.query(
-      `UPDATE posts SET ${col} = ${col} + 1 WHERE id = $1 RETURNING upvotes, downvotes`,
-      [postId]
-    );
+    const prev: VoteType | null = existing.rows[0]?.vote_type ?? null;
 
     const authorRes = await client.query<{ anon_id: string }>(
       'SELECT anon_id FROM posts WHERE id = $1',
@@ -84,15 +76,43 @@ export async function PATCH(
     );
     const postAuthor = authorRes.rows[0]?.anon_id ?? null;
 
-    if (postAuthor && shouldApplyTrustForVote(voterUsername, postAuthor)) {
-      if (v.value.vote_type === 'up') {
-        await applyTrustDelta(postAuthor, 2, client);
-      } else {
-        await applyTrustDelta(postAuthor, -2, client);
-      }
+    if (prev === next) {
+      const res = await client.query(
+        'SELECT upvotes, downvotes FROM posts WHERE id = $1',
+        [postId]
+      );
+      return { votes: res.rows[0], postLikeNotif: null };
     }
 
-    if (v.value.vote_type === 'up' && postAuthor) {
+    if (next === null) {
+      await client.query('DELETE FROM votes WHERE post_id = $1 AND voter_token = $2', [postId, voterToken]);
+    } else if (prev === null) {
+      await client.query(
+        'INSERT INTO votes (post_id, voter_token, vote_type) VALUES ($1, $2, $3)',
+        [postId, voterToken, next]
+      );
+    } else {
+      await client.query(
+        'UPDATE votes SET vote_type = $3 WHERE post_id = $1 AND voter_token = $2',
+        [postId, voterToken, next]
+      );
+    }
+
+    const upDelta = (next === 'up' ? 1 : 0) - (prev === 'up' ? 1 : 0);
+    const downDelta = (next === 'down' ? 1 : 0) - (prev === 'down' ? 1 : 0);
+
+    const res = await client.query(
+      'UPDATE posts SET upvotes = upvotes + $2, downvotes = downvotes + $3 WHERE id = $1 RETURNING upvotes, downvotes',
+      [postId, upDelta, downDelta]
+    );
+
+    if (postAuthor && shouldApplyTrustForVote(voterUsername, postAuthor)) {
+      const trustDelta = upDelta * 2 + downDelta * -2;
+      if (trustDelta !== 0) await applyTrustDelta(postAuthor, trustDelta, client);
+    }
+
+    let postLikeNotif: Notification | null = null;
+    if (next === 'up' && prev !== 'up' && postAuthor) {
       const milestoneRes = await client.query<{
         upvotes: number;
         downvotes: number;
@@ -109,13 +129,11 @@ export async function PATCH(
         );
         await applyTrustDelta(postAuthor, 10, client);
       }
+
+      postLikeNotif = await createNotification(postAuthor, 'post_like', postId, null, voterUsername, client);
     }
 
-    const notif = v.value.vote_type === 'up' && postAuthor
-      ? await createNotification(postAuthor, 'post_like', postId, null, voterUsername, client)
-      : null;
-
-    return { votes: res.rows[0], postLikeNotif: notif };
+    return { votes: res.rows[0], postLikeNotif };
   });
 
   emitFeed({

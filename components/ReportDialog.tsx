@@ -65,13 +65,13 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
       aria-labelledby="report-title"
     >
       <div
-        className="bg-[#F9F9F9] dark:bg-[#0c0c0c] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.04] dark:border-white/5 dark:shadow-none w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 animate-fade-slide-in relative"
+        className="bg-[#F9F9F9] dark:bg-[#0d0b1a] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.04] dark:border-violet-500/20 dark:shadow-[0_8px_40px_rgba(124,58,237,0.18)] w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 animate-fade-slide-in relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="report-title" className="text-base font-semibold text-stone-900 dark:text-zinc-100 mb-1">
+        <h2 id="report-title" className="text-base font-semibold text-stone-900 dark:text-[#e9e5ff] mb-1">
           Reportar
         </h2>
-        <p className="text-[13px] text-stone-500 dark:text-zinc-400 mb-4">
+        <p className="text-[13px] text-stone-500 dark:text-[#6b6a8f] mb-4">
           Selecciona el motivo. Lo revisará el equipo de moderación.
         </p>
 
@@ -85,15 +85,15 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
                 onClick={() => setReason(r.value)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
                   active
-                    ? 'border-mauve-500 bg-mauve-50/60 dark:bg-mauve-600/10'
-                    : 'border-black/[0.06] dark:border-white/5 hover:border-black/[0.08] dark:hover:border-white/10 hover:bg-black/[0.02] dark:hover:bg-[#111111]'
+                    ? 'border-violet-500 bg-mauve-50/60 dark:bg-violet-600/15'
+                    : 'border-black/[0.06] dark:border-violet-500/10 hover:border-black/[0.08] dark:hover:border-violet-500/25 hover:bg-black/[0.02] dark:hover:bg-violet-500/8'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 transition-colors ${
-                    active ? 'border-mauve-600 bg-mauve-600' : 'border-stone-300'
+                    active ? 'border-violet-500 bg-violet-600' : 'border-stone-300 dark:border-[#3a3860]'
                   }`} />
-                  <span className="text-[13px] font-medium text-stone-800 dark:text-zinc-200">{r.label}</span>
+                  <span className="text-[13px] font-medium text-stone-800 dark:text-[#e9e5ff]">{r.label}</span>
                 </div>
                 <p className="text-[11px] text-stone-500 mt-0.5 ml-5.5 pl-[22px]">{r.description}</p>
               </button>
@@ -108,7 +108,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
               onChange={(e) => setDetail(e.target.value.slice(0, 200))}
               placeholder="Cuéntanos brevemente (opcional)"
               rows={2}
-              className="w-full text-[13px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-[#111111] resize-none border border-black/[0.06] dark:border-white/5 focus:border-mauve-500 rounded-lg px-3 py-2 focus:outline-none transition-colors"
+              className="w-full text-[13px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent dark:bg-violet-950/30 resize-none border border-black/[0.06] dark:border-violet-500/15 focus:border-violet-500 rounded-lg px-3 py-2 focus:outline-none transition-colors"
             />
             <p className="text-[10px] text-stone-400 text-right mt-0.5">{200 - detail.length}</p>
           </div>
@@ -119,7 +119,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-1.5 text-sm text-stone-500 dark:text-zinc-400 hover:text-stone-800 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/5 rounded-lg transition-all"
+            className="px-4 py-1.5 text-sm text-stone-500 dark:text-[#6b6a8f] hover:text-stone-800 dark:hover:text-violet-200 hover:bg-black/[0.04] dark:hover:bg-violet-500/10 rounded-lg transition-all"
           >
             Cancelar
           </button>
@@ -127,7 +127,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="px-4 py-1.5 text-sm font-semibold text-white bg-[#0c0c0c] hover:bg-black dark:bg-[#1f1f1f] dark:hover:bg-[#2a2a2a] dark:text-zinc-200 active:scale-95 rounded-full transition-all shadow-sm disabled:opacity-40"
+            className="px-4 py-1.5 text-sm font-semibold text-white bg-[#0c0c0c] hover:bg-black dark:bg-violet-700 dark:hover:bg-violet-600 dark:shadow-[0_0_16px_rgba(124,58,237,0.4)] active:scale-95 rounded-full transition-all shadow-sm disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Enviar reporte'}
           </button>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Términos y Condiciones',
-  description: 'Términos y condiciones de uso de QuemonesUM.',
+  description: 'Términos y condiciones de uso de DeepUM.',
 };
 
 export default function TerminosPage() {
@@ -28,7 +28,7 @@ export default function TerminosPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">1. Uso de la plataforma</h2>
           <p>
-            QuemonesUM es una plataforma de publicación anónima dirigida a estudiantes de la Universidad de Montemorelos.
+            DeepUM es una plataforma de publicación anónima dirigida a estudiantes de la Universidad de Montemorelos.
             Al usar este sitio, aceptas publicar contenido de forma responsable y respetuosa. No se permite publicar
             contenido que sea ilegal, difamatorio, obsceno, amenazante o que viole los derechos de terceros.
           </p>
@@ -37,7 +37,7 @@ export default function TerminosPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">2. Anonimato y responsabilidad</h2>
           <p>
-            Aunque las publicaciones son anónimas para otros usuarios, QuemonesUM puede conservar información técnica
+            Aunque las publicaciones son anónimas para otros usuarios, DeepUM puede conservar información técnica
             (como identificadores de sesión) con fines de moderación. El anonimato no exime al usuario de la
             responsabilidad legal por el contenido que publique.
           </p>
@@ -46,7 +46,7 @@ export default function TerminosPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">3. Moderación y eliminación de contenido</h2>
           <p>
-            QuemonesUM se reserva el derecho de eliminar cualquier publicación o comentario que viole estos términos,
+            DeepUM se reserva el derecho de eliminar cualquier publicación o comentario que viole estos términos,
             sin previo aviso. Los usuarios pueden reportar contenido inapropiado usando el ícono de bandera disponible
             en cada publicación.
           </p>
@@ -56,14 +56,14 @@ export default function TerminosPage() {
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">4. Propiedad intelectual</h2>
           <p>
             El contenido publicado por los usuarios es responsabilidad exclusiva de quien lo publica. Al publicar,
-            otorgas a QuemonesUM una licencia no exclusiva para mostrar dicho contenido en la plataforma.
+            otorgas a DeepUM una licencia no exclusiva para mostrar dicho contenido en la plataforma.
           </p>
         </section>
 
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">5. Modificaciones</h2>
           <p>
-            QuemonesUM puede actualizar estos términos en cualquier momento. El uso continuo de la plataforma
+            DeepUM puede actualizar estos términos en cualquier momento. El uso continuo de la plataforma
             implica la aceptación de los términos vigentes.
           </p>
         </section>

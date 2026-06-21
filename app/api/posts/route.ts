@@ -1,46 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { emitFeed } from '@/lib/events';
 import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
-import { formatSuspensionDate } from '@/lib/trust';
-import { getSessionUsername, unauthorized } from '@/lib/auth';
+import { getAnonId, setAnonCookie } from '@/lib/anon';
+import { pruneCategory } from '@/lib/ephemeral';
 
 const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 
 function buildOrderClause(sort: SortOption): string {
+  // "recent" sorts by bump order (last reply first), matching 4chan behavior
   if (sort === 'top') return 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC';
   if (sort === 'hot') return 'ORDER BY (p.upvotes + p.downvotes) DESC, p.created_at DESC';
-  return 'ORDER BY p.created_at DESC';
+  return 'ORDER BY p.last_bumped_at DESC, p.created_at DESC';
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await getSessionUsername())) return unauthorized();
-
   const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category') as PostCategory | null;
-  const rawSort = searchParams.get('sort') ?? 'recent';
+  const category  = searchParams.get('category') as PostCategory | null;
+  const rawSort   = searchParams.get('sort') ?? 'recent';
   const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? (rawSort as SortOption) : 'recent';
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const limit = 10;
-  const offset = (page - 1) * limit;
-
-  const q = searchParams.get('q')?.trim() ?? '';
+  const page      = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const archived  = searchParams.get('archived') === 'true';
+  const limit     = 10;
+  const offset    = (page - 1) * limit;
+  const q         = searchParams.get('q')?.trim() ?? '';
 
   const params: unknown[] = [];
   let sql = `
     SELECT p.*,
-      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count,
-      u.trust_score,
-      u.trust_unlocked
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
     FROM posts p
-    LEFT JOIN users u ON u.username = p.anon_id
     WHERE p.is_hidden = false
+      AND p.archived = $${params.length + 1}
   `;
+  params.push(archived);
 
   if (q) {
     params.push(`%${q}%`);
@@ -56,7 +54,12 @@ export async function GET(request: NextRequest) {
     sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
   }
 
-  sql += ` ${buildOrderClause(sort)} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  // Archive uses score order; live board uses bump/hot/top
+  const order = archived
+    ? 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC'
+    : buildOrderClause(sort);
+
+  sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   params.push(limit, offset);
 
   const result = await query(sql, params);
@@ -64,11 +67,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const username = await getSessionUsername();
-  if (!username) return unauthorized();
+  const { anonId, newToken } = getAnonId(request);
 
-  const rateKey = `posts:user:${username}`;
-  const rl = checkRateLimit(rateKey, RATE_LIMITS.posts);
+  const rl = checkRateLimit(`posts:anon:${anonId}`, RATE_LIMITS.posts);
   if (!rl.ok) {
     return NextResponse.json(
       { error: 'Demasiados posts. Intenta más tarde.' },
@@ -93,32 +94,23 @@ export async function POST(request: NextRequest) {
     imageWebp = img.webpDataUrl;
   }
 
-  const anonId = username;
-
-  if (username) {
-    const suspCheck = await query(
-      'SELECT is_suspended, suspension_end FROM users WHERE username = $1',
-      [username]
+  const { post } = await withTransaction(async (client) => {
+    const insertRes = await client.query(
+      `INSERT INTO posts (anon_id, content, category, image_webp)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [anonId, v.value.content, v.value.category, imageWebp]
     );
-    const user = suspCheck.rows[0];
-    if (user?.is_suspended) {
-      const isActive = user.suspension_end === null || new Date(user.suspension_end) > new Date();
-      if (isActive) {
-        const msg = user.suspension_end === null
-          ? 'Tu cuenta ha sido suspendida permanentemente por reincidencia.'
-          : `Tu cuenta está suspendida hasta ${formatSuspensionDate(user.suspension_end)}. Revisa nuestras reglas para evitar futuras suspensiones.`;
-        return NextResponse.json({ error: msg }, { status: 403 });
-      }
-    }
-  }
+    const post = { ...insertRes.rows[0], comment_count: 0 };
 
-  const result = await query(
-    `INSERT INTO posts (anon_id, content, category, image_webp) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [anonId, v.value.content, v.value.category, imageWebp]
-  );
+    // Prune the oldest thread in this category if over the limit
+    await pruneCategory(v.value.category, client);
 
-  const post = { ...result.rows[0], comment_count: 0 };
+    return { post };
+  });
+
   emitFeed({ type: 'post:new', post });
 
-  return NextResponse.json({ post: result.rows[0] }, { status: 201 });
+  const res = NextResponse.json({ post }, { status: 201 });
+  if (newToken) setAnonCookie(res, newToken);
+  return res;
 }

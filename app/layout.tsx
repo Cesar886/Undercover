@@ -2,11 +2,8 @@ import type { Metadata } from 'next';
 import { Fraunces, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import '@mantine/core/styles.css';
-import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
-import { Suspense } from 'react';
 import { MantineSetup } from '@/components/MantineSetup';
 import { Navbar } from '@/components/Navbar';
-import { WelcomeModal } from '@/components/WelcomeModal';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Footer } from '@/components/Footer';
@@ -29,8 +26,8 @@ const SITE_URL = 'https://quemonesum.site';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'QuemonesUM – Confesiones Anónimas de la Universidad de Montemorelos',
-    template: '%s | QuemonesUM',
+    default: 'DeepUM – Confesiones Anónimas de la Universidad de Montemorelos',
+    template: '%s | DeepUM',
   },
   description:
     'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos, Nuevo León, México.',
@@ -46,9 +43,9 @@ export const metadata: Metadata = {
     'quemonesum',
     'anécdotas universitarias montemorelos',
   ],
-  authors: [{ name: 'QuemonesUM', url: SITE_URL }],
-  creator: 'QuemonesUM',
-  publisher: 'QuemonesUM',
+  authors: [{ name: 'DeepUM', url: SITE_URL }],
+  creator: 'DeepUM',
+  publisher: 'DeepUM',
   category: 'community',
   robots: {
     index: true,
@@ -65,8 +62,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'es_MX',
     url: SITE_URL,
-    siteName: 'QuemonesUM',
-    title: 'QuemonesUM – Confesiones Anónimas de la Universidad de Montemorelos',
+    siteName: 'DeepUM',
+    title: 'DeepUM – Confesiones Anónimas de la Universidad de Montemorelos',
     description:
       'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos.',
     images: [
@@ -74,13 +71,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'QuemonesUM – Foro anónimo de la Universidad de Montemorelos',
+        alt: 'DeepUM – Foro anónimo de la Universidad de Montemorelos',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'QuemonesUM – Confesiones Anónimas de la UM',
+    title: 'DeepUM – Confesiones Anónimas de la UM',
     description:
       'El foro anónimo de los estudiantes de la Universidad de Montemorelos, Nuevo León.',
     images: ['/og-image.png'],
@@ -92,18 +89,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" {...mantineHtmlProps} className={`${fraunces.variable} ${instrumentSans.variable}`}>
-      <head />
-      <body className="font-sans bg-[#F9F9F9] dark:bg-[#030303] text-stone-900 dark:text-zinc-100 min-h-screen pt-12 antialiased selection:bg-mauve-200 selection:text-mauve-900 dark:selection:bg-mauve-600/30 dark:selection:text-mauve-100 transition-colors duration-200">
-        <div className="fixed inset-0 z-[-1] pointer-events-none hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/40 via-[#030303] to-[#030303]"></div>
-        <ColorSchemeScript />
+    <html lang="es" data-mantine-color-scheme="auto" suppressHydrationWarning className={`${fraunces.variable} ${instrumentSans.variable}`}>
+      <body suppressHydrationWarning className="font-sans bg-[#F9F9F9] dark:bg-[#06050f] text-stone-900 dark:text-[#e9e5ff] min-h-screen pt-12 antialiased selection:bg-mauve-200 selection:text-mauve-900 dark:selection:bg-violet-600/30 dark:selection:text-violet-100 transition-colors duration-200">
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var s=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';if((s||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();" }} />
+        <div className="fixed inset-0 z-[-1] pointer-events-none hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/50 via-[#06050f] to-[#06050f]"></div>
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] z-[-1] pointer-events-none hidden dark:block" style={{background: 'radial-gradient(ellipse at 50% 100%, rgba(124,58,237,0.08) 0%, transparent 70%)'}}></div>
         <MantineSetup>
           <ThemeProvider>
             <FeedStreamProvider>
               <Navbar />
-              <Suspense fallback={null}>
-                <WelcomeModal />
-              </Suspense>
               {children}
               <Footer />
             </FeedStreamProvider>

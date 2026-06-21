@@ -9,24 +9,20 @@ import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
+import { useAnonId } from '@/hooks/useAnonId';
 import { Post, PostCategory } from '@/types';
 
 export default function Home() {
-  const [posts, setPosts]       = useState<Post[]>([]);
-  const [category, setCategory] = useState<PostCategory | 'all'>('all');
-  const [sort, setSort]         = useState<SortOption>('recent');
-  const [page, setPage]         = useState(1);
-  const [hasMore, setHasMore]   = useState(true);
-  const [loading, setLoading]   = useState(true);
-  const [username, setUsername] = useState('');
-  const { message, showToast }  = useToast();
+  const [posts, setPosts]         = useState<Post[]>([]);
+  const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
+  const [category, setCategory]   = useState<PostCategory | 'all'>('all');
+  const [sort, setSort]           = useState<SortOption>('recent');
+  const [page, setPage]           = useState(1);
+  const [hasMore, setHasMore]     = useState(true);
+  const [loading, setLoading]     = useState(true);
+  const { message, showToast } = useToast();
+  const { anonId: username }   = useAnonId();
 
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((data) => setUsername(data.user?.username ?? ''))
-      .catch(() => {});
-  }, []);
 
   const fetchPosts = useCallback(
     async (cat: PostCategory | 'all', s: SortOption, pg: number, replace: boolean) => {
@@ -74,10 +70,16 @@ export default function Home() {
     useCallback(
       (ev) => {
         if (ev.type === 'post:new') {
-          // Solo insertar si encaja en el filtro y solo en orden "recent".
           if (sort !== 'recent') return;
           if (category !== 'all' && ev.post.category !== category) return;
-          setPosts((prev) => (prev.some((p) => p.id === ev.post.id) ? prev : [ev.post, ...prev]));
+          setPosts((prev) => {
+            if (prev.some((p) => p.id === ev.post.id)) return prev;
+            setNewPostIds((ids) => new Set([...ids, ev.post.id]));
+            setTimeout(() => {
+              setNewPostIds((ids) => { const n = new Set(ids); n.delete(ev.post.id); return n; });
+            }, 600);
+            return [ev.post, ...prev];
+          });
           return;
         }
         if (ev.type === 'post:vote') {
@@ -112,7 +114,7 @@ export default function Home() {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <PostForm onPostCreated={handlePostCreated} />
 
-      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-[#F9F9F9]/80 dark:bg-[#030303]/80 backdrop-blur-md border-b border-black/[0.04] dark:border-white/5">
+      <div className="sticky top-12 z-40 -mx-4 px-4 py-2 bg-[#F9F9F9]/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10">
         <div className="flex items-center gap-3 max-w-[600px] mx-auto">
           <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             <CategoryFilter active={category} onChange={setCategory} />
@@ -131,27 +133,30 @@ export default function Home() {
             <PostSkeleton />
           </>
         ) : (
-          posts.map((post, index) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUsername={username}
-              onVoted={() => showToast('Voto guardado')}
-              onVoteError={(msg) => showToast(msg)}
-              onDeleted={handleDeleted}
-              onActionError={(msg) => showToast(msg)}
-              onReported={() => showToast('Gracias, lo revisaremos.')}
-              style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
-              className="opacity-0 animate-fade-slide-in"
-            />
-          ))
+          posts.map((post, index) => {
+            const isNew = newPostIds.has(post.id);
+            return (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUsername={username}
+                onVoted={() => showToast('Voto guardado')}
+                onVoteError={(msg) => showToast(msg)}
+                onDeleted={handleDeleted}
+                onActionError={(msg) => showToast(msg)}
+                onReported={() => showToast('Gracias, lo revisaremos.')}
+                style={isNew ? undefined : { animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
+                className={isNew ? 'animate-new-post-slide' : 'opacity-0 animate-fade-slide-in'}
+              />
+            );
+          })
         )}
 
         {!loading && posts.length === 0 && (
-          <div className="bg-white dark:bg-[#0c0c0c] border border-black/[0.04] dark:border-white/5 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
+          <div className="bg-white dark:bg-[#0d0b1a] border border-black/[0.04] dark:border-violet-500/10 rounded-2xl py-14 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
             <p className="text-2xl mb-2">🔥</p>
-            <p className="text-gray-500 dark:text-zinc-400 text-sm font-medium">Nada por aquí todavía</p>
-            <p className="text-gray-400 dark:text-zinc-500 text-xs mt-1">Sé el primero en quemar algo</p>
+            <p className="text-gray-500 dark:text-[#6b6a8f] text-sm font-medium">Nada por aquí todavía</p>
+            <p className="text-gray-400 dark:text-[#4a4870] text-xs mt-1">Sé el primero en quemar algo</p>
           </div>
         )}
       </div>

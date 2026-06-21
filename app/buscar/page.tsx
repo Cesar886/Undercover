@@ -7,6 +7,7 @@ import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
+import { useAnonId } from '@/hooks/useAnonId';
 import { Post } from '@/types';
 
 export default function BuscarPage() {
@@ -15,18 +16,11 @@ export default function BuscarPage() {
   const [posts, setPosts]         = useState<Post[]>([]);
   const [loading, setLoading]     = useState(false);
   const [searched, setSearched]   = useState(false);
-  const [username, setUsername]   = useState('');
-  const { message, showToast }    = useToast();
+  const { message, showToast } = useToast();
+  const { anonId: username }   = useAnonId();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((data) => setUsername(data.user?.username ?? ''))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!submitted) return;
@@ -89,7 +83,7 @@ export default function BuscarPage() {
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar en QuemonesUM..."
+          placeholder="Buscar en DeepUM..."
           className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-mauve-600 shadow-sm"
         />
       </form>

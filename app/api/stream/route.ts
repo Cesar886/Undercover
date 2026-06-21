@@ -1,17 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { subscribeFeed, FeedEvent } from '@/lib/events';
-import { getSessionUsername } from '@/lib/auth';
 
-// Streaming requiere runtime Node y respuesta dinámica.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const currentUsername = await getSessionUsername();
-  if (!currentUsername) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
-
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -22,21 +15,18 @@ export async function GET(request: NextRequest) {
         try {
           controller.enqueue(encoder.encode(chunk));
         } catch {
-          // controller ya cerrado
+          // controller already closed
         }
       };
 
       const sendEvent = (ev: FeedEvent) => {
-        if (ev.type === 'notification:new' && ev.recipient !== currentUsername) return;
+        if (ev.type === 'notification:new') return;
         safeEnqueue(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`);
       };
 
-      // Saludo inicial — fuerza al cliente a confirmar conexión y evita buffering en proxies.
       safeEnqueue(`event: ready\ndata: {}\n\n`);
 
       const unsubscribe = subscribeFeed(sendEvent);
-
-      // Heartbeat cada 25s para mantener viva la conexión a través de proxies.
       const heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 25000);
 
       const cleanup = () => {
@@ -47,7 +37,7 @@ export async function GET(request: NextRequest) {
         try {
           controller.close();
         } catch {
-          // ya cerrado
+          // already closed
         }
       };
 

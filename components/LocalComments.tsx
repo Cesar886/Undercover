@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CornerDownRight, Flag, SendHorizonal, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { CornerDownRight, Flag, SendHorizonal, MessageSquare } from 'lucide-react';
+import { ReactionsPanel } from '@/components/ReactionsPanel';
 import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
@@ -16,6 +17,8 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 import { ReportReason } from '@/types';
+import { anonDisplayName } from '@/lib/anonDisplay';
+import { useAnonId } from '@/hooks/useAnonId';
 
 interface Comment {
   id: string;
@@ -143,9 +146,9 @@ function ReplyForm({
           placeholder="Escribe tu respuesta…"
           rows={1}
           disabled={submitting}
-          className="w-full text-[14px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
+          className="w-full text-[14px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent resize-none overflow-hidden focus:outline-none py-1 disabled:opacity-60 leading-relaxed"
         />
-        <div className="h-px bg-mauve-500/60 rounded-full" />
+        <div className="h-px bg-violet-500/60 dark:shadow-[0_0_6px_rgba(124,58,237,0.4)] rounded-full" />
         <div className="mt-2.5">
           <ImagePicker
             preview={image}
@@ -224,25 +227,6 @@ function CommentItem({
   const isAuthor = !!username && username === comment.anon_id && !comment.is_deleted;
   const hasReplies = (comment.replies?.length ?? 0) > 0;
   const [savingEdit, setSavingEdit] = useState(false);
-  const [upvotes, setUpvotes] = useState(comment.upvotes ?? 0);
-  const [downvotes, setDownvotes] = useState(comment.downvotes ?? 0);
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
-  const [voting, setVoting] = useState(false);
-
-  async function handleVote(voteType: 'up' | 'down') {
-    if (voting || voted !== null || comment.is_deleted) return;
-    setVoting(true);
-    const r = await apiPatch<{ votes: { upvotes: number; downvotes: number } }>(
-      `/api/posts/${postId}/comments/${comment.id}/vote`,
-      { vote_type: voteType }
-    );
-    setVoting(false);
-    if (r.ok) {
-      setUpvotes(r.data.votes.upvotes);
-      setDownvotes(r.data.votes.downvotes);
-      setVoted(voteType);
-    }
-  }
 
   async function handleSaveEdit(content: string) {
     setSavingEdit(true);
@@ -259,17 +243,17 @@ function CommentItem({
 
   return (
     <div>
-      <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80 dark:hover:bg-zinc-800/40">
+      <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80 dark:hover:bg-violet-500/5">
         <div className="mt-0.5">
           <AvatarBadge name={comment.anon_id} size="sm" muted={!!comment.is_deleted} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2 mb-1">
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className={`text-[13px] font-bold leading-none truncate ${comment.is_deleted ? 'text-stone-400 dark:text-zinc-500' : 'text-stone-800 dark:text-zinc-200'}`}>
-                {comment.is_deleted ? '—' : comment.anon_id}
+              <span className={`text-[13px] font-bold leading-none truncate font-mono ${comment.is_deleted ? 'text-stone-400 dark:text-[#3a3860]' : 'text-stone-800 dark:text-[#c4bbff]'}`}>
+                {comment.is_deleted ? '—' : anonDisplayName(comment.anon_id)}
               </span>
-              <span className="text-[11px] text-stone-400 dark:text-zinc-500 leading-none flex items-center">
+              <span className="text-[11px] text-stone-400 dark:text-[#4a4870] leading-none flex items-center">
                 {!comment.is_deleted && (
                   <>
                     <Tooltip
@@ -280,12 +264,12 @@ function CommentItem({
                       events={{ hover: true, focus: true, touch: true }}
                       transitionProps={{ transition: 'fade', duration: 200 }}
                       classNames={{
-                        tooltip: 'bg-white dark:bg-[#18181b] text-stone-600 dark:text-zinc-300 border border-black/10 dark:border-white/10 shadow-xl text-xs rounded-xl px-3 py-2',
-                        arrow: 'border-l border-t border-black/10 dark:border-white/10'
+                        tooltip: 'bg-white dark:bg-[#0d0b1a] text-stone-600 dark:text-violet-200 border border-black/10 dark:border-violet-500/20 shadow-xl text-xs rounded-xl px-3 py-2',
+                        arrow: 'border-l border-t border-black/10 dark:border-violet-500/20'
                       }}
                     >
-                      <span className="font-medium cursor-help hover:text-stone-600 dark:hover:text-zinc-300 transition-colors">
-                        {comment.trust_unlocked ? `[confianza ${comment.trust_score ?? 0}]` : '[confianza ?]'}
+                      <span className="font-mono cursor-help hover:text-stone-600 dark:hover:text-violet-400 transition-colors">
+                        {comment.trust_unlocked ? `[trust:${comment.trust_score ?? 0}]` : '[trust:?]'}
                       </span>
                     </Tooltip>
                     <span className="mx-1">·</span>
@@ -331,10 +315,10 @@ function CommentItem({
               saving={savingEdit}
               onCancel={onCancelEdit}
               onSave={handleSaveEdit}
-              textareaClassName="w-full text-[14px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent dark:bg-zinc-800 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-zinc-700 focus:border-mauve-500 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
+              textareaClassName="w-full text-[14px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent dark:bg-violet-950/30 resize-none overflow-hidden focus:outline-none border border-stone-200 dark:border-violet-500/20 focus:border-violet-500 dark:focus:border-violet-500 rounded-lg px-3 py-2 leading-relaxed disabled:opacity-60"
             />
           ) : (
-            <p className="text-[14px] text-stone-700 dark:text-zinc-300 leading-relaxed break-words">
+            <p className="text-[14px] text-stone-700 dark:text-[#d4ceff] leading-relaxed break-words">
               {parentAnonId && (
                 <span className="text-mauve-600 font-semibold mr-1">@{parentAnonId}</span>
               )}
@@ -350,30 +334,12 @@ function CommentItem({
 
           {!comment.is_deleted && !isEditing && (
             <div className="mt-2 flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => handleVote('up')}
-                  disabled={voting || voted !== null}
-                  className={`flex items-center gap-1 text-[11px] transition-colors disabled:cursor-not-allowed ${
-                    voted === 'up' ? 'text-mauve-600' : 'text-stone-300 hover:text-mauve-600'
-                  }`}
-                  aria-label="Voto positivo"
-                >
-                  <ThumbsUp size={11} strokeWidth={2} />
-                  {upvotes > 0 && <span>{upvotes}</span>}
-                </button>
-                <button
-                  onClick={() => handleVote('down')}
-                  disabled={voting || voted !== null}
-                  className={`flex items-center gap-1 text-[11px] transition-colors disabled:cursor-not-allowed ${
-                    voted === 'down' ? 'text-blue-500' : 'text-stone-300 hover:text-blue-400'
-                  }`}
-                  aria-label="Voto negativo"
-                >
-                  <ThumbsDown size={11} strokeWidth={2} />
-                  {downvotes > 0 && <span>{downvotes}</span>}
-                </button>
-              </div>
+              <ReactionsPanel
+                postId={postId}
+                commentId={comment.id}
+                upvotes={comment.upvotes ?? 0}
+                downvotes={comment.downvotes ?? 0}
+              />
               {username && (
                 <button
                   onClick={() => (isReplying ? onCancelReply() : onReply(comment.id, comment.anon_id))}
@@ -434,12 +400,16 @@ function CommentItem({
   );
 }
 
-export function LocalComments({ postId, onCountChange }: { postId: string; onCountChange?: (count: number) => void }) {
+export function LocalComments({ postId, archived, onCountChange }: {
+  postId: string;
+  archived?: boolean;
+  onCountChange?: (count: number) => void;
+}) {
   const [comments, setComments]     = useState<Comment[]>([]);
   const [content, setContent]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused]       = useState(false);
-  const [username, setUsername]     = useState('');
+  const { anonId: username }        = useAnonId();
   const [replyingTo, setReplyingTo] = useState<{ id: string; anonId: string } | null>(null);
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [image, setImage]           = useState<string | null>(null);
@@ -455,10 +425,6 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
     fetch(`/api/posts/${postId}/comments`)
       .then((r) => r.json())
       .then((data) => setComments(data.comments ?? []))
-      .catch(() => {});
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((data) => setUsername(data.user?.username ?? ''))
       .catch(() => {});
   }, [postId]);
 
@@ -607,9 +573,9 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
   const visibleCount = comments.filter((c) => !c.is_deleted).length;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-stone-200/80 dark:border-zinc-800/60 rounded-2xl shadow-md shadow-stone-100/80 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-stone-100 dark:border-zinc-800 flex items-center gap-2.5">
-        <span className="font-display text-[15px] font-semibold text-stone-800 dark:text-zinc-200 tracking-tight">Comentarios</span>
+    <div className="bg-white dark:bg-[#0d0b1a] border border-stone-200/80 dark:border-violet-500/12 rounded-2xl shadow-md shadow-stone-100/80 dark:shadow-[0_4px_24px_rgba(124,58,237,0.1)] overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-stone-100 dark:border-violet-500/10 flex items-center gap-2.5">
+        <span className="font-display text-[15px] font-semibold text-stone-800 dark:text-[#e9e5ff] tracking-tight">Comentarios</span>
         {visibleCount > 0 && (
           <span className="bg-mauve-100 text-mauve-700 text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none">
             {visibleCount}
@@ -617,8 +583,15 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
         )}
       </div>
 
-      {username ? (
-        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 dark:border-zinc-800 transition-colors duration-300 ${focused ? 'bg-mauve-50/20 dark:bg-mauve-600/5' : ''}`}>
+      {archived ? (
+        <div className="px-5 py-4 border-b border-stone-100 dark:border-violet-500/10 flex items-center gap-2.5">
+          <span className="text-violet-400" aria-hidden>🗃</span>
+          <p className="text-sm text-stone-400 dark:text-[#4a4870] italic">
+            Este hilo está archivado — solo lectura.
+          </p>
+        </div>
+      ) : (
+        <div className={`flex gap-3 px-5 py-4 border-b border-stone-100 dark:border-violet-500/10 transition-colors duration-300 ${focused ? 'bg-mauve-50/20 dark:bg-violet-600/5' : ''}`}>
           <div className="flex-shrink-0 mt-0.5">
             <AvatarBadge name={username} size="md" />
           </div>
@@ -636,7 +609,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
                 placeholder="Comparte tu voz…"
                 rows={1}
                 disabled={submitting}
-                className="w-full text-[15px] text-stone-800 dark:text-zinc-200 placeholder-stone-300 dark:placeholder-zinc-600 bg-transparent resize-none overflow-hidden focus:outline-none pt-1 pb-1 pr-8 disabled:opacity-60 leading-relaxed"
+                className="w-full text-[15px] text-stone-800 dark:text-[#e9e5ff] placeholder-stone-300 dark:placeholder-[#2e2b4a] bg-transparent resize-none overflow-hidden focus:outline-none pt-1 pb-1 pr-8 disabled:opacity-60 leading-relaxed"
               />
               {!focused && content.trim() && (
                 <button
@@ -650,8 +623,8 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
               )}
             </div>
             <div
-              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-mauve-500' : 'bg-stone-200 dark:bg-zinc-700'}`}
-              style={focused ? { boxShadow: '0 0 6px rgba(249,115,22,0.3)' } : {}}
+              className={`h-[1.5px] rounded-full transition-all duration-200 ${focused ? 'bg-violet-500' : 'bg-stone-200 dark:bg-violet-900/40'}`}
+              style={focused ? { boxShadow: '0 0 8px rgba(124,58,237,0.4)' } : {}}
             />
             {focused && (
               <div className="mt-2.5 animate-fade-in">
@@ -680,7 +653,7 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
                   <button
                     type="submit"
                     disabled={submitting || (!content.trim() && !image)}
-                    className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
+                    className="px-4 py-1.5 text-xs font-semibold bg-stone-900 hover:bg-stone-800 dark:bg-violet-700 dark:hover:bg-violet-600 dark:shadow-[0_0_12px_rgba(124,58,237,0.35)] active:scale-95 disabled:opacity-30 text-white rounded-full transition-all shadow-sm"
                   >
                     {submitting ? 'Enviando…' : 'Comentar'}
                   </button>
@@ -689,28 +662,16 @@ export function LocalComments({ postId, onCountChange }: { postId: string; onCou
             )}
           </form>
         </div>
-      ) : (
-        <div className="px-5 py-5 border-b border-stone-100 dark:border-zinc-800">
-          <p className="font-display italic text-[15px] text-stone-500 dark:text-zinc-400 mb-3">
-            Únete a la conversación.
-          </p>
-          <a
-            href="/login"
-            className="inline-flex items-center px-4 py-1.5 text-xs font-semibold bg-mauve-600 hover:bg-mauve-700 active:scale-95 text-white rounded-full transition-all shadow-sm"
-          >
-            Entrar
-          </a>
-        </div>
       )}
 
       {comments.length === 0 ? (
         <div className="py-14 text-center">
-          <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 dark:text-zinc-700 mb-3" />
-          <p className="font-display italic text-[15px] text-stone-400 dark:text-zinc-500">Nadie ha comentado todavía.</p>
-          <p className="text-xs text-stone-300 dark:text-zinc-600 mt-1">Sé el primero.</p>
+          <MessageSquare size={28} strokeWidth={1.5} className="mx-auto text-stone-200 dark:text-violet-900/60 mb-3" />
+          <p className="font-display italic text-[15px] text-stone-400 dark:text-[#4a4870]">Nadie ha comentado todavía.</p>
+          <p className="text-xs text-stone-300 dark:text-[#2e2b4a] mt-1">Sé el primero.</p>
         </div>
       ) : (
-        <div className="px-4 py-1 divide-y divide-stone-100/80 dark:divide-zinc-800/80">
+        <div className="px-4 py-1 divide-y divide-stone-100/80 dark:divide-violet-500/8">
           {tree.map((c) => (
             <CommentItem
               key={c.id}

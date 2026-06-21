@@ -4,7 +4,7 @@ import { Flag } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Reportes',
-  description: 'Cómo reportar contenido inapropiado en QuemonesUM.',
+  description: 'Cómo reportar contenido inapropiado en DeepUM.',
 };
 
 export default function ReportesPage() {

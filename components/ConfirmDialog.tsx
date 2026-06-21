@@ -51,21 +51,21 @@ export function ConfirmDialog({
       aria-labelledby="confirm-title"
     >
       <div
-        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-sm p-5 animate-fade-slide-in"
+        className="bg-white dark:bg-[#0d0b1a] dark:border dark:border-violet-500/20 dark:shadow-[0_8px_40px_rgba(124,58,237,0.2)] rounded-2xl shadow-xl w-full max-w-sm p-5 animate-fade-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-title" className="text-base font-semibold text-stone-900 dark:text-zinc-100 mb-1.5">
+        <h2 id="confirm-title" className="text-base font-semibold text-stone-900 dark:text-[#e9e5ff] mb-1.5">
           {title}
         </h2>
         {description && (
-          <p className="text-[13px] text-stone-500 dark:text-zinc-400 leading-relaxed mb-4">{description}</p>
+          <p className="text-[13px] text-stone-500 dark:text-[#6b6a8f] leading-relaxed mb-4">{description}</p>
         )}
         <div className="flex items-center justify-end gap-2 mt-4">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-1.5 text-sm text-stone-500 dark:text-zinc-400 hover:text-stone-800 dark:hover:text-zinc-200 hover:bg-stone-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+            className="px-4 py-1.5 text-sm text-stone-500 dark:text-[#6b6a8f] hover:text-stone-800 dark:hover:text-violet-200 hover:bg-stone-100 dark:hover:bg-violet-500/10 rounded-lg transition-all"
           >
             {cancelLabel}
           </button>

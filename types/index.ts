@@ -1,5 +1,7 @@
 export type PostCategory = 'quemones' | 'infieles' | 'confesiones' | 'general';
 export type VoteType = 'up' | 'down';
+export type ReactionEmoji = '❤️' | '😂' | '🤯' | '🫶' | '🙃' | '🫪';
+export type ReactionCounts = Partial<Record<ReactionEmoji, number>>;
 
 export interface Post {
   id: string;
@@ -13,6 +15,8 @@ export interface Post {
   image_webp: string | null;
   created_at: string;
   updated_at: string | null;
+  last_bumped_at: string;
+  archived: boolean;
   comment_count?: number;
   trust_score?: number;
   trust_unlocked?: boolean;

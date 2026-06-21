@@ -1,38 +1,49 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySessionValue } from '@/lib/session';
+
+const ENC = new TextEncoder();
+
+async function deriveAnonId(token: string): Promise<string | null> {
+  const salt = process.env.ANON_SALT;
+  if (!salt) return null; // refuse to derive without a real secret
+  const data = ENC.encode(`${token}:${salt}`);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+const COOKIE_OPTS = {
+  path: '/',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 60 * 60 * 24 * 365,
+  sameSite: 'lax' as const,
+};
 
 export async function middleware(request: NextRequest) {
-  const raw = request.cookies.get('session_user')?.value;
-  const session = raw ? await verifySessionValue(raw) : null;
+  const token  = request.cookies.get('anon_token')?.value;
+  const pubId  = request.cookies.get('anon_pub')?.value;
 
-  const { pathname } = request.nextUrl;
-  const isAuthPage = pathname === '/login' || pathname === '/completar-registro';
+  // Both cookies present — nothing to do
+  if (token && pubId) return NextResponse.next();
 
-  if (session && isAuthPage) {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = '/';
-    return NextResponse.redirect(homeUrl);
+  const finalToken = token ?? crypto.randomUUID();
+  const anonId     = await deriveAnonId(finalToken);
+
+  // ANON_SALT not configured — skip cookie generation rather than use a weak fallback.
+  // API routes in lib/anon.ts will throw explicitly when they are called.
+  if (!anonId) return NextResponse.next();
+
+  const response = NextResponse.next();
+
+  if (!token) {
+    response.cookies.set('anon_token', finalToken, { ...COOKIE_OPTS, httpOnly: true });
+  }
+  if (!pubId || pubId !== anonId) {
+    response.cookies.set('anon_pub', anonId, { ...COOKIE_OPTS, httpOnly: false });
   }
 
-  // Rutas protegidas que requieren sesión
-  const isProtectedRoute = 
-    pathname === '/' || 
-    pathname.startsWith('/posts/') || 
-    pathname === '/buscar' || 
-    pathname === '/guardados' || 
-    (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/'));
-
-  if (!session && isProtectedRoute) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

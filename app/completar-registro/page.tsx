@@ -160,7 +160,7 @@ export default function CompletarRegistroPage() {
               disabled={loading || status !== 'available' || !accepted}
               className="w-full bg-mauve-600 hover:bg-mauve-700 disabled:opacity-40 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
             >
-              {loading ? 'Creando cuenta...' : 'Entrar a QuemonesUM'}
+              {loading ? 'Creando cuenta...' : 'Entrar a DeepUM'}
             </button>
           </form>
         </div>

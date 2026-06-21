@@ -50,12 +50,12 @@ export function AuthorMenu({ onEdit, onDelete, size = 'md' }: AuthorMenuProps) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-1 w-36 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 overflow-hidden animate-fade-in"
+          className="absolute right-0 mt-1 w-36 bg-white dark:bg-[#0d0b1a] border border-stone-200 dark:border-violet-500/20 rounded-lg shadow-lg dark:shadow-[0_8px_24px_rgba(124,58,237,0.15)] z-20 overflow-hidden animate-fade-in"
         >
           <button
             role="menuitem"
             onClick={() => { setOpen(false); onEdit(); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800 text-left transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-stone-700 dark:text-violet-200/80 hover:bg-stone-50 dark:hover:bg-violet-500/10 text-left transition-colors"
           >
             <Pencil size={13} strokeWidth={1.8} />
             Editar

@@ -35,21 +35,21 @@ export function SortFilter({ active, onChange, compact }: SortFilterProps) {
       <div ref={ref} className="relative flex-shrink-0">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors py-1"
+          className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-[#4a4870] hover:text-gray-600 dark:hover:text-violet-300 transition-colors py-1"
         >
           <ArrowUpDown size={13} strokeWidth={1.5} />
           <span className="hidden sm:inline whitespace-nowrap">{activeLabel}</span>
         </button>
         {open && (
-          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg py-1 min-w-[130px] z-50">
+          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#0d0b1a] border border-gray-200 dark:border-violet-500/20 rounded-xl shadow-lg dark:shadow-[0_8px_32px_rgba(124,58,237,0.15)] py-1 min-w-[130px] z-50">
             {SORTS.map((s) => (
               <button
                 key={s.value}
                 onClick={() => { onChange(s.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                   active === s.value
-                    ? 'text-mauve-700 font-semibold bg-mauve-50 dark:bg-mauve-600/10'
-                    : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                    ? 'text-violet-700 dark:text-violet-300 font-semibold bg-mauve-50 dark:bg-violet-600/15'
+                    : 'text-gray-600 dark:text-[#6b6a8f] hover:bg-gray-50 dark:hover:bg-violet-500/10'
                 }`}
               >
                 {s.label}
