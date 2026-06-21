@@ -112,13 +112,13 @@ export default function BoardPage({ params }: { params: { board: string } }) {
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
       <div className="flex items-baseline gap-2 mb-1">
         <h1
-          className="font-bold text-xl font-mono"
+          className="font-bold text-xl"
           style={{ color: boardMeta.text }}
         >
-          /{board}/
+          {boardMeta.name}
         </h1>
         <span className="text-sm text-gray-400 dark:text-[#4a4870]">
-          {boardMeta.name} — {boardMeta.description}
+          {boardMeta.description}
         </span>
       </div>
 

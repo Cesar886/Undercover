@@ -56,9 +56,9 @@ export function Navbar() {
           <Link
             key={board.slug}
             href={`/${board.slug}`}
-            className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded whitespace-nowrap transition-colors text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 hover:bg-gray-100/80 dark:hover:bg-violet-500/10"
+            className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap transition-colors text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 hover:bg-gray-100/80 dark:hover:bg-violet-500/10"
           >
-            /{board.slug}/
+            {board.name}
           </Link>
         ))}
       </div>

@@ -58,10 +58,10 @@ export default function Home() {
                 <div className="flex items-baseline gap-2">
                   <Link
                     href={`/${board.slug}`}
-                    className="font-bold text-base font-mono hover:underline transition-colors"
+                    className="font-bold text-base hover:underline transition-colors"
                     style={{ color: board.text }}
                   >
-                    /{board.slug}/
+                    {board.name}
                   </Link>
                   <span className="text-xs text-gray-400 dark:text-[#4a4870]">
                     {board.description}
