@@ -5,6 +5,7 @@ import { validateCommentInput, isUuid } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getAnonId, setAnonCookie } from '@/lib/anon';
+import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
 
 export async function GET(
   _request: NextRequest,
@@ -35,6 +36,12 @@ export async function POST(
   }
   if (postCheck.rows[0].archived) {
     return NextResponse.json({ error: 'Este hilo está archivado.' }, { status: 403 });
+  }
+
+  const ip  = getRealIp(request);
+  const ban = await getBanStatus(ip);
+  if (ban.banned) {
+    return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
   }
 
   const { anonId, newToken } = getAnonId(request);
@@ -75,8 +82,8 @@ export async function POST(
   }
 
   const result = await query(
-    'INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [params.id, v.value.parent_id, anonId, v.value.content, imageWebp]
+    'INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, poster_ip) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [params.id, v.value.parent_id, anonId, v.value.content, imageWebp, ip]
   );
 
   // Bump the parent thread so it rises in the feed (4chan-style bump)

@@ -5,6 +5,7 @@ import { validateReportInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta } from '@/lib/trust';
 import { getReporterId } from '@/lib/auth';
+import { applyBan } from '@/lib/ipban';
 
 export async function POST(
   request: NextRequest,
@@ -40,7 +41,7 @@ export async function POST(
        SET report_count = report_count + 1,
            is_hidden = CASE WHEN report_count + 1 >= 10 THEN true ELSE is_hidden END
        WHERE id = $1
-       RETURNING report_count, is_hidden, anon_id`,
+       RETURNING report_count, is_hidden, anon_id, poster_ip`,
       [postId]
     );
 
@@ -52,13 +53,18 @@ export async function POST(
       [postId, v.value.reason, v.value.detail ?? null, reporterId]
     );
 
-    const { report_count, is_hidden, anon_id: postAuthor } = updateRes.rows[0];
+    const { report_count, is_hidden, anon_id: postAuthor, poster_ip } = updateRes.rows[0];
 
     if (is_hidden && report_count >= 10) {
       const prevCount = report_count - 1;
       const justHidden = prevCount < 10;
       if (justHidden && postAuthor) {
         await applyTrustDelta(postAuthor, -15, client);
+
+        // Auto-ban the poster's IP
+        if (poster_ip) {
+          await applyBan(poster_ip, `post con ${report_count} reportes`);
+        }
 
         const reportersRes = await client.query<{ reporter_id: string }>(
           `SELECT DISTINCT reporter_id FROM reports

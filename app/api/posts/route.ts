@@ -7,6 +7,9 @@ import { validateAndConvertImage } from '@/lib/imageValidation';
 import { PostCategory } from '@/types';
 import { getAnonId, setAnonCookie } from '@/lib/anon';
 import { pruneCategory } from '@/lib/ephemeral';
+import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
+
+export const dynamic = 'force-dynamic';
 
 const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
@@ -63,14 +66,32 @@ export async function GET(request: NextRequest) {
   params.push(limit, offset);
 
   const result = await query(sql, params);
+  console.log('[GET /api/posts] archived:', archived, '| count:', result.rows.length, '| ids:', result.rows.map((r: {id:string}) => r.id.slice(0,8)).join(','));
   return NextResponse.json({ posts: result.rows, page, limit });
 }
 
 export async function POST(request: NextRequest) {
-  const { anonId, newToken } = getAnonId(request);
+  console.log('[POST /api/posts] request received');
+
+  const ip = getRealIp(request);
+  const ban = await getBanStatus(ip);
+  if (ban.banned) {
+    return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
+  }
+
+  let anonId: string;
+  let newToken: string | undefined;
+  try {
+    ({ anonId, newToken } = getAnonId(request));
+    console.log('[POST /api/posts] anonId derived:', anonId.slice(0, 8) + '...');
+  } catch (err) {
+    console.error('[POST /api/posts] getAnonId failed:', err);
+    return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
+  }
 
   const rl = checkRateLimit(`posts:anon:${anonId}`, RATE_LIMITS.posts);
   if (!rl.ok) {
+    console.log('[POST /api/posts] rate limited');
     return NextResponse.json(
       { error: 'Demasiados posts. Intenta más tarde.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
@@ -80,35 +101,52 @@ export async function POST(request: NextRequest) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
+    console.log('[POST /api/posts] body parsed:', JSON.stringify(body).slice(0, 100));
+  } catch (err) {
+    console.error('[POST /api/posts] JSON parse failed:', err);
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
   const v = validatePostInput(body);
-  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+  if (!v.ok) {
+    console.log('[POST /api/posts] validation failed:', v.error);
+    return NextResponse.json({ error: v.error }, { status: v.status });
+  }
+  console.log('[POST /api/posts] validation ok, category:', v.value.category);
 
   let imageWebp: string | null = null;
   if (v.value.image) {
     const img = await validateAndConvertImage(v.value.image);
-    if (!img.ok) return NextResponse.json({ error: img.error }, { status: 400 });
+    if (!img.ok) {
+      console.log('[POST /api/posts] image validation failed:', img.error);
+      return NextResponse.json({ error: img.error }, { status: 400 });
+    }
     imageWebp = img.webpDataUrl;
+    console.log('[POST /api/posts] image ok');
   }
 
-  const { post } = await withTransaction(async (client) => {
-    const insertRes = await client.query(
-      `INSERT INTO posts (anon_id, content, category, image_webp)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [anonId, v.value.content, v.value.category, imageWebp]
-    );
-    const post = { ...insertRes.rows[0], comment_count: 0 };
-
-    // Prune the oldest thread in this category if over the limit
-    await pruneCategory(v.value.category, client);
-
-    return { post };
-  });
+  let post: unknown;
+  try {
+    ({ post } = await withTransaction(async (client) => {
+      console.log('[POST /api/posts] inserting...');
+      const insertRes = await client.query(
+        `INSERT INTO posts (anon_id, content, category, image_webp, poster_ip)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [anonId, v.value.content, v.value.category, imageWebp, ip]
+      );
+      const post = { ...insertRes.rows[0], comment_count: 0 };
+      console.log('[POST /api/posts] inserted, id:', post.id);
+      await pruneCategory(v.value.category, client);
+      console.log('[POST /api/posts] pruneCategory done');
+      return { post };
+    }));
+  } catch (err) {
+    console.error('[POST /api/posts] DB error:', err);
+    return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
+  }
 
   emitFeed({ type: 'post:new', post });
+  console.log('[POST /api/posts] emitFeed done, returning 201');
 
   const res = NextResponse.json({ post }, { status: 201 });
   if (newToken) setAnonCookie(res, newToken);
