@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/useToast';
 import { apiGet } from '@/lib/apiClient';
 import { BOARDS } from '@/lib/boards';
 import { Post } from '@/types';
+import { QuemaCountdown } from '@/components/QuemaCountdown';
+import { useFeedEvents } from '@/components/FeedStreamProvider';
 
 interface BoardPreview {
   slug: string;
@@ -41,8 +43,18 @@ export default function Home() {
     showToast('Post publicado');
   }
 
+  useFeedEvents(
+    useCallback((ev) => {
+      if (ev.type === 'quema:total') {
+        setPreviews(BOARDS.map((b) => ({ slug: b.slug, posts: [], loading: false })));
+        showToast('🔥 Quema Total — el tablón renace');
+      }
+    }, [showToast])
+  );
+
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-6">
+      <QuemaCountdown />
       <PostForm onPostCreated={handlePostCreated} />
 
       <div className="space-y-4">

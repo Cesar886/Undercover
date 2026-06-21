@@ -14,7 +14,8 @@ export type FeedEvent =
     }
   | { type: 'comment:edited'; postId: string; comment: Comment }
   | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean }
-  | { type: 'notification:new'; recipient: string; notification: Notification };
+  | { type: 'notification:new'; recipient: string; notification: Notification }
+  | { type: 'quema:total' };
 
 const globalForBus = globalThis as unknown as { __feedBus?: EventEmitter };
 const bus = globalForBus.__feedBus ?? new EventEmitter();

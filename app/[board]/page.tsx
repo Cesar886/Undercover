@@ -11,6 +11,7 @@ import { apiGet } from '@/lib/apiClient';
 import { useAnonId } from '@/hooks/useAnonId';
 import { isValidBoard, getBoard } from '@/lib/boards';
 import { Post, PostCategory } from '@/types';
+import { QuemaCountdown } from '@/components/QuemaCountdown';
 
 export default function BoardPage({ params }: { params: { board: string } }) {
   const { board } = params;
@@ -101,8 +102,12 @@ export default function BoardPage({ params }: { params: { board: string } }) {
             )
           );
         }
+        if (ev.type === 'quema:total') {
+          setPosts([]);
+          showToast('🔥 Quema Total — el tablón renace');
+        }
       },
-      [board]
+      [board, showToast]
     )
   );
 
@@ -110,6 +115,7 @@ export default function BoardPage({ params }: { params: { board: string } }) {
 
   return (
     <main className="max-w-[600px] mx-auto px-4 py-6 space-y-4">
+      <QuemaCountdown />
       <div className="flex items-baseline gap-2 mb-1">
         <h1
           className="font-bold text-xl"
