@@ -84,7 +84,10 @@ export async function DELETE(
     return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
   }
 
-  await query('DELETE FROM posts WHERE id = $1', [params.id]);
+  await query(
+    `UPDATE posts SET content = '', image_webp = NULL, is_hidden = TRUE WHERE id = $1`,
+    [params.id]
+  );
   emitFeed({ type: 'post:hidden', postId: params.id });
 
   return NextResponse.json({ success: true });
