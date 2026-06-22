@@ -50,6 +50,14 @@ const CATEGORIES: {
     text: '#7e22ce',
     glow: '0 0 0 1px #9333ea30, 0 2px 10px rgba(147,51,234,0.28)',
   },
+  {
+    value: 'stickers',
+    label: 'Stickers',
+    bg: 'rgba(234,179,8,0.07)',
+    border: '#eab308',
+    text: '#ca8a04',
+    glow: '0 0 0 1px #eab30830, 0 2px 10px rgba(234,179,8,0.28)',
+  },
 ];
 
 const MAX_CHARS = 500;
@@ -90,6 +98,13 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [content]);
+
+  useEffect(() => {
+    if (category === 'stickers') {
+      setPollEnabled(false);
+      setContent('');
+    }
+  }, [category]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -195,16 +210,23 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
             <p className="text-[10px] text-zinc-400 dark:text-[#4a4870] font-semibold tracking-widest uppercase mb-1.5 font-mono">
               {displayName}
             </p>
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
-              placeholder={pollEnabled ? '¿Cuál es tu pregunta?' : '¿Qué está pasando en la U?'}
-              rows={2}
-              disabled={loading}
-              className="w-full bg-transparent text-zinc-800 dark:text-[#e9e5ff] placeholder:text-zinc-300 dark:placeholder:text-[#2e2b4a] text-[15px] leading-relaxed resize-none focus:ring-0 focus:outline-none disabled:opacity-50 overflow-hidden"
-            />
-            {hasBlockedUrl && (
+            {category !== 'stickers' && (
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+                placeholder={pollEnabled ? '¿Cuál es tu pregunta?' : '¿Qué está pasando en la U?'}
+                rows={2}
+                disabled={loading}
+                className="w-full bg-transparent text-zinc-800 dark:text-[#e9e5ff] placeholder:text-zinc-300 dark:placeholder:text-[#2e2b4a] text-[15px] leading-relaxed resize-none focus:ring-0 focus:outline-none disabled:opacity-50 overflow-hidden"
+              />
+            )}
+            {category === 'stickers' && !image && (
+              <p className="text-stone-400 dark:text-[#6b6a8f] text-[15px] italic py-2">
+                Sube una imagen para tu sticker...
+              </p>
+            )}
+            {hasBlockedUrl && category !== 'stickers' && (
               <p className="text-red-500 text-xs mt-1">No se permiten enlaces ni URLs.</p>
             )}
             {image && (
@@ -288,21 +310,23 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
               onError={(m) => setImageError(m)}
               disabled={loading || !!image}
             />
-            <button
-              type="button"
-              onClick={() => setPollEnabled((enabled) => !enabled)}
-              disabled={loading}
-              aria-pressed={pollEnabled}
-              title="Encuesta"
-              className={`inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                pollEnabled
-                  ? 'bg-violet-600 text-white shadow-sm shadow-violet-200/60 dark:shadow-violet-900/30'
-                  : 'text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:text-[#4a4870] dark:hover:bg-violet-500/10 dark:hover:text-violet-200'
-              }`}
-            >
-              <BarChart3 size={14} strokeWidth={1.8} />
-              Encuesta
-            </button>
+            {category !== 'stickers' && (
+              <button
+                type="button"
+                onClick={() => setPollEnabled((enabled) => !enabled)}
+                disabled={loading}
+                aria-pressed={pollEnabled}
+                title="Encuesta"
+                className={`inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+                  pollEnabled
+                    ? 'bg-violet-600 text-white shadow-sm shadow-violet-200/60 dark:shadow-violet-900/30'
+                    : 'text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:text-[#4a4870] dark:hover:bg-violet-500/10 dark:hover:text-violet-200'
+                }`}
+              >
+                <BarChart3 size={14} strokeWidth={1.8} />
+                Encuesta
+              </button>
+            )}
           </div>
 
           {/* Categorías */}

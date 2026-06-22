@@ -17,16 +17,16 @@ type PollRow = {
   user_vote_option_id: string | null;
 };
 
-const globalForPolls = globalThis as unknown as { __pollSchemaReady?: boolean };
+const globalForPolls = globalThis as unknown as {
+  __pollSchemaReady?: boolean;
+  __pollSchemaPromise?: Promise<void>;
+};
 
 function executorOrDefault(executor?: Queryable): Queryable {
   return executor ?? { query };
 }
 
-export async function ensurePollSchema(executor?: Queryable): Promise<void> {
-  if (globalForPolls.__pollSchemaReady) return;
-
-  const db = executorOrDefault(executor);
+async function _runPollSchema(db: Queryable): Promise<void> {
   await db.query(`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -65,10 +65,24 @@ export async function ensurePollSchema(executor?: Queryable): Promise<void> {
     ALTER TABLE post_poll_options ADD CONSTRAINT post_poll_options_position_check
       CHECK (position >= 0 AND position < 6);
   `);
+}
 
+export async function ensurePollSchema(executor?: Queryable): Promise<void> {
+  if (globalForPolls.__pollSchemaReady) return;
+
+  // When called without a transaction executor, use a singleton promise so
+  // concurrent requests don't run DDL simultaneously and deadlock each other.
   if (!executor) {
-    globalForPolls.__pollSchemaReady = true;
+    if (!globalForPolls.__pollSchemaPromise) {
+      globalForPolls.__pollSchemaPromise = _runPollSchema({ query }).then(() => {
+        globalForPolls.__pollSchemaReady = true;
+        globalForPolls.__pollSchemaPromise = undefined;
+      });
+    }
+    return globalForPolls.__pollSchemaPromise;
   }
+
+  return _runPollSchema(executor);
 }
 
 export async function createPollForPost(

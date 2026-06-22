@@ -7,6 +7,7 @@ const FILTERS: { value: PostCategory | 'all'; label: string; activeClass: string
   { value: 'quemones',    label: 'Quemones',    activeClass: 'bg-mauve-600 dark:bg-violet-700 dark:border-violet-600 text-white border-mauve-600' },
   { value: 'infieles',    label: 'Infieles',    activeClass: 'bg-pink-500 dark:bg-violet-600 dark:border-violet-500 text-white border-pink-500' },
   { value: 'confesiones', label: 'Confesiones', activeClass: 'bg-purple-600 dark:bg-violet-800 dark:border-violet-700 text-white border-purple-600' },
+  { value: 'stickers',    label: 'Stickers',    activeClass: 'bg-yellow-500 dark:bg-yellow-600 dark:border-yellow-500 text-white border-yellow-500' },
 ];
 
 interface CategoryFilterProps {

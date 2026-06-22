@@ -1,4 +1,4 @@
-export type PostCategory = 'quemones' | 'infieles' | 'confesiones' | 'general';
+export type PostCategory = 'quemones' | 'infieles' | 'confesiones' | 'general' | 'stickers';
 export type VoteType = 'up' | 'down';
 export type ReactionEmoji = '❤️' | '😂' | '🤯' | '🫶' | '🙃' | '🫪';
 export type ReactionCounts = Partial<Record<ReactionEmoji, number>>;

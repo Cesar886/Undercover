@@ -13,6 +13,7 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  serverExternalPackages: ['@imgly/background-removal-node', 'sharp', 'node-webpmux'],
 };
 
 export default withPWA(nextConfig);

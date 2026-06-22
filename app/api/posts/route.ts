@@ -12,7 +12,7 @@ import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost
 
 export const dynamic = 'force-dynamic';
 
-const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones'];
+const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones', 'stickers'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 
@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
   if (category && VALID_CATEGORIES.includes(category)) {
     params.push(category);
     sql += ` AND p.category = $${params.length}`;
+  } else if (!category) {
+    sql += ` AND p.category != 'stickers'`;
   }
 
   if (sort === 'top') {
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   let imageWebp: string | null = null;
   if (v.value.image) {
-    const img = await validateAndConvertImage(v.value.image);
+    const img = await validateAndConvertImage(v.value.image, v.value.category);
     if (!img.ok) {
       console.log('[POST /api/posts] image validation failed:', img.error);
       return NextResponse.json({ error: img.error }, { status: 400 });

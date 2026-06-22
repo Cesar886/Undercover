@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import webpmux from 'node-webpmux';
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
@@ -40,7 +41,37 @@ function looksLikeImage(buf: Buffer): boolean {
   return false;
 }
 
-export async function validateAndConvertImage(input: unknown): Promise<ImageValidation> {
+// Técnica 1 + 5: Endurece el canal alfa y limpia los píxeles transparentes.
+// Píxeles con alfa < 30 → totalmente transparentes (RGB también a 0 para mejor compresión).
+// Píxeles con alfa > 220 → totalmente opacos.
+// La banda 30-220 se conserva como anillo de antialiasing (1-2 px).
+async function hardenAlphaEdges(buf: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(buf)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const px = new Uint8Array(data.buffer);
+  const s = info.channels; // 4 (RGBA)
+
+  for (let i = 0; i < px.length; i += s) {
+    const a = px[i + 3];
+    if (a < 30) {
+      // Zona exterior: opacidad cero + RGB negro → comprime como bitmap de 1 bit
+      px[i] = px[i + 1] = px[i + 2] = px[i + 3] = 0;
+    } else if (a > 220) {
+      // Interior sólido: opacidad total
+      px[i + 3] = 255;
+    }
+    // 30–220: anillo de antialiasing, se deja intacto
+  }
+
+  return sharp(Buffer.from(px.buffer), {
+    raw: { width: info.width, height: info.height, channels: info.channels },
+  }).png().toBuffer();
+}
+
+export async function validateAndConvertImage(input: unknown, category?: string): Promise<ImageValidation> {
   if (typeof input !== 'string') return { ok: false, error: 'Imagen inválida' };
 
   const buf = decodeBase64Image(input);
@@ -55,8 +86,76 @@ export async function validateAndConvertImage(input: unknown): Promise<ImageVali
   }
 
   try {
-    const webp = await sharp(buf, { failOn: 'error' }).webp({ quality: 80 }).toBuffer();
-    return { ok: true, webpDataUrl: `data:image/webp;base64,${webp.toString('base64')}` };
+    let processBuf = buf;
+    if (category === 'stickers') {
+      try {
+        // Técnica 6: Preprocesar antes de quitar fondo.
+        // Reducción de ruido leve + normalización de contraste + pre-redimensionado a 512px.
+        // Así el removedor recibe una imagen más limpia y procesa menos datos.
+        const preprocessed = await sharp(buf)
+          .resize({ width: 512, height: 512, fit: 'inside' })
+          .median(3)       // reduce ruido de sensor sin borrar bordes
+          .normalise()     // contraste automático → silueta más definida
+          .png()
+          .toBuffer();
+
+        const { removeBackground } = await import('@imgly/background-removal-node');
+        const blob = new Blob([new Uint8Array(preprocessed)], { type: 'image/png' });
+        const bgRemovedBlob = await removeBackground(blob);
+        const arrayBuffer = await bgRemovedBlob.arrayBuffer();
+        processBuf = Buffer.from(arrayBuffer);
+      } catch (err) {
+        console.error('Error removing background:', err);
+      }
+    }
+
+    let webpBuf: Buffer;
+
+    if (category === 'stickers') {
+      // Técnica 1 + 5: Endurecer alfa y limpiar píxeles transparentes
+      const hardened = await hardenAlphaEdges(processBuf);
+
+      // Técnica 2: Cuantización de color con imagequant (median-cut + Floyd-Steinberg).
+      // 256 colores RGBA bien elegidos → menos entropía → WebP comprime mejor.
+      // dither: 0.6 distribuye el error de cuantización en gradientes sin generar ruido
+      // de alta frecuencia que perjudique al codificador lossy.
+      // Técnica 4: Enfoque sutil antes de exportar (realza bordes sin añadir bytes).
+      const quantizedPng = await sharp(hardened, { failOn: 'error' })
+        .resize({ width: 512, height: 512, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .sharpen({ sigma: 0.8, m1: 0.4, m2: 0.4 })
+        .png({ palette: true, colours: 256, dither: 0.6 })
+        .toBuffer();
+
+      // Técnica 3: Compresión asimétrica — alfa al 20 % (canal casi binario tras hardenAlphaEdges),
+      //            color al 78 % (sube de 60 aprovechando el ahorro del alfa).
+      //            effort: 6 → máximo esfuerzo del codificador WebP.
+      const resizedWebp = await sharp(quantizedPng)
+        .webp({ quality: 78, alphaQuality: 20, effort: 6 })
+        .toBuffer();
+
+      // Añadir EXIF metadata para WASticker
+      const json = {
+        "sticker-pack-id": "quemadosum",
+        "sticker-pack-name": "DeepUM",
+        "sticker-pack-publisher": "UM",
+        "emojis": ["🔥"]
+      };
+      const exifAttr = Buffer.from([
+        0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00
+      ]);
+      const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf-8');
+      const exif = Buffer.concat([exifAttr, jsonBuffer]);
+      exif.writeUInt32LE(jsonBuffer.length, 14);
+
+      const img = new webpmux.Image();
+      await img.load(resizedWebp);
+      img.exif = exif;
+      webpBuf = await img.save(null);
+    } else {
+      webpBuf = await sharp(processBuf, { failOn: 'error' }).webp({ quality: 80 }).toBuffer();
+    }
+
+    return { ok: true, webpDataUrl: `data:image/webp;base64,${webpBuf.toString('base64')}` };
   } catch {
     return { ok: false, error: 'No se pudo procesar la imagen' };
   }

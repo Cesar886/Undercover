@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     'quemones universidad de montemorelos',
     'quemones montemorelos',
     'confesiones universidad montemorelos',
-    'chismes UM Nuevo León',
+    'stickers UM Nuevo León',
     'foro estudiantes montemorelos',
     'Universidad de Montemorelos',
     'quemonesum',

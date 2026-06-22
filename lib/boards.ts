@@ -47,6 +47,15 @@ export const BOARDS: Board[] = [
     text: '#7e22ce',
     glow: '0 0 0 1px #9333ea30, 0 2px 10px rgba(147,51,234,0.28)',
   },
+  {
+    slug: 'stickers',
+    name: 'Stickers',
+    description: 'Tus mejores stickers aquí',
+    bg: 'rgba(234,179,8,0.07)',
+    border: '#eab308',
+    text: '#ca8a04',
+    glow: '0 0 0 1px #eab30830, 0 2px 10px rgba(234,179,8,0.28)',
+  },
 ];
 
 const VALID_SLUGS = new Set<string>(BOARDS.map((b) => b.slug));
