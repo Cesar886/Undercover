@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import webpmux from 'node-webpmux';
+import { removeBackground } from '@imgly/background-removal-node';
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 

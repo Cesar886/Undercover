@@ -148,10 +148,10 @@ export function ImagePicker({ preview, onPick, onClear, onError, disabled, uploa
           type="button"
           onClick={onClear}
           disabled={disabled || uploading}
-          className="absolute -top-2 -right-2 bg-white border border-gray-200 shadow-sm rounded-full p-1 text-gray-500 hover:text-red-500 disabled:opacity-50"
+          className="absolute top-1.5 right-1.5 bg-white/90 dark:bg-zinc-800/90 border border-gray-200 dark:border-zinc-600 shadow rounded-full p-1.5 text-gray-500 hover:text-red-500 disabled:opacity-50 z-10 touch-manipulation"
           aria-label="Quitar imagen"
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     );
