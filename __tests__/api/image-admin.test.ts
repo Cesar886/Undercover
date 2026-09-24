@@ -4,7 +4,7 @@ jest.mock('@/lib/imageAdmin', () => ({
   IMAGE_ADMIN_COOKIE_OPTIONS: { httpOnly: true, sameSite: 'strict', path: '/', maxAge: 28800 },
 }));
 jest.mock('@/lib/db', () => ({ query: jest.fn() }));
-jest.mock('@/lib/imageReviews', () => ({ ensureImageReviewSchema: jest.fn(), reviewImage: jest.fn() }));
+jest.mock('@/lib/imageReviews', () => ({ ensureImageReviewSchema: jest.fn(), reviewImage: jest.fn(), deleteImageReview: jest.fn() }));
 jest.mock('@/lib/ipban', () => ({ getRealIp: () => '127.0.0.1' }));
 
 import { NextRequest } from 'next/server';
@@ -45,14 +45,14 @@ it('rejects cross-origin decisions even with a session', async () => {
   expect((await POST(req('POST', { id: ID, decision: 'approved' }, 'https://other.example'))).status).toBe(403);
   expect(reviewImage).not.toHaveBeenCalled();
 });
-it('serves previews privately only while pending', async () => {
+it('serves previews privately from the moderation history', async () => {
   (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
   (query as jest.Mock).mockResolvedValue({ rows: [{ image_data: 'data:image/webp;base64,aGVsbG8=' }] });
   const res = await preview(req(), { params: { id: ID } });
   expect(res.headers.get('cache-control')).toBe('private, no-store');
   expect(res.headers.get('content-type')).toBe('image/webp');
   expect(await res.text()).toBe('hello');
-  expect((query as jest.Mock).mock.calls[0][0]).toContain("status = 'pending'");
+  expect((query as jest.Mock).mock.calls[0][0]).toContain('COALESCE(r.image_data');
 });
 it('accepts one-click decisions without a reason', async () => {
   (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
