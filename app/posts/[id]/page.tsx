@@ -148,7 +148,7 @@ export default function PostPage() {
   if (state.kind === 'error') {
     return (
       <main className="max-w-[600px] mx-auto px-6 pt-32 text-center space-y-4 animate-fade-in">
-        <p className="text-xl font-semibold text-gray-700">Algo se atoró cargando este quemón.</p>
+        <p className="text-xl font-semibold text-gray-700">Vuelva mas tarde... o no.</p>
         <p className="text-sm text-gray-500">{state.msg}</p>
         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
           <BackLink />

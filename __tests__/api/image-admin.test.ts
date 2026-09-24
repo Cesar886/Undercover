@@ -8,12 +8,12 @@ jest.mock('@/lib/imageReviews', () => ({ ensureImageReviewSchema: jest.fn(), rev
 jest.mock('@/lib/ipban', () => ({ getRealIp: () => '127.0.0.1' }));
 
 import { NextRequest } from 'next/server';
-import { GET, POST } from '@/app/api/image-admin/route';
+import { DELETE, GET, POST } from '@/app/api/image-admin/route';
 import { GET as preview } from '@/app/api/image-admin/[id]/route';
 import { POST as login, DELETE as logout } from '@/app/api/image-admin/session/route';
 import { hasImageAdminSession, checkImageAdminCredentials, createImageAdminSession, deleteImageAdminSession } from '@/lib/imageAdmin';
 import { query } from '@/lib/db';
-import { reviewImage } from '@/lib/imageReviews';
+import { deleteImageReview, reviewImage } from '@/lib/imageReviews';
 import { _resetForTesting } from '@/lib/rateLimit';
 import { isImageAdminOrigin } from '@/lib/imageAdminOrigin';
 
@@ -83,4 +83,15 @@ it('revokes the session and removes its cookie on logout', async () => {
   const res = await logout(req('DELETE'));
   expect(deleteImageAdminSession).toHaveBeenCalled();
   expect(res.cookies.get('image_admin_session')?.maxAge).toBe(0);
+});
+
+it('permanently deletes a reviewed image only after an authenticated same-origin request', async () => {
+  (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
+  (deleteImageReview as jest.Mock).mockResolvedValue(true);
+  const request = new NextRequest('http://localhost/api/image-admin?id=' + ID, {
+    method: 'DELETE', headers: { origin: 'http://localhost' },
+  });
+  const res = await DELETE(request);
+  expect(res.status).toBe(200);
+  expect(deleteImageReview).toHaveBeenCalledWith(ID);
 });
