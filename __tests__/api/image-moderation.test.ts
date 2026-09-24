@@ -13,7 +13,7 @@ import { POST as createComment } from '@/app/api/posts/[id]/comments/route';
 import { query, withTransaction } from '@/lib/db';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { emitFeed } from '@/lib/events';
-import { reviewImage } from '@/lib/imageReviews';
+import { deleteImageReview, reviewImage } from '@/lib/imageReviews';
 
 const ID = '12345678-1234-1234-1234-123456789012';
 const IMAGE = 'data:image/webp;base64,cHJpdmF0ZQ==';
@@ -21,6 +21,7 @@ const client = { query: jest.fn() };
 const request = (data: unknown) => new NextRequest('http://localhost/api/posts', {
   method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Owner-Token': '12345678-1234-4234-8234-123456789012' }, body: JSON.stringify(data),
 });
+
 beforeEach(() => {
   jest.clearAllMocks();
   (query as jest.Mock).mockResolvedValue({ rows: [{ archived: false }] });
@@ -41,8 +42,6 @@ it.each(['post', 'comment'])('queues %s bytes privately, never in public respons
   expect(JSON.stringify((emitFeed as jest.Mock).mock.calls)).not.toContain(IMAGE);
   const inserts = client.query.mock.calls;
   expect(inserts.some(([sql, args]) => sql.includes('INSERT INTO image_reviews') && args[1] === IMAGE)).toBe(true);
-  const publicInsert = inserts.find(([sql]) => sql.includes('INSERT INTO ' + (kind === 'post' ? 'posts' : 'comments')));
-  expect(publicInsert[1]).not.toContain(IMAGE);
 });
 
 it('rejects invalid image data before any insertion', async () => {
@@ -52,38 +51,85 @@ it('rejects invalid image data before any insertion', async () => {
   expect(withTransaction).not.toHaveBeenCalled();
 });
 
-it.each(['post', 'comment'])('approval publishes only the selected pending %s image', async (kind) => {
-  client.query.mockResolvedValueOnce({ rows: [{ id: ID, status: 'pending', post_id: kind === 'post' ? ID : null, comment_id: kind === 'comment' ? ID : null, image_data: IMAGE }] })
-    .mockResolvedValueOnce({ rows: [{ id: ID, post_id: ID, image_webp: IMAGE }] })
+it.each(['post', 'comment'])('approval publishes and preserves the private %s image', async (kind) => {
+  const target = kind === 'post'
+    ? { id: ID, content: 'hello', image_webp: null, is_hidden: false, archived: false }
+    : { id: ID, post_id: ID, content: 'hello', image_webp: null, is_deleted: false };
+  const published = { ...target, image_webp: IMAGE };
+  client.query
+    .mockResolvedValueOnce({ rows: [{ status: 'pending', post_id: kind === 'post' ? ID : null, comment_id: kind === 'comment' ? ID : null, image_data: IMAGE, target_hidden_by_review: false }] })
+    .mockResolvedValueOnce({ rows: [target] })
+    .mockResolvedValueOnce({ rows: [published] })
     .mockResolvedValueOnce({ rows: [] });
+
   expect(await reviewImage(ID, 'approved')).toBe(true);
-  expect(client.query.mock.calls[0][0]).toContain('FOR UPDATE');
-  expect(client.query.mock.calls[1][1]).toEqual([IMAGE, ID]);
-  expect(client.query.mock.calls[2][1]).toEqual([ID, 'approved']);
-  expect(client.query.mock.calls[2][0]).toContain('image_data = NULL');
+  expect(client.query.mock.calls[2][1][0]).toBe(IMAGE);
+  expect(client.query.mock.calls[3][0]).toContain('image_data = COALESCE(image_data');
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false]);
   expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: kind + ':edited' }));
 });
 
-it('rejection discards bytes without publishing anything', async () => {
-  client.query.mockResolvedValueOnce({ rows: [{ status: 'pending', post_id: ID, image_data: IMAGE }] })
+it('rejecting an image-only comment hides it without destroying its review', async () => {
+  client.query
+    .mockResolvedValueOnce({ rows: [{ status: 'pending', post_id: null, comment_id: ID, image_data: IMAGE, target_hidden_by_review: false }] })
+    .mockResolvedValueOnce({ rows: [{ id: ID, post_id: ID, content: '', image_webp: null, is_deleted: false }] })
+    .mockResolvedValueOnce({ rows: [{ id: ID, post_id: ID, content: '', image_webp: null, is_deleted: true }] })
     .mockResolvedValueOnce({ rows: [] });
+
   expect(await reviewImage(ID, 'rejected')).toBe(true);
-  expect(client.query).toHaveBeenCalledTimes(2);
-  expect(client.query.mock.calls[1][1]).toEqual([ID, 'rejected']);
-  expect(emitFeed).not.toHaveBeenCalled();
+  expect(client.query.mock.calls[2][0]).toContain('is_deleted');
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, true]);
+  expect(emitFeed).toHaveBeenCalledWith({ type: 'comment:deleted', postId: ID, commentId: ID, soft: true });
 });
 
-it('does not apply repeated or conflicting decisions to a completed review', async () => {
-  client.query.mockResolvedValueOnce({ rows: [{ status: 'approved' }] });
-  expect(await reviewImage(ID, 'rejected')).toBe(false);
-  expect(client.query).toHaveBeenCalledTimes(1);
+it('keeps comment text while removing a rejected attachment', async () => {
+  const target = { id: ID, post_id: ID, content: 'Este texto sí permanece', image_webp: IMAGE, is_deleted: false };
+  client.query
+    .mockResolvedValueOnce({ rows: [{ status: 'approved', post_id: null, comment_id: ID, image_data: IMAGE, target_hidden_by_review: false }] })
+    .mockResolvedValueOnce({ rows: [target] })
+    .mockResolvedValueOnce({ rows: [{ ...target, image_webp: null }] })
+    .mockResolvedValueOnce({ rows: [] });
+
+  expect(await reviewImage(ID, 'rejected')).toBe(true);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, false]);
+  expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: 'comment:edited' }));
 });
 
-it('discards a pending image when its target has been deleted or hidden', async () => {
-  client.query.mockResolvedValueOnce({ rows: [{ status: 'pending', post_id: ID, image_data: IMAGE }] })
-    .mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+it('can approve again and restore a comment hidden by moderation', async () => {
+  const target = { id: ID, post_id: ID, content: '', image_webp: null, is_deleted: true };
+  client.query
+    .mockResolvedValueOnce({ rows: [{ status: 'rejected', post_id: null, comment_id: ID, image_data: IMAGE, target_hidden_by_review: true }] })
+    .mockResolvedValueOnce({ rows: [target] })
+    .mockResolvedValueOnce({ rows: [{ ...target, image_webp: IMAGE, is_deleted: false }] })
+    .mockResolvedValueOnce({ rows: [] });
+
   expect(await reviewImage(ID, 'approved')).toBe(true);
-  expect(client.query.mock.calls[1][0]).toContain('NOT is_hidden');
-  expect(client.query.mock.calls[2][1]).toEqual([ID, 'rejected']);
-  expect(emitFeed).not.toHaveBeenCalled();
+  expect(client.query.mock.calls[2][1]).toEqual([IMAGE, ID, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false]);
+  expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: 'comment:new' }));
+});
+
+it('supports a reversible hidden status while retaining bytes', async () => {
+  const target = { id: ID, content: 'texto', image_webp: IMAGE, is_hidden: false, archived: false };
+  client.query
+    .mockResolvedValueOnce({ rows: [{ status: 'approved', post_id: ID, comment_id: null, image_data: IMAGE, target_hidden_by_review: false }] })
+    .mockResolvedValueOnce({ rows: [target] })
+    .mockResolvedValueOnce({ rows: [{ ...target, image_webp: null }] })
+    .mockResolvedValueOnce({ rows: [] });
+
+  expect(await reviewImage(ID, 'hidden')).toBe(true);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'hidden', IMAGE, false]);
+});
+
+it('permanently deletes the private review and clears the public attachment', async () => {
+  const target = { id: ID, post_id: ID, content: 'texto', image_webp: IMAGE, is_deleted: false };
+  client.query
+    .mockResolvedValueOnce({ rows: [{ id: ID, post_id: null, comment_id: ID, image_data: IMAGE }] })
+    .mockResolvedValueOnce({ rows: [target] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [{ ...target, image_webp: null }] });
+
+  expect(await deleteImageReview(ID)).toBe(true);
+  expect(client.query.mock.calls[2][0]).toContain('DELETE FROM image_reviews');
+  expect(client.query.mock.calls[3][0]).toContain('image_webp = NULL');
 });

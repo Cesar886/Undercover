@@ -26,6 +26,7 @@ import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
+import { isCategoryAvailable } from '@/lib/categoryAvailability';
 
 function timeAgoCompact(date: Date): string {
   const secs = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -55,8 +56,9 @@ const BOARD_NAMES: Record<string, string> = {
 };
 
 function BackLink({ category, className = '' }: { category?: PostCategory; className?: string }) {
-  const href  = category ? `/${category}` : '/';
-  const label = category ? `Volver a ${(BOARD_NAMES[category] ?? category)}` : 'Volver al inicio';
+  const availableCategory = category && isCategoryAvailable(category) ? category : undefined;
+  const href  = availableCategory ? `/${availableCategory}` : '/';
+  const label = availableCategory ? `Volver a ${(BOARD_NAMES[availableCategory] ?? availableCategory)}` : 'Volver al inicio';
   return (
     <Link
       href={href}

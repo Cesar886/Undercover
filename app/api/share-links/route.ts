@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { isUuid } from '@/lib/validation';
 import { ensureVisibilitySchema, ownerTokenFromRequest } from '@/lib/visibility';
 import { createShareToken, shareLinkTtlSeconds, verifyShareToken } from '@/lib/shareLinks';
+import { publicOrigin } from '@/lib/publicOrigin';
 
 export async function POST(request: NextRequest) {
   await ensureVisibilitySchema();
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     ...(kind === 'comment' ? { commentId: commentId as string } : {}),
   });
   const hash = kind === 'comment' ? `#comment-${commentId}` : '';
-  const url = `${request.nextUrl.origin}/posts/${postId}?share=${encodeURIComponent(created.token)}${hash}`;
+  const url = `${publicOrigin(request)}/posts/${postId}?share=${encodeURIComponent(created.token)}${hash}`;
   return NextResponse.json({ url, expiresAt: created.expiresAt, expiresInSeconds: shareLinkTtlSeconds() }, {
     headers: { 'Cache-Control': 'no-store' },
   });

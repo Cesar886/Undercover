@@ -35,13 +35,14 @@ el espacio disponible en el servidor.
 
 Deployed on 2026-09-24 to 164.90.129.213 alongside the existing marketplace.
 
-- App: `/srv/quemonesum/app`
+- Versión activa tras usar el script: `/srv/quemonesum/current`
+- Primera instalación conservada: `/srv/quemonesum/app`
 - PM2 process: `quemonesum-test`, listening only on `127.0.0.1:3107`
 - Nginx site: `/etc/nginx/sites-available/quemonesum.site`
 - HTTPS: Let's Encrypt for `quemonesum.site` and `www.quemonesum.site`, automatic renewal
 - Dedicated PostgreSQL database and role: `quemonesum_test`
 - PostgreSQL runs in the existing `marketplace-um-postgres-1` container; the marketplace database is unchanged.
-- Runtime secrets: `/srv/quemonesum/app/.env.production` (mode 0600; do not overwrite when updating)
+- Runtime secrets: `/srv/quemonesum/shared/.env.production` (mode 0600; las versiones enlazan este archivo)
 - Moderation panel: `https://quemonesum.site/imagenes-dnewjlfe99474ef8wu-admin`
 
 Production build, public HTTPS, admin login and real pending/approved/rejected

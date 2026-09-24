@@ -4,12 +4,13 @@ import { categorySlug, ensureCategoriesSchema, listCategories } from '@/lib/cate
 import { query } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitize } from '@/lib/sanitize';
+import { isCategoryAvailable } from '@/lib/categoryAvailability';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    return NextResponse.json({ categories: await listCategories() });
+    return NextResponse.json({ categories: await listCategories() }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('[GET /api/categories]', error);
     return NextResponse.json({ error: 'No se pudieron cargar las categorías' }, { status: 500 });
@@ -43,6 +44,9 @@ export async function POST(request: NextRequest) {
   const name = sanitize(typeof body.name === 'string' ? body.name : '').trim();
   const description = sanitize(typeof body.description === 'string' ? body.description : '').trim();
   const slug = categorySlug(name);
+  if (!isCategoryAvailable(slug)) {
+    return NextResponse.json({ error: 'Esta categoría ya no está disponible' }, { status: 400 });
+  }
 
   if (name.length < 3 || name.length > 40) {
     return NextResponse.json({ error: 'El nombre debe tener entre 3 y 40 caracteres' }, { status: 400 });

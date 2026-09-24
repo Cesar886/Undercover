@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { isCategoryAvailable, RETIRED_CATEGORIES } from './categoryAvailability';
 
 export interface Category {
   slug: string;
@@ -12,8 +13,6 @@ export const SYSTEM_CATEGORIES: Category[] = [
   { slug: 'general', name: 'General', description: 'Que esta pasando en la U', is_system: true },
   { slug: 'quemones', name: 'Quemones', description: 'Quememos a todos', is_system: true },
   { slug: 'infieles', name: 'Infieles', description: 'Entre todos nos cuidamos', is_system: true },
-  { slug: 'confesiones', name: 'Confesiones', description: 'Lo que no le dirías a nadie en persona', is_system: true },
-  { slug: 'stickers', name: 'Stickers', description: 'Tus mejores stickers aquí', is_system: true },
 ];
 
 let schemaReady: Promise<void> | null = null;
@@ -67,17 +66,20 @@ export async function listCategories(): Promise<Category[]> {
   const result = await query(
     `SELECT slug, name, description, is_system, created_at
      FROM categories
+     WHERE slug <> ALL($1::text[])
      ORDER BY is_system DESC,
        CASE slug
          WHEN 'general' THEN 1 WHEN 'quemones' THEN 2 WHEN 'infieles' THEN 3
          WHEN 'confesiones' THEN 4 WHEN 'stickers' THEN 5 ELSE 99
        END,
-       created_at ASC`
+       created_at ASC`,
+    [RETIRED_CATEGORIES]
   );
   return result.rows as Category[];
 }
 
 export async function categoryExists(slug: string): Promise<boolean> {
+  if (!isCategoryAvailable(slug)) return false;
   await ensureCategoriesSchema();
   const result = await query('SELECT 1 FROM categories WHERE slug = $1 LIMIT 1', [slug]);
   return result.rowCount === 1;

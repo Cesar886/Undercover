@@ -31,7 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 RELEASE="$(date -u +%Y%m%dT%H%M%SZ)-$(node -e 'process.stdout.write(require("crypto").randomBytes(4).toString("hex"))')"
-SOURCE=(app components hooks lib public types sql scripts deploy package.json package-lock.json next.config.mjs next-env.d.ts postcss.config.mjs tailwind.config.ts tsconfig.json)
+SOURCE=(app components hooks lib public types sql scripts deploy middleware.ts package.json package-lock.json next.config.mjs next-env.d.ts postcss.config.mjs tailwind.config.ts tsconfig.json)
 echo 'Preparando una copia de los cambios locales para compilar…'
 tar --exclude='.env*' --exclude='*.dump' --exclude='*.sqlite*' --exclude='uploads' -cf - "${SOURCE[@]}" | tar -xf - -C "$STAGING"
 ln -s "$ROOT/node_modules" "$STAGING/node_modules"
@@ -40,6 +40,10 @@ ln -s "$ROOT/node_modules" "$STAGING/node_modules"
   NEXT_PUBLIC_BASE_URL=https://quemonesum.site npm run build
 )
 [[ -s "$STAGING/.next/BUILD_ID" ]] || { echo 'No se generó BUILD_ID.' >&2; exit 1; }
+node - "$STAGING/.next/server/middleware-manifest.json" <<'NODE'
+const manifest = require(process.argv[2]);
+if (!manifest.middleware['/']) throw new Error('La compilación no incluye el middleware requerido.');
+NODE
 tar -C "$STAGING" --exclude='.next/cache' --exclude='node_modules' --exclude='.env*' --exclude='*.dump' --exclude='*.sqlite*' --exclude='uploads' -czf "$STAGING/release.tar.gz" "${SOURCE[@]}" .next
 echo "Subiendo versión $RELEASE…"
 "${SSH[@]}" "mkdir -p '$BASE/incoming'"

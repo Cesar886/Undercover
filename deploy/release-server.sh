@@ -26,7 +26,7 @@ fi
 ln -s "$BASE/shared/.env.production" "$TARGET/.env.production"
 
 echo 'Instalando dependencias de producción…'
-(cd "$TARGET" && npm ci --omit=dev --no-audit --no-fund)
+(cd "$TARGET" && npm ci --omit=dev --prefer-offline --no-audit --no-fund)
 
 echo 'Respaldando exclusivamente quemonesum_test…'
 BACKUP="$BASE/backups/$RELEASE.dump"
@@ -50,7 +50,12 @@ fs.writeFileSync(target, JSON.stringify({ apps: [{
   env: { NODE_ENV: 'production' }, autorestart: true
 }] }));
 NODE
-  pm2 startOrReload "$BASE/pm2-deploy.json" --only "$NAME" --update-env
+  # PM2 reload retains the previous pm_cwd/pm_exec_path on some versions.
+  # Replace only this process entry so the new release is actually executed.
+  if pm2 describe "$NAME" >/dev/null 2>&1; then
+    pm2 delete "$NAME"
+  fi
+  pm2 start "$BASE/pm2-deploy.json" --only "$NAME"
 }
 
 SWITCHED=0

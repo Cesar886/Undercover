@@ -585,20 +585,15 @@ export function LocalComments({ postId, archived, onCountChange }: {
     useCallback(
       (ev) => {
         if (ev.type === 'comment:new' && ev.postId === postId) {
-          setComments((prev) => {
-            if (prev.some((c) => c.id === ev.comment.id)) return prev;
-            return [...prev, ev.comment];
-          });
+          setComments((prev) => prev.some((c) => c.id === ev.comment.id)
+            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment } : c)
+            : [...prev, ev.comment]);
           return;
         }
         if (ev.type === 'comment:edited' && ev.postId === postId) {
-          setComments((prev) =>
-            prev.map((c) =>
-              c.id === ev.comment.id
-                ? { ...c, content: ev.comment.content, image_webp: ev.comment.image_webp, updated_at: ev.comment.updated_at }
-                : c
-            )
-          );
+          setComments((prev) => prev.some((c) => c.id === ev.comment.id)
+            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment } : c)
+            : [...prev, ev.comment]);
           return;
         }
         if (ev.type === 'comment:visibility' && ev.postId === postId) {
