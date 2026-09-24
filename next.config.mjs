@@ -13,7 +13,20 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
-  serverExternalPackages: ['@imgly/background-removal-node', 'sharp', 'node-webpmux'],
+  // Prevent Next.js from bundling packages with native binaries
+  serverExternalPackages: ['@imgly/background-removal-node', 'onnxruntime-node', 'sharp', 'node-webpmux'],
+  webpack(config, { isServer }) {
+    if (isServer) {
+      // webpack-level externals — runs before Next.js module resolution.
+      // Required for packages that use native .node binaries (ONNX, sharp).
+      const natives = ['@imgly/background-removal-node', 'onnxruntime-node', 'sharp', 'node-webpmux'];
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : [config.externals]),
+        ...natives,
+      ];
+    }
+    return config;
+  },
 };
 
 export default withPWA(nextConfig);

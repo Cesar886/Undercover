@@ -136,6 +136,7 @@ export async function validateAndConvertImage(input: unknown, category?: string)
 
       // Añadir EXIF metadata para WASticker
       const json = {
+        "sticker": true,
         "sticker-pack-id": "quemadosum",
         "sticker-pack-name": "DeepUM",
         "sticker-pack-publisher": "UM",
