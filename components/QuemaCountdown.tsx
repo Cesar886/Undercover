@@ -55,7 +55,7 @@ export function QuemaCountdown() {
         🔥
       </span>
       <span className="text-gray-400 dark:text-[#4a4870]">
-        Quema Total en{' '}
+        Borrado Total en{' '}
         <span className={`font-mono tabular-nums font-semibold ${urgent ? 'text-orange-500' : 'text-gray-500 dark:text-[#6b6a8f]'}`}>
           {format(ms)}
         </span>

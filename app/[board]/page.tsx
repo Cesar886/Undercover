@@ -125,7 +125,7 @@ export default function BoardPage({ params }: { params: { board: string } }) {
         }
         if (ev.type === 'quema:total') {
           setPosts([]);
-          showToast('🔥 Quema Total — el tablón renace');
+          showToast('🔥 Borrado Total');
         }
       },
       [board, showToast]

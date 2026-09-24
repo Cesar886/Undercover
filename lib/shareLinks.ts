@@ -7,8 +7,7 @@ export type ShareGrant = {
   exp: number;
 };
 
-const DEFAULT_TEST_TTL_SECONDS = 60;
-const PRODUCTION_TTL_SECONDS = 2 * 60 * 60;
+const DEFAULT_TTL_SECONDS = 2 * 60 * 60;
 
 function secret(): string {
   const value = process.env.SHARE_LINK_SECRET || process.env.ANON_SALT;
@@ -23,8 +22,8 @@ function signature(encodedPayload: string): string {
 export function shareLinkTtlSeconds(): number {
   const configured = Number.parseInt(process.env.SHARE_LINK_TTL_SECONDS ?? '', 10);
   if (Number.isFinite(configured) && configured > 0) return configured;
-  // Keep one minute while testing. Set SHARE_LINK_TTL_SECONDS=7200 for production.
-  return DEFAULT_TEST_TTL_SECONDS;
+  // Shared links are valid for two hours unless an explicit positive override is configured.
+  return DEFAULT_TTL_SECONDS;
 }
 
 export function createShareToken(input: Omit<ShareGrant, 'exp'>): { token: string; expiresAt: string } {
@@ -65,5 +64,3 @@ export function shareGrantCoversPost(grant: ShareGrant | null, postId: string): 
 export function shareGrantCoversComment(grant: ShareGrant | null, postId: string, commentId: string): boolean {
   return Boolean(grant && grant.kind === 'comment' && grant.postId === postId && grant.commentId === commentId);
 }
-
-export const SHARE_LINK_PRODUCTION_TTL_SECONDS = PRODUCTION_TTL_SECONDS;

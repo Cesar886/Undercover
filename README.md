@@ -129,12 +129,12 @@ sudo certbot --apache -d yourdomain.com
 | `DATABASE_URL` | Yes      | PostgreSQL connection string                  |
 | `ANON_SALT`    | Yes      | Secret for SHA-256 voter token (min 32 chars) |
 | `SHARE_LINK_SECRET` | Yes | Secret used to sign temporary share links |
-| `SHARE_LINK_TTL_SECONDS` | No | Link lifetime; use `60` for testing and `7200` for two hours |
+| `SHARE_LINK_TTL_SECONDS` | No | Link lifetime in seconds; defaults to `7200` (two hours) |
 
 ## Architecture Notes
 
 - **Anonymity:** No cookies, no sessions, no user accounts.
 - **Voter tokens:** SHA-256 hash of `IP + postId + ANON_SALT`. Raw IPs never stored.
-- **Temporary links:** HMAC-signed URLs expire after `SHARE_LINK_TTL_SECONDS` (60 seconds by default for testing).
+- **Temporary links:** HMAC-signed URLs expire after `SHARE_LINK_TTL_SECONDS` (two hours by default).
 - **Rate limiting:** In-memory, resets on server restart. For multi-instance, replace with Redis.
 - **Auto-moderation:** Posts hidden automatically at 10 reports.

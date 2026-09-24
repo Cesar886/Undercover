@@ -30,7 +30,7 @@ const sections = [
   },
   {
     emoji: '🔥',
-    title: 'Quema total',
+    title: 'Borrado Total',
     lines: [
       'Cada lunes 5 AM todo se borra. Sin archivo, sin historial.',
     ],

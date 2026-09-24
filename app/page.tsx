@@ -68,7 +68,7 @@ export default function Home() {
     }
     if (event.type === 'quema:total') {
       setPreviews((current) => current.map((preview) => ({ ...preview, posts: [], loading: false })));
-      showToast('🔥 Quema Total — el tablón renace');
+      showToast('🔥 Borrado Total');
     }
   }, [showToast]));
 
@@ -83,7 +83,7 @@ export default function Home() {
         <div className="flex items-center justify-between px-1">
           <div>
             <h1 className="text-sm font-bold text-gray-800 dark:text-[#e9e5ff]">Categorías</h1>
-            <p className="text-[11px] text-gray-400">Las cinco originales son permanentes.</p>
+            <p className="text-[11px] text-gray-400">Las originales son permanentes.</p>
           </div>
           <CreateCategory onCreated={handleCategoryCreated} />
         </div>

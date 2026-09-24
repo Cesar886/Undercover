@@ -27,7 +27,7 @@ async function handle(request: NextRequest) {
   try {
     const result = await runQuema();
     emitFeed({ type: 'quema:total' });
-    console.log('[cron/quema] quema total:', result);
+    console.log('[cron/quema] Borrado Total:', result);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     console.error('[cron/quema] error:', err);
