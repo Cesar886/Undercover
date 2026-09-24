@@ -3,6 +3,7 @@ import { query, withTransaction } from '@/lib/db';
 import { isUuid, validateEditCommentInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
 import { getAnonId } from '@/lib/anon';
+import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 
 export async function PATCH(
   request: NextRequest,
@@ -12,6 +13,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
   const { anonId } = getAnonId(request);
 
   let body: unknown;
@@ -46,8 +49,8 @@ export async function PATCH(
     [v.value.content, params.commentId]
   );
 
-  const comment = result.rows[0];
-  emitFeed({ type: 'comment:edited', postId: params.id, comment });
+  const comment = publicOwnedRow(result.rows[0], ownerToken);
+  emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
 
   return NextResponse.json({ comment });
 }

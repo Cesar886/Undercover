@@ -1,4 +1,4 @@
-export type PostCategory = 'quemones' | 'infieles' | 'confesiones' | 'general' | 'stickers';
+export type PostCategory = string;
 export type VoteType = 'up' | 'down';
 export type ReactionEmoji = '❤️' | '😂' | '🤯' | '🫶' | '🙃' | '🫪';
 export type ReactionCounts = Partial<Record<ReactionEmoji, number>>;
@@ -28,6 +28,8 @@ export interface Post {
   downvotes: number;
   report_count: number;
   is_hidden: boolean;
+  owner_hidden: boolean;
+  is_owner?: boolean;
   image_webp: string | null;
   created_at: string;
   updated_at: string | null;
@@ -51,6 +53,8 @@ export interface Comment {
   is_deleted: boolean;
   report_count: number;
   is_hidden: boolean;
+  owner_hidden: boolean;
+  is_owner?: boolean;
   trust_score?: number;
   trust_unlocked?: boolean;
   upvotes?: number;

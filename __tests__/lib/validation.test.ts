@@ -46,7 +46,7 @@ describe('validatePostInput', () => {
     expect(r.ok).toBe(false);
   });
   it('rejects invalid category', () => {
-    const r = validatePostInput({ content: 'hi', category: 'fake' });
+    const r = validatePostInput({ content: 'hi', category: 'invalid category!' });
     expect(r.ok).toBe(false);
   });
   it('accepts valid input', () => {
@@ -54,10 +54,11 @@ describe('validatePostInput', () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.category).toBe('quemones');
   });
-  it('passes image through when provided', () => {
-    const r = validatePostInput({ content: 'hi', category: 'quemones', image: 'data:...' });
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value.image).toBe('data:...');
+  it('accepts images and sticker posts for moderation', () => {
+    const result = validatePostInput({ content: 'hi', category: 'quemones', image: 'data:...' });
+    expect(result.ok && result.value.image).toBe('data:...');
+    expect(validatePostInput({ content: '', category: 'stickers', image: 'data:...' }).ok).toBe(true);
+    expect(validatePostInput({ content: '', category: 'stickers' }).ok).toBe(false);
   });
   it('accepts a poll with 2 to 6 options', () => {
     const r = validatePostInput({
@@ -106,6 +107,10 @@ describe('validatePostInput', () => {
 describe('validateCommentInput', () => {
   it('rejects empty content with no image', () => {
     expect(validateCommentInput({ content: '' }).ok).toBe(false);
+  });
+  it('accepts images for moderation, including image-only comments', () => {
+    expect(validateCommentInput({ content: 'hi', image: 'data:...' }).ok).toBe(true);
+    expect(validateCommentInput({ content: '', image: 'data:...' }).ok).toBe(true);
   });
   it('rejects content > 300 chars', () => {
     expect(validateCommentInput({ content: 'a'.repeat(301) }).ok).toBe(false);

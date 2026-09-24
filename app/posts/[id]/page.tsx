@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/useToast';
 import { ShareImageButton } from '@/components/ShareImageButton';
 import { ReactionsPanel } from '@/components/ReactionsPanel';
 import { PollView } from '@/components/PollView';
+import { ExpiringShareButton } from '@/components/ExpiringShareButton';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { Tooltip } from '@mantine/core';
@@ -37,7 +38,7 @@ function timeAgoCompact(date: Date): string {
   return `${Math.floor(secs / 31536000)}a`;
 }
 
-const accent: Record<PostCategory, { bar: string; ring: string }> = {
+const accent: Record<string, { bar: string; ring: string }> = {
   general:     { bar: 'bg-zinc-400 dark:bg-violet-900',  ring: 'ring-zinc-300/40 dark:ring-violet-800/40' },
   quemones:    { bar: 'bg-mauve-600 dark:bg-violet-600', ring: 'ring-mauve-400/40 dark:ring-violet-500/40' },
   infieles:    { bar: 'bg-pink-500 dark:bg-violet-500',  ring: 'ring-pink-300/40 dark:ring-violet-400/40' },
@@ -45,7 +46,7 @@ const accent: Record<PostCategory, { bar: string; ring: string }> = {
   stickers:    { bar: 'bg-yellow-500 dark:bg-yellow-600', ring: 'ring-yellow-400/40 dark:ring-yellow-500/40' },
 };
 
-const BOARD_NAMES: Record<PostCategory, string> = {
+const BOARD_NAMES: Record<string, string> = {
   general:     'General',
   quemones:    'Quemones',
   infieles:    'Infieles',
@@ -55,7 +56,7 @@ const BOARD_NAMES: Record<PostCategory, string> = {
 
 function BackLink({ category, className = '' }: { category?: PostCategory; className?: string }) {
   const href  = category ? `/${category}` : '/';
-  const label = category ? `Volver a ${BOARD_NAMES[category]}` : 'Volver al inicio';
+  const label = category ? `Volver a ${(BOARD_NAMES[category] ?? category)}` : 'Volver al inicio';
   return (
     <Link
       href={href}
@@ -86,7 +87,9 @@ export default function PostPage() {
 
   const loadPost = useCallback(async () => {
     setState({ kind: 'loading' });
-    const r = await apiGet<{ post: Post | null }>(`/api/posts/${id}`);
+    const shareToken = new URLSearchParams(window.location.search).get("share");
+    const shareQuery = shareToken ? `?share=${encodeURIComponent(shareToken)}` : "";
+    const r = await apiGet<{ post: Post | null }>(`/api/posts/${id}${shareQuery}`);
     if (r.ok) {
       if (!r.data.post) setState({ kind: 'notfound' });
       else {
@@ -113,7 +116,7 @@ export default function PostPage() {
         }
         if (ev.type === 'post:hidden' && ev.postId === id) setState({ kind: 'notfound' });
         if (ev.type === 'post:edited' && ev.post.id === id) {
-          setState((s) => s.kind === 'ok' ? { kind: 'ok', post: { ...s.post, content: ev.post.content, updated_at: ev.post.updated_at } } : s);
+          setState((s) => s.kind === 'ok' ? { kind: 'ok', post: { ...s.post, content: ev.post.content, image_webp: ev.post.image_webp, updated_at: ev.post.updated_at } } : s);
         }
       },
       [id]
@@ -159,7 +162,7 @@ export default function PostPage() {
   }
 
   const post = state.post;
-  const cat = accent[post.category];
+  const cat = accent[post.category] ?? { bar: 'bg-sky-500 dark:bg-sky-600', ring: 'ring-sky-300/40 dark:ring-sky-500/40' };
   const created = new Date(post.created_at);
   const timeAgo = timeAgoCompact(created);
   const fullDate = format(created, "d 'de' MMMM, HH:mm", { locale: es });
@@ -177,6 +180,16 @@ export default function PostPage() {
       setEditing(false);
     } else {
       showToast(r.error);
+    }
+  }
+
+  async function handleToggleHidden() {
+    const result = await apiPatch<{ post: Post }>(`/api/posts/${post.id}/visibility`, { hidden: !post.owner_hidden });
+    if (result.ok) {
+      setState({ kind: 'ok', post: { ...post, ...result.data.post } });
+      showToast(result.data.post.owner_hidden ? 'Post oculto: solo tú y quienes tengan el enlace directo pueden verlo.' : 'Post visible de nuevo.');
+    } else {
+      showToast(result.error);
     }
   }
 
@@ -238,6 +251,7 @@ export default function PostPage() {
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
               <span className="text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
               <CategoryPill category={post.category} />
+              {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400 text-[11px]">
@@ -262,11 +276,13 @@ export default function PostPage() {
                   <span title={editedTitle} className="text-stone-300"> · editado</span>
                 )}
               </span>
-              {isAuthor && !editing && (
+              {(isAuthor || post.is_owner) && !editing && (
                 <AuthorMenu
                   size="sm"
-                  onEdit={() => setEditing(true)}
-                  onDelete={() => setConfirmDelete(true)}
+                  onEdit={isAuthor ? () => setEditing(true) : undefined}
+                  onDelete={isAuthor ? () => setConfirmDelete(true) : undefined}
+                  onToggleHidden={post.is_owner ? handleToggleHidden : undefined}
+                  hidden={post.owner_hidden}
                 />
               )}
             </div>
@@ -324,7 +340,8 @@ export default function PostPage() {
                 postId={post.id}
                 onError={(msg) => showToast(msg)}
               /> */}
-              {post.category === 'stickers' && post.image_webp ? (
+              <ExpiringShareButton postId={post.id} onError={(message) => showToast(message)} />
+              {post.category === 'stickers' && post.image_webp && (
                 <button
                   onClick={handleShareSticker}
                   className="flex items-center gap-1 text-xs hover:text-[#25D366] transition-colors"
@@ -336,19 +353,6 @@ export default function PostPage() {
                   </svg>
                   Añadir
                 </button>
-              ) : (
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`¡Mira esto en la UM! 🔥 ${process.env.NEXT_PUBLIC_BASE_URL}/posts/${post.id}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs hover:text-[#25D366] transition-colors"
-                  aria-label="Compartir en WhatsApp"
-                >
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  Compartir
-                </a>
               )}
               {!isAuthor && (
                 <button
@@ -389,4 +393,3 @@ export default function PostPage() {
     </main>
   );
 }
-

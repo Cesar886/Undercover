@@ -9,7 +9,10 @@ const config: Record<PostCategory, { label: string; className: string }> = {
 };
 
 export function CategoryPill({ category }: { category: PostCategory }) {
-  const { label, className } = config[category];
+  const { label, className } = config[category] ?? {
+    label: category.split('-').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+    className: 'border border-sky-500/30 text-sky-600 dark:text-sky-300 bg-sky-500/10',
+  };
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${className}`}>
       {label}

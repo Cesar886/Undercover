@@ -7,7 +7,7 @@ export type Validated<T> =
   | { ok: false; error: string; status: number };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones', 'stickers'];
+const CATEGORY_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
 const MIN_POLL_OPTIONS = 2;
 const MAX_POLL_OPTIONS = 6;
 const MAX_POLL_OPTION_CHARS = 80;
@@ -69,27 +69,25 @@ export function validatePostInput(body: unknown): Validated<PostInput> {
   }
   const b = body as Record<string, unknown>;
 
-  if (!VALID_CATEGORIES.includes(b.category as PostCategory)) {
+  if (typeof b.category !== 'string' || !CATEGORY_RE.test(b.category)) {
     return { ok: false, error: 'Categoría inválida', status: 400 };
   }
   const category = b.category as PostCategory;
 
-  const rawContent = typeof b.content === 'string' ? b.content : '';
-  let content = sanitize(rawContent);
-  
-  if (category === 'stickers') {
-    content = ''; // Ignore text for stickers
-  } else {
-    if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
-    if (content.length > 500) return { ok: false, error: 'Contenido excede 500 caracteres', status: 400 };
-    if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
+  if (b.image != null && typeof b.image !== 'string') {
+    return { ok: false, error: 'Imagen inválida', status: 400 };
   }
-
   const image = typeof b.image === 'string' && b.image.length > 0 ? b.image : undefined;
-  
   if (category === 'stickers' && !image) {
     return { ok: false, error: 'Los stickers requieren una imagen', status: 400 };
   }
+
+  const rawContent = typeof b.content === 'string' ? b.content : '';
+  const content = category === 'stickers' ? '' : sanitize(rawContent);
+
+  if (!content && !image) return { ok: false, error: 'Contenido vacío', status: 400 };
+  if (content.length > 500) return { ok: false, error: 'Contenido excede 500 caracteres', status: 400 };
+  if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
 
   let pollOptions = validatePollOptions(b.poll_options);
   if (category === 'stickers') {
@@ -134,9 +132,14 @@ export function validateCommentInput(body: unknown): Validated<CommentInput> {
   }
   const b = body as Record<string, unknown>;
 
+  if (b.image != null && typeof b.image !== 'string') {
+    return { ok: false, error: 'Imagen inválida', status: 400 };
+  }
+  const image = typeof b.image === 'string' && b.image.length > 0 ? b.image : undefined;
+
   const rawContent = typeof b.content === 'string' ? b.content : '';
   const content = sanitize(rawContent);
-  if (!content) return { ok: false, error: 'Contenido vacío', status: 400 };
+  if (!content && !image) return { ok: false, error: 'Contenido vacío', status: 400 };
   if (content.length > 300) return { ok: false, error: 'Contenido excede 300 caracteres', status: 400 };
   if (containsUrl(content)) return { ok: false, error: 'No se permiten enlaces ni URLs en el contenido', status: 400 };
 
@@ -147,8 +150,6 @@ export function validateCommentInput(body: unknown): Validated<CommentInput> {
     }
     parent_id = b.parent_id;
   }
-
-  const image = typeof b.image === 'string' && b.image.length > 0 ? b.image : undefined;
 
   return { ok: true, value: { content, parent_id, image } };
 }

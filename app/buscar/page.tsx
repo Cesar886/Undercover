@@ -65,6 +65,12 @@ export default function BuscarPage() {
         setPosts((prev) => prev.filter((p) => p.id !== ev.postId));
         return;
       }
+      if (ev.type === 'post:visibility') {
+        setPosts((prev) => prev
+          .filter((p) => !(p.id === ev.postId && ev.hidden && !p.is_owner))
+          .map((p) => p.id === ev.postId ? { ...p, owner_hidden: ev.hidden } : p));
+        return;
+      }
       if (ev.type === 'comment:new') {
         setPosts((prev) =>
           prev.map((p) =>

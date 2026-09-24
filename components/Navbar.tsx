@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Sun, Moon, Archive } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
-import { BOARDS } from '@/lib/boards';
+import { useCategories } from '@/hooks/useCategories';
 
 export function Navbar() {
   const { theme, toggle } = useTheme();
   const pathname = usePathname();
+  const { categories } = useCategories();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_0_rgba(124,58,237,0.08)]">
@@ -54,7 +55,7 @@ export function Navbar() {
 
       {/* Board tabs */}
       <div className="max-w-[600px] mx-auto px-3 h-9 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        {BOARDS.map((board) => {
+        {categories.map((board) => {
           const active = pathname === `/${board.slug}`;
           return (
             <Link

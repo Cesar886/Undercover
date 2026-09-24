@@ -1,101 +1,112 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
+import { validateAndConvertImage } from '@/lib/imageValidation';
+import { ensureImageReviewSchema, queueImage } from '@/lib/imageReviews';
 import { emitFeed } from '@/lib/events';
 import { validateCommentInput, isUuid } from '@/lib/validation';
-import { validateAndConvertImage } from '@/lib/imageValidation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getAnonId, setAnonCookie } from '@/lib/anon';
 import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
+import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
+import type { Comment } from '@/types';
+import { shareGrantCoversComment, shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
-
-  const result = await query(
-    `SELECT c.* FROM comments c WHERE c.post_id = $1 ORDER BY c.created_at ASC`,
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
+  const direct = request.nextUrl.searchParams.get('direct');
+  const directCommentId = direct && isUuid(direct) ? direct : null;
+  const suppliedShareToken = request.nextUrl.searchParams.get('share');
+  const shareGrant = verifyShareToken(suppliedShareToken);
+  if (suppliedShareToken && !shareGrant) {
+    return NextResponse.json({ error: 'Este enlace compartido expiró' }, { status: 410 });
+  }
+  const postResult = await query(
+    'SELECT owner_hidden, owner_token::text AS owner_token FROM posts WHERE id = $1 AND is_hidden = false',
     [params.id]
   );
-  return NextResponse.json({ comments: result.rows });
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
-
-  // Reject comments on archived threads
-  const postCheck = await query(
-    `SELECT archived FROM posts WHERE id = $1`,
-    [params.id]
-  );
-  if (postCheck.rows.length === 0) {
+  if (postResult.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+  const post = postResult.rows[0];
+  const ownsPost = Boolean(ownerToken && post.owner_token === ownerToken);
+  if (post.owner_hidden && !ownsPost && !shareGrantCoversPost(shareGrant, params.id)) {
     return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   }
-  if (postCheck.rows[0].archived) {
-    return NextResponse.json({ error: 'Este hilo está archivado.' }, { status: 403 });
-  }
 
-  const ip  = getRealIp(request);
+  const directAccess = Boolean(directCommentId && shareGrantCoversComment(shareGrant, params.id, directCommentId));
+
+  const result = await query(
+    `SELECT c.* FROM comments c
+     WHERE c.post_id = $1 AND c.is_hidden = false
+       AND (c.owner_hidden = false OR c.owner_token = $2::uuid OR (c.id = $3::uuid AND $4::boolean))
+     ORDER BY c.created_at ASC`,
+    [params.id, ownerToken, directCommentId, directAccess]
+  );
+  const comments = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as unknown as Comment[];
+  return NextResponse.json({ comments }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
+  if (!ownerToken) return NextResponse.json({ error: 'Token de propiedad inválido o ausente' }, { status: 400 });
+
+  const postCheck = await query(`SELECT archived FROM posts WHERE id = $1 AND is_hidden = false`, [params.id]);
+  if (postCheck.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+  if (postCheck.rows[0].archived) return NextResponse.json({ error: 'Este hilo está archivado.' }, { status: 403 });
+
+  const ip = getRealIp(request);
   const ban = await getBanStatus(ip);
-  if (ban.banned) {
-    return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
-  }
+  if (ban.banned) return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
 
   const { anonId, newToken } = getAnonId(request);
-
-  const rl = checkRateLimit(`comments:anon:${anonId}`, RATE_LIMITS.comments);
-  if (!rl.ok) {
-    return NextResponse.json(
-      { error: 'Demasiados comentarios. Espera un momento.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
-    );
+  const rate = checkRateLimit(`comments:anon:${anonId}`, RATE_LIMITS.comments);
+  if (!rate.ok) {
+    return NextResponse.json({ error: 'Demasiados comentarios. Espera un momento.' }, {
+      status: 429, headers: { 'Retry-After': String(rate.retryAfter) },
+    });
   }
 
   let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
-  }
+  try { body = await request.json(); }
+  catch { return NextResponse.json({ error: 'JSON inválido' }, { status: 400 }); }
+  const validated = validateCommentInput(body);
+  if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: validated.status });
 
-  const v = validateCommentInput(body);
-  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-
-  if (v.value.parent_id) {
-    const parentCheck = await query(
-      'SELECT id FROM comments WHERE id = $1 AND post_id = $2',
-      [v.value.parent_id, params.id]
+  if (validated.value.parent_id) {
+    const parent = await query(
+      `SELECT id FROM comments WHERE id = $1 AND post_id = $2 AND is_hidden = false`,
+      [validated.value.parent_id, params.id]
     );
-    if (parentCheck.rows.length === 0) {
-      return NextResponse.json({ error: 'Comentario padre inválido' }, { status: 400 });
-    }
+    if (parent.rows.length === 0) return NextResponse.json({ error: 'Comentario padre inválido' }, { status: 400 });
   }
 
-  let imageWebp: string | null = null;
-  if (v.value.image) {
-    const img = await validateAndConvertImage(v.value.image);
-    if (!img.ok) return NextResponse.json({ error: img.error }, { status: 400 });
-    imageWebp = img.webpDataUrl;
+  let pendingImage: string | null = null;
+  if (validated.value.image) {
+    const image = await validateAndConvertImage(validated.value.image);
+    if (!image.ok) return NextResponse.json({ error: image.error }, { status: 400 });
+    pendingImage = image.webpDataUrl;
+    await ensureImageReviewSchema();
   }
 
-  const result = await query(
-    'INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, poster_ip) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [params.id, v.value.parent_id, anonId, v.value.content, imageWebp, ip]
-  );
+  const inserted = await withTransaction(async (client) => {
+    const result = await client.query(
+      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, poster_ip, owner_token)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::uuid) RETURNING *`,
+      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ip, ownerToken]
+    );
+    if (pendingImage) await queueImage(client, 'comment', result.rows[0].id, pendingImage);
+    return result.rows[0];
+  });
 
-  // Bump the parent thread so it rises in the feed (4chan-style bump)
-  await query(
-    `UPDATE posts SET last_bumped_at = NOW() WHERE id = $1 AND archived = FALSE`,
-    [params.id]
-  );
+  await query(`UPDATE posts SET last_bumped_at = NOW() WHERE id = $1 AND archived = FALSE`, [params.id]);
+  const comment = publicOwnedRow(inserted, ownerToken) as unknown as Comment;
+  emitFeed({ type: 'comment:new', postId: params.id, comment: { ...comment, is_owner: false } });
 
-  const comment = result.rows[0];
-  emitFeed({ type: 'comment:new', postId: params.id, comment });
-
-  const res = NextResponse.json({ comment }, { status: 201 });
-  if (newToken) setAnonCookie(res, newToken);
-  return res;
+  const response = NextResponse.json({ comment, image_status: pendingImage ? 'pending' : null }, {
+    status: 201, headers: { 'Cache-Control': 'no-store' },
+  });
+  if (newToken) setAnonCookie(response, newToken);
+  return response;
 }

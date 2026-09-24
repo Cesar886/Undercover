@@ -4,42 +4,52 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { emitFeed } from '@/lib/events';
 import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
+import { ensureImageReviewSchema, queueImage } from '@/lib/imageReviews';
 import { Post, PostCategory } from '@/types';
 import { getAnonId, setAnonCookie } from '@/lib/anon';
 import { pruneCategory } from '@/lib/ephemeral';
 import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
+import { categoryExists } from '@/lib/categories';
 import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost } from '@/lib/polls';
+import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 
 export const dynamic = 'force-dynamic';
-
-const VALID_CATEGORIES: PostCategory[] = ['general', 'quemones', 'infieles', 'confesiones', 'stickers'];
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 
 function buildOrderClause(sort: SortOption): string {
-  // "recent" sorts by bump order (last reply first), matching 4chan behavior
   if (sort === 'top') return 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC';
   if (sort === 'hot') return 'ORDER BY (p.upvotes + p.downvotes) DESC, p.created_at DESC';
   return 'ORDER BY p.last_bumped_at DESC, p.created_at DESC';
 }
 
 export async function GET(request: NextRequest) {
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
   const { searchParams } = new URL(request.url);
-  const category  = searchParams.get('category') as PostCategory | null;
-  const rawSort   = searchParams.get('sort') ?? 'recent';
-  const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? (rawSort as SortOption) : 'recent';
-  const page      = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const archived  = searchParams.get('archived') === 'true';
-  const limit     = 10;
-  const offset    = (page - 1) * limit;
-  const q         = searchParams.get('q')?.trim() ?? '';
+  const category = searchParams.get('category') as PostCategory | null;
+  const rawSort = searchParams.get('sort') ?? 'recent';
+  const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? rawSort as SortOption : 'recent';
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const archived = searchParams.get('archived') === 'true';
+  const limit = 10;
+  const offset = (page - 1) * limit;
+  const q = searchParams.get('q')?.trim() ?? '';
 
-  const params: unknown[] = [];
+  const validCategory = category ? await categoryExists(category) : false;
+  if (category && !validCategory) {
+    return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 });
+  }
+
+  const params: unknown[] = [ownerToken];
   let sql = `
     SELECT p.*,
-      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
+      (SELECT COUNT(*) FROM comments c
+       WHERE c.post_id = p.id AND c.is_hidden = false
+         AND (c.owner_hidden = false OR c.owner_token = $1::uuid))::int AS comment_count
     FROM posts p
     WHERE p.is_hidden = false
+      AND (p.owner_hidden = false OR p.owner_token = $1::uuid)
       AND p.archived = $${params.length + 1}
   `;
   params.push(archived);
@@ -48,124 +58,101 @@ export async function GET(request: NextRequest) {
     params.push(`%${q}%`);
     sql += ` AND p.content ILIKE $${params.length}`;
   }
-
-  if (category && VALID_CATEGORIES.includes(category)) {
+  if (category && validCategory) {
     params.push(category);
     sql += ` AND p.category = $${params.length}`;
   } else if (!category) {
     sql += ` AND p.category != 'stickers'`;
   }
+  if (sort === 'top') sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
 
-  if (sort === 'top') {
-    sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
-  }
-
-  // Archive uses score order; live board uses bump/hot/top
   const order = archived
     ? 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC'
     : buildOrderClause(sort);
-
   sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   params.push(limit, offset);
 
   const result = await query(sql, params);
+  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as Post[];
   const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
-  const posts = await attachPollsToPosts(result.rows as Post[], viewerAnonId);
-  console.log('[GET /api/posts] archived:', archived, '| count:', posts.length, '| ids:', posts.map((r: {id:string}) => r.id.slice(0,8)).join(','));
-  return NextResponse.json({ posts, page, limit });
+  const posts = await attachPollsToPosts(safeRows, viewerAnonId);
+  return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[POST /api/posts] request received');
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
+  if (!ownerToken) {
+    return NextResponse.json({ error: 'Token de propiedad inválido o ausente' }, { status: 400 });
+  }
 
   const ip = getRealIp(request);
   const ban = await getBanStatus(ip);
-  if (ban.banned) {
-    return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
-  }
+  if (ban.banned) return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
 
   let anonId: string;
   let newToken: string | undefined;
   try {
     ({ anonId, newToken } = getAnonId(request));
-    console.log('[POST /api/posts] anonId derived:', anonId.slice(0, 8) + '...');
-  } catch (err) {
-    console.error('[POST /api/posts] getAnonId failed:', err);
+  } catch {
     return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
   }
 
   const rl = checkRateLimit(`posts:anon:${anonId}`, RATE_LIMITS.posts);
   if (!rl.ok) {
-    console.log('[POST /api/posts] rate limited');
-    return NextResponse.json(
-      { error: 'Demasiados posts. Intenta más tarde.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
-    );
+    return NextResponse.json({ error: 'Demasiados posts. Intenta más tarde.' }, {
+      status: 429, headers: { 'Retry-After': String(rl.retryAfter) },
+    });
   }
 
   let body: unknown;
+  try { body = await request.json(); }
+  catch { return NextResponse.json({ error: 'JSON inválido' }, { status: 400 }); }
+
+  const validated = validatePostInput(body);
+  if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: validated.status });
+  if (!(await categoryExists(validated.value.category))) {
+    return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
+  }
+
+  let pendingImage: string | null = null;
+  if (validated.value.image) {
+    const image = await validateAndConvertImage(validated.value.image, validated.value.category);
+    if (!image.ok) return NextResponse.json({ error: image.error }, { status: 400 });
+    pendingImage = image.webpDataUrl;
+    await ensureImageReviewSchema();
+  }
+
+  let created: Post | null = null;
   try {
-    body = await request.json();
-    console.log('[POST /api/posts] body parsed:', JSON.stringify(body).slice(0, 100));
-  } catch (err) {
-    console.error('[POST /api/posts] JSON parse failed:', err);
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
-  }
-
-  const v = validatePostInput(body);
-  if (!v.ok) {
-    console.log('[POST /api/posts] validation failed:', v.error);
-    return NextResponse.json({ error: v.error }, { status: v.status });
-  }
-  console.log('[POST /api/posts] validation ok, category:', v.value.category);
-
-  let imageWebp: string | null = null;
-  if (v.value.image) {
-    const img = await validateAndConvertImage(v.value.image, v.value.category);
-    if (!img.ok) {
-      console.log('[POST /api/posts] image validation failed:', img.error);
-      return NextResponse.json({ error: img.error }, { status: 400 });
-    }
-    imageWebp = img.webpDataUrl;
-    console.log('[POST /api/posts] image ok');
-  }
-
-  let post: Post | null = null;
-  try {
-    ({ post } = await withTransaction(async (client) => {
+    created = await withTransaction(async (client) => {
       await ensurePollSchema(client);
-      console.log('[POST /api/posts] inserting...');
-      const insertRes = await client.query<Post>(
-        `INSERT INTO posts (anon_id, content, category, image_webp, poster_ip)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [anonId, v.value.content, v.value.category, imageWebp, ip]
+      const inserted = await client.query<Post>(
+        `INSERT INTO posts (anon_id, content, category, image_webp, poster_ip, owner_token)
+         VALUES ($1, $2, $3, $4, $5, $6::uuid) RETURNING *`,
+        [anonId, validated.value.content, validated.value.category, null, ip, ownerToken]
       );
-      let post: Post = { ...insertRes.rows[0], comment_count: 0, poll: null };
-      console.log('[POST /api/posts] inserted, id:', post.id);
-
-      if (v.value.poll_options?.length) {
-        await createPollForPost(client, post.id, v.value.poll_options, v.value.poll_question ?? '');
+      let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
+      if (pendingImage) await queueImage(client, 'post', post.id, pendingImage);
+      if (validated.value.poll_options?.length) {
+        await createPollForPost(client, post.id, validated.value.poll_options, validated.value.poll_question ?? '');
         post = { ...post, poll: await getPollForPost(post.id, anonId, client) };
-        console.log('[POST /api/posts] poll created, options:', v.value.poll_options.length);
       }
-
-      await pruneCategory(v.value.category, client);
-      console.log('[POST /api/posts] pruneCategory done');
-      return { post };
-    }));
-  } catch (err) {
-    console.error('[POST /api/posts] DB error:', err);
+      await pruneCategory(validated.value.category, client);
+      return post;
+    });
+  } catch (error) {
+    console.error('[POST /api/posts] DB error:', error);
     return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   }
 
-  if (!post) {
-    return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
-  }
+  if (!created) return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
+  const post = publicOwnedRow(created as unknown as Record<string, unknown>, ownerToken) as unknown as Post;
+  emitFeed({ type: 'post:new', post: { ...post, is_owner: false } });
 
-  emitFeed({ type: 'post:new', post });
-  console.log('[POST /api/posts] emitFeed done, returning 201');
-
-  const res = NextResponse.json({ post }, { status: 201 });
-  if (newToken) setAnonCookie(res, newToken);
-  return res;
+  const response = NextResponse.json({ post, image_status: pendingImage ? 'pending' : null }, {
+    status: 201, headers: { 'Cache-Control': 'no-store' },
+  });
+  if (newToken) setAnonCookie(response, newToken);
+  return response;
 }

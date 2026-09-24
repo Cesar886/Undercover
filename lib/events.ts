@@ -5,6 +5,7 @@ export type FeedEvent =
   | { type: 'post:new'; post: Post }
   | { type: 'post:vote'; postId: string; upvotes: number; downvotes: number }
   | { type: 'post:hidden'; postId: string }
+  | { type: 'post:visibility'; postId: string; hidden: boolean }
   | { type: 'post:edited'; post: Post }
   | { type: 'post:reaction'; postId: string; counts: ReactionCounts }
   | { type: 'post:poll'; postId: string; poll: PostPoll }
@@ -15,6 +16,7 @@ export type FeedEvent =
     }
   | { type: 'comment:edited'; postId: string; comment: Comment }
   | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean }
+  | { type: 'comment:visibility'; postId: string; commentId: string; hidden: boolean }
   | { type: 'notification:new'; recipient: string; notification: Notification }
   | { type: 'quema:total' };
 

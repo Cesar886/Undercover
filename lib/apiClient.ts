@@ -1,3 +1,5 @@
+import { ownerTokenHeaders } from './ownerToken';
+
 export type ApiResult<T> =
   | { ok: true; data: T; status: number }
   | { ok: false; error: string; status: number; retryAfter?: number };
@@ -39,7 +41,7 @@ async function parseResult<T>(res: Response): Promise<ApiResult<T>> {
 
 export async function apiGet<T>(url: string): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: ownerTokenHeaders(), cache: 'no-store' });
     return parseResult<T>(res);
   } catch {
     return { ok: false, error: 'Sin conexión, revisa tu red', status: 0 };
@@ -50,7 +52,7 @@ export async function apiPost<T>(url: string, body: unknown): Promise<ApiResult<
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...ownerTokenHeaders() },
       body: JSON.stringify(body),
     });
     return parseResult<T>(res);
@@ -63,7 +65,7 @@ export async function apiPatch<T>(url: string, body: unknown): Promise<ApiResult
   try {
     const res = await fetch(url, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...ownerTokenHeaders() },
       body: JSON.stringify(body),
     });
     return parseResult<T>(res);
@@ -74,7 +76,7 @@ export async function apiPatch<T>(url: string, body: unknown): Promise<ApiResult
 
 export async function apiDelete<T>(url: string): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(url, { method: 'DELETE' });
+    const res = await fetch(url, { method: 'DELETE', headers: ownerTokenHeaders() });
     return parseResult<T>(res);
   } catch {
     return { ok: false, error: 'Sin conexión, revisa tu red', status: 0 };

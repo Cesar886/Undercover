@@ -139,6 +139,7 @@ export function ImagePicker({ preview, onPick, onClear, onError, disabled, uploa
       <div className="relative inline-block mt-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={preview} alt="preview" className="max-h-40 rounded-lg border border-gray-200" />
+        <p className="text-xs text-gray-500 mt-1">La imagen quedará pendiente de revisión antes de publicarse.</p>
         {uploading && (
           <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center">
             <span className="text-xs text-gray-600">Subiendo...</span>

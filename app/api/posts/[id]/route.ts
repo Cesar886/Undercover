@@ -5,98 +5,77 @@ import { emitFeed } from '@/lib/events';
 import { getAnonId } from '@/lib/anon';
 import { attachPollsToPosts, getPollForPost } from '@/lib/polls';
 import { Post } from '@/types';
+import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
+import { shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  if (!isUuid(params.id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
+  const suppliedShareToken = request.nextUrl.searchParams.get('share');
+  const shareGrant = verifyShareToken(suppliedShareToken);
+  if (suppliedShareToken && !shareGrant) {
+    return NextResponse.json({ error: 'Este enlace compartido expiró' }, { status: 410 });
   }
 
+  // Hidden posts require either the persistent owner token or a valid signed share link:
   const result = await query(
     `SELECT p.*,
-      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
+      (SELECT COUNT(*) FROM comments c
+       WHERE c.post_id = p.id AND c.is_hidden = false
+         AND (c.owner_hidden = false OR c.owner_token = $2::uuid))::int AS comment_count
      FROM posts p
      WHERE p.id = $1 AND p.is_hidden = false`,
-    [params.id]
+    [params.id, ownerToken]
   );
-
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+  const rawPost = result.rows[0];
+  const ownsPost = Boolean(ownerToken && rawPost.owner_token === ownerToken);
+  if (rawPost.owner_hidden && !ownsPost && !shareGrantCoversPost(shareGrant, params.id)) {
     return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   }
 
-  const viewerAnonId = _request.cookies.get('anon_pub')?.value ?? null;
-  const [post] = await attachPollsToPosts(result.rows as Post[], viewerAnonId);
-
-  return NextResponse.json({ post });
+  const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
+  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
+  const [post] = await attachPollsToPosts([safe], viewerAnonId);
+  return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  if (!isUuid(params.id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
-  }
-
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  await ensureVisibilitySchema();
+  const ownerToken = ownerTokenFromRequest(request);
   const { anonId } = getAnonId(request);
 
   let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
-  }
+  try { body = await request.json(); }
+  catch { return NextResponse.json({ error: 'JSON inválido' }, { status: 400 }); }
 
-  const v = validateEditPostInput(body);
-  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+  const validated = validateEditPostInput(body);
+  if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: validated.status });
 
   const owner = await query('SELECT anon_id FROM posts WHERE id = $1', [params.id]);
-  if (owner.rows.length === 0) {
-    return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
-  }
-  if (owner.rows[0].anon_id !== anonId) {
-    return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
-  }
+  if (owner.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+  if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
   const result = await query(
     `UPDATE posts SET content = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-    [v.value.content, params.id]
+    [validated.value.content, params.id]
   );
-
-  const post: Post = {
-    ...result.rows[0],
-    poll: await getPollForPost(params.id, anonId),
-  };
-  emitFeed({ type: 'post:edited', post });
-
-  return NextResponse.json({ post });
+  const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
+  const post: Post = { ...safe, poll: await getPollForPost(params.id, anonId) };
+  emitFeed({ type: 'post:edited', post: { ...post, is_owner: false } });
+  return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  if (!isUuid(params.id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
-  }
-
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   const { anonId } = getAnonId(request);
-
   const owner = await query('SELECT anon_id FROM posts WHERE id = $1', [params.id]);
-  if (owner.rows.length === 0) {
-    return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
-  }
-  if (owner.rows[0].anon_id !== anonId) {
-    return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
-  }
+  if (owner.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
+  if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
-  await query(
-    `UPDATE posts SET content = '', image_webp = NULL, is_hidden = TRUE WHERE id = $1`,
-    [params.id]
-  );
+  await query(`UPDATE posts SET content = '', image_webp = NULL, is_hidden = TRUE WHERE id = $1`, [params.id]);
   emitFeed({ type: 'post:hidden', postId: params.id });
-
   return NextResponse.json({ success: true });
 }

@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
 import { useAnonId } from '@/hooks/useAnonId';
-import { isValidBoard, getBoard } from '@/lib/boards';
+import { getBoard } from '@/lib/boards';
+import { useCategories } from '@/hooks/useCategories';
 import { Post, PostCategory } from '@/types';
 import { QuemaCountdown } from '@/components/QuemaCountdown';
 import { RulesCard } from '@/components/RulesCard';
@@ -31,9 +32,8 @@ function BackHomeLink({ className = '' }: { className?: string }) {
 export default function BoardPage({ params }: { params: { board: string } }) {
   const { board } = params;
 
-  if (!isValidBoard(board)) notFound();
-
-  const boardMeta = getBoard(board)!;
+  const { categories, loading: categoriesLoading } = useCategories();
+  const boardMeta = getBoard(board, categories);
 
   const [posts, setPosts]           = useState<Post[]>([]);
   const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
@@ -110,6 +110,12 @@ export default function BoardPage({ params }: { params: { board: string } }) {
           setPosts((prev) => prev.filter((p) => p.id !== ev.postId));
           return;
         }
+        if (ev.type === 'post:visibility') {
+          setPosts((prev) => prev
+            .filter((post) => !(post.id === ev.postId && ev.hidden && !post.is_owner))
+            .map((post) => post.id === ev.postId ? { ...post, owner_hidden: ev.hidden } : post));
+          return;
+        }
         if (ev.type === 'comment:new') {
           setPosts((prev) =>
             prev.map((p) =>
@@ -127,6 +133,9 @@ export default function BoardPage({ params }: { params: { board: string } }) {
   );
 
   const isInitialLoad = loading && posts.length === 0;
+
+  if (!categoriesLoading && !boardMeta) notFound();
+  if (!boardMeta) return <main className="max-w-[600px] mx-auto px-4 py-10"><PostSkeleton /></main>;
 
   return (
     <main className="max-w-[600px] lg:max-w-[900px] mx-auto px-4 py-6 lg:grid lg:grid-cols-[minmax(0,600px)_260px] lg:items-start lg:gap-5">
@@ -150,6 +159,7 @@ export default function BoardPage({ params }: { params: { board: string } }) {
           <PostForm
             onPostCreated={handlePostCreated}
             defaultCategory={board as PostCategory}
+            categories={categories}
             lockedCategory
           />
           <QuemaCountdown />

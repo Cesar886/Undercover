@@ -15,11 +15,13 @@ import { InlineEditor } from '@/components/InlineEditor';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
-import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { ReportReason } from '@/types';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
 import { containsUrl } from '@/lib/linkDetection';
+import { ensureOwnerToken } from '@/lib/ownerToken';
+import { ExpiringShareButton } from '@/components/ExpiringShareButton';
 
 interface Comment {
   id: string;
@@ -28,6 +30,8 @@ interface Comment {
   image_webp?: string | null;
   created_at: string;
   updated_at?: string | null;
+  owner_hidden?: boolean;
+  is_owner?: boolean;
   is_deleted?: boolean;
   parent_id?: string | null;
   replies?: Comment[];
@@ -232,8 +236,19 @@ function CommentItem({
   const isReplying = replyingTo?.id === comment.id;
   const isEditing = editingId === comment.id;
   const isAuthor = !!username && username === comment.anon_id && !comment.is_deleted;
+  const [ownerHidden, setOwnerHidden] = useState(Boolean(comment.owner_hidden));
   const hasReplies = (comment.replies?.length ?? 0) > 0;
   const [savingEdit, setSavingEdit] = useState(false);
+
+  async function handleToggleHidden() {
+    const result = await apiPatch<{ comment: Comment }>(
+      '/api/posts/' + postId + '/comments/' + comment.id + '/visibility',
+      { hidden: !ownerHidden }
+    );
+    if (result.ok) {
+      setOwnerHidden(Boolean(result.data.comment.owner_hidden));
+    }
+  }
 
   async function handleSaveEdit(content: string) {
     setSavingEdit(true);
@@ -249,7 +264,7 @@ function CommentItem({
   }
 
   return (
-    <div>
+    <div id={'comment-' + comment.id}>
       <div className="group flex gap-3 py-3.5 -mx-1 px-1 rounded-xl transition-colors duration-150 hover:bg-stone-50/80 dark:hover:bg-violet-500/5">
         <div className="mt-0.5">
           <AvatarBadge name={comment.anon_id} size="sm" muted={!!comment.is_deleted} />
@@ -260,6 +275,7 @@ function CommentItem({
               <span className={`text-[13px] font-bold leading-none truncate font-mono ${comment.is_deleted ? 'text-stone-400 dark:text-[#3a3860]' : 'text-stone-800 dark:text-[#c4bbff]'}`}>
                 {comment.is_deleted ? '—' : anonDisplayName(comment.anon_id)}
               </span>
+              {ownerHidden && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
               <span className="text-[11px] text-stone-400 dark:text-[#4a4870] leading-none flex items-center">
                 {!comment.is_deleted && (
                   <>
@@ -290,11 +306,14 @@ function CommentItem({
             </div>
             {!comment.is_deleted && (
               <div className="flex items-center gap-1">
-                {isAuthor && !isEditing && (
+                <ExpiringShareButton postId={postId} commentId={comment.id} compact />
+                {(isAuthor || comment.is_owner) && !isEditing && (
                   <AuthorMenu
                     size="sm"
-                    onEdit={() => onStartEdit(comment.id)}
-                    onDelete={() => onAskDelete(comment.id, hasReplies)}
+                    onEdit={isAuthor ? () => onStartEdit(comment.id) : undefined}
+                    onDelete={isAuthor ? () => onAskDelete(comment.id, hasReplies) : undefined}
+                    onToggleHidden={comment.is_owner ? handleToggleHidden : undefined}
+                    hidden={ownerHidden}
                   />
                 )}
                 {!isAuthor && username && (
@@ -429,10 +448,15 @@ export function LocalComments({ postId, archived, onCountChange }: {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    fetch(`/api/posts/${postId}/comments`)
-      .then((r) => r.json())
-      .then((data) => setComments(data.comments ?? []))
-      .catch(() => {});
+    const match = window.location.hash.match(/^#comment-([0-9a-f-]{36})$/i);
+    const params = new URLSearchParams();
+    if (match) params.set("direct", match[1]);
+    const shareToken = new URLSearchParams(window.location.search).get("share");
+    if (shareToken) params.set("share", shareToken);
+    const query = params.size > 0 ? `?${params.toString()}` : "";
+    apiGet<{ comments: Comment[] }>(`/api/posts/${postId}/comments${query}`).then((result) => {
+      if (result.ok) setComments(result.data.comments ?? []);
+    });
   }, [postId]);
 
   useEffect(() => {
@@ -447,6 +471,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
       showToast('No se permiten enlaces ni URLs.');
       return;
     }
+    if (!ensureOwnerToken()) {
+      showToast('No se pudo guardar el token de propiedad en este navegador.');
+      return;
+    }
     setSubmitting(true);
     setImageError(null);
     const result = await apiPost<{ comment: Comment }>(`/api/posts/${postId}/comments`, {
@@ -454,6 +482,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: image ?? undefined,
     });
     if (result.ok) {
+      if (image) showToast('Imagen enviada: pendiente de revisión.');
       setComments((prev) => [...prev, result.data.comment]);
       setContent('');
       setImage(null);
@@ -474,6 +503,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
   }
 
   async function handleReplySubmit(parentId: string, text: string, img: string | null) {
+    if (!ensureOwnerToken()) {
+      showToast('No se pudo guardar el token de propiedad en este navegador.');
+      return;
+    }
     if (containsUrl(text)) {
       showToast('No se permiten enlaces ni URLs.');
       return;
@@ -484,6 +517,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: img ?? undefined,
     });
     if (result.ok) {
+      if (img) showToast('Imagen enviada: pendiente de revisión.');
       setComments((prev) => [...prev, result.data.comment]);
       setReplyingTo(null);
     } else {
@@ -561,10 +595,16 @@ export function LocalComments({ postId, archived, onCountChange }: {
           setComments((prev) =>
             prev.map((c) =>
               c.id === ev.comment.id
-                ? { ...c, content: ev.comment.content, updated_at: ev.comment.updated_at }
+                ? { ...c, content: ev.comment.content, image_webp: ev.comment.image_webp, updated_at: ev.comment.updated_at }
                 : c
             )
           );
+          return;
+        }
+        if (ev.type === 'comment:visibility' && ev.postId === postId) {
+          setComments((prev) => prev
+            .filter((comment) => !(comment.id === ev.commentId && ev.hidden && !comment.is_owner))
+            .map((comment) => comment.id === ev.commentId ? { ...comment, owner_hidden: ev.hidden } : comment));
           return;
         }
         if (ev.type === 'comment:deleted' && ev.postId === postId) {
