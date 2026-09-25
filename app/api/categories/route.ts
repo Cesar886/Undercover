@@ -21,35 +21,64 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(24, Math.max(4, Number.isFinite(rawLimit) ? rawLimit : 12));
     const offset = (page - 1) * limit;
     const result = await query(
-      `WITH category_stats AS (
+      `WITH visible_posts AS (
+         SELECT id, category, created_at, last_bumped_at
+         FROM posts
+         WHERE is_hidden = false AND archived = false
+       ),
+       visible_comments AS (
+         SELECT cm.id, cm.post_id, vp.category, cm.created_at
+         FROM comments cm
+         JOIN visible_posts vp ON vp.id = cm.post_id
+         WHERE cm.is_hidden = false AND cm.is_deleted = false
+       ),
+       post_stats AS (
+         SELECT category, COUNT(*)::int AS post_count, MAX(COALESCE(last_bumped_at, created_at)) AS last_post_at
+         FROM visible_posts
+         GROUP BY category
+       ),
+       comment_stats AS (
+         SELECT category, COUNT(*)::int AS comment_count, MAX(created_at) AS last_comment_at
+         FROM visible_comments
+         GROUP BY category
+       ),
+       vote_stats AS (
+         SELECT vp.category, COUNT(*)::int AS vote_count
+         FROM votes v
+         JOIN visible_posts vp ON vp.id = v.post_id
+         GROUP BY vp.category
+       ),
+       post_reaction_stats AS (
+         SELECT vp.category, COUNT(*)::int AS reaction_count
+         FROM post_reactions pr
+         JOIN visible_posts vp ON vp.id = pr.post_id
+         GROUP BY vp.category
+       ),
+       comment_reaction_stats AS (
+         SELECT vc.category, COUNT(*)::int AS reaction_count
+         FROM comment_reactions cr
+         JOIN visible_comments vc ON vc.id = cr.comment_id
+         GROUP BY vc.category
+       ),
+       category_stats AS (
          SELECT
            c.slug,
-           COUNT(DISTINCT p.id)::int AS post_count,
-           COUNT(DISTINCT cm.id)::int AS comment_count,
-           COUNT(DISTINCT v.id)::int AS vote_count,
-           (
-             COUNT(DISTINCT pr.post_id::text || ':' || pr.voter_token)::int +
-             COUNT(DISTINCT cr.comment_id::text || ':' || cr.voter_token)::int
-           ) AS reaction_count,
-           MAX(GREATEST(
-             COALESCE(p.last_bumped_at, p.created_at, c.created_at),
-             COALESCE(cm.created_at, p.created_at, c.created_at),
+           COALESCE(ps.post_count, 0)::int AS post_count,
+           COALESCE(cs.comment_count, 0)::int AS comment_count,
+           COALESCE(vs.vote_count, 0)::int AS vote_count,
+           (COALESCE(prs.reaction_count, 0) + COALESCE(crs.reaction_count, 0))::int AS reaction_count,
+           GREATEST(
+             COALESCE(ps.last_post_at, c.created_at),
+             COALESCE(cs.last_comment_at, c.created_at),
              c.created_at
-           )) AS last_activity_at
+           ) AS last_activity_at
          FROM categories c
-         LEFT JOIN posts p
-           ON p.category = c.slug
-          AND p.is_hidden = false
-          AND p.archived = false
-         LEFT JOIN comments cm
-           ON cm.post_id = p.id
-          AND cm.is_hidden = false
-          AND cm.is_deleted = false
-         LEFT JOIN votes v ON v.post_id = p.id
-         LEFT JOIN post_reactions pr ON pr.post_id = p.id
-         LEFT JOIN comment_reactions cr ON cr.comment_id = cm.id
+         LEFT JOIN post_stats ps ON ps.category = c.slug
+         LEFT JOIN comment_stats cs ON cs.category = c.slug
+         LEFT JOIN vote_stats vs ON vs.category = c.slug
+         LEFT JOIN post_reaction_stats prs ON prs.category = c.slug
+         LEFT JOIN comment_reaction_stats crs ON crs.category = c.slug
          WHERE c.slug <> ALL($1::text[])
-         GROUP BY c.slug, c.created_at
        )
        SELECT
          c.slug, c.name, c.description, c.is_system, c.created_at,
