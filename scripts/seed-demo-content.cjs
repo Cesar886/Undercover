@@ -1,12 +1,35 @@
 #!/usr/bin/env node
 
-require('dotenv').config();
 const { Pool } = require('pg');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+function loadEnvFile(file) {
+  if (!fs.existsSync(file)) return;
+  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!match || process.env[match[1]] !== undefined) continue;
+    let value = match[2];
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[match[1]] = value;
+  }
+}
+
+loadEnvFile(path.join(process.cwd(), '.env.production'));
+loadEnvFile(path.join(process.cwd(), '.env.local'));
+loadEnvFile(path.join(process.cwd(), '.env'));
 
 const POST_COUNT = Number.parseInt(process.env.DEMO_POSTS || '260', 10);
 const COMMENT_COUNT = Number.parseInt(process.env.DEMO_COMMENTS || '780', 10);
+const REPLY_COUNT = Number.parseInt(process.env.DEMO_REPLIES || '1800', 10);
 const AUTHOR_COUNT = Number.parseInt(process.env.DEMO_AUTHORS || '90', 10);
+const BACKFILL_REACTIONS = process.env.DEMO_BACKFILL_REACTIONS !== 'false';
+const CLEAN_UNSUPPORTED_REACTIONS = process.env.DEMO_CLEAN_UNSUPPORTED_REACTIONS !== 'false';
+const RESET_DEMO_REACTIONS = process.env.DEMO_RESET_DEMO_REACTIONS !== 'false';
 
 if (!process.env.DATABASE_URL) {
   console.error('Falta DATABASE_URL en el entorno o en .env');
@@ -353,7 +376,40 @@ const commentBits = [
   'la categoria ya tiene personalidad propia',
 ];
 
-const emojis = ['🔥', '👀', '💀', '🍿', '😬', '🫢'];
+const replyBits = [
+  'exacto, eso mismo pense',
+  'no, pero espera, falta una parte',
+  'yo creo que aqui hay mas contexto',
+  'esa respuesta cambio todo',
+  'me dio risa como lo dijiste',
+  'confirmo la energia, aunque no los hechos',
+  'esta teoria si tiene sentido',
+  'yo venia a leer y termine opinando',
+  'ahi discrepo tantito',
+  'esto se puso mejor que el post',
+  'alguien tenia que decirlo',
+  'la respuesta merece estar arriba',
+  'jajaja esa fue muy especifica',
+  'aqui ya se armo mini hilo',
+  'me convenciste con cero pruebas',
+  'esa parte nadie la esta viendo',
+  'la cronologia esta sospechosa',
+  'necesitamos mapa del drama',
+  'esta respuesta tiene mas evidencia que el post',
+  'yo le creo a esta version',
+  'la forma en que todos entendimos',
+  'esto ya parece audiencia publica',
+  'dato pequeno pero importante',
+  'se tenia que investigar y se investigo',
+  'la comunidad haciendo su trabajo',
+  'no estaba listo para ese detalle',
+  'ahi esta el verdadero plot twist',
+  'esta respuesta explica demasiado',
+  'me sumo a esta teoria',
+  'aqui hay material para segunda parte',
+];
+
+const reactionEmojis = ['❤️', '😂', '🤯', '🫶', '🙃', '🫪'];
 
 function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
@@ -393,6 +449,45 @@ function makePostContent(i) {
 function makeCommentContent(i) {
   const suffix = randomInt(1, 5) === 1 ? ' jajaja' : '';
   return `${pick(commentBits)}${suffix} (${i + 1})`;
+}
+
+function makeReplyContent(i) {
+  const intro = randomInt(1, 4) === 1 ? '@anon ' : '';
+  const tail = randomInt(1, 6) === 1 ? ' necesito actualizacion' : '';
+  return `${intro}${pick(replyBits)}${tail} [respuesta demo ${i + 1}]`;
+}
+
+function shuffle(list) {
+  return [...list].sort(() => Math.random() - 0.5);
+}
+
+function weightedEngagement(max) {
+  const roll = randomInt(1, 100);
+  if (roll <= 8) return randomInt(Math.floor(max * 0.65), max);
+  if (roll <= 25) return randomInt(Math.floor(max * 0.22), Math.floor(max * 0.62));
+  if (roll <= 58) return randomInt(Math.floor(max * 0.05), Math.floor(max * 0.2));
+  if (roll <= 82) return randomInt(1, Math.max(2, Math.floor(max * 0.04)));
+  return 0;
+}
+
+function reactionPlan(maxTotal) {
+  const total = weightedEngagement(maxTotal);
+  if (total <= 0) return [];
+
+  const emojiCountRoll = randomInt(1, 100);
+  const emojiCount = emojiCountRoll <= 40 ? 1 : emojiCountRoll <= 72 ? 2 : emojiCountRoll <= 92 ? 3 : randomInt(4, reactionEmojis.length);
+  const selected = shuffle(reactionEmojis).slice(0, emojiCount);
+  const plan = [];
+  let remaining = total;
+
+  for (let i = 0; i < selected.length; i += 1) {
+    const isLast = i === selected.length - 1;
+    const count = isLast ? remaining : randomInt(1, Math.max(1, Math.floor(remaining * (i === 0 ? 0.8 : 0.55))));
+    if (count > 0) plan.push([selected[i], count]);
+    remaining -= count;
+    if (remaining <= 0) break;
+  }
+  return plan;
 }
 
 async function ensureSchema(client) {
@@ -463,14 +558,16 @@ async function seedPost(client, i, categories) {
 }
 
 async function seedComments(client, postIds) {
+  const commentIds = [];
   for (let i = 0; i < COMMENT_COUNT; i += 1) {
     const postId = pick(postIds);
     const createdAt = daysAgo(randomInt(0, 14), randomInt(0, 23));
-    await client.query(
+    const inserted = await client.query(
       `INSERT INTO comments (
          post_id, anon_id, content, upvotes, downvotes, owner_token, created_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7)`,
+       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7)
+       RETURNING id`,
       [
         postId,
         pick(authors),
@@ -481,12 +578,84 @@ async function seedComments(client, postIds) {
         createdAt,
       ]
     );
+    commentIds.push(inserted.rows[0]?.id);
   }
+  return commentIds.filter(Boolean);
+}
+
+async function seedReplies(client, requestedCount) {
+  if (requestedCount <= 0) return [];
+
+  const seedParents = await client.query(
+    `SELECT id, post_id, created_at
+     FROM comments
+     WHERE is_hidden = false AND is_deleted = false
+     ORDER BY created_at DESC
+     LIMIT 1500`
+  );
+  if (!seedParents.rows.length) return [];
+
+  const commentPool = [...seedParents.rows];
+  const replyIds = [];
+  for (let i = 0; i < requestedCount; i += 1) {
+    const parent = pick(commentPool);
+    const parentDate = new Date(parent.created_at);
+    const createdAt = new Date(parentDate.getTime() + randomInt(3, 10080) * 60 * 1000);
+    const inserted = await client.query(
+      `INSERT INTO comments (
+         post_id, parent_id, anon_id, content, upvotes, downvotes, owner_token, created_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8)
+       RETURNING id, post_id, created_at`,
+      [
+        parent.post_id,
+        parent.id,
+        pick(authors),
+        makeReplyContent(i),
+        weightedEngagement(260),
+        weightedEngagement(36),
+        ownerToken(5000 + i),
+        createdAt > new Date() ? new Date() : createdAt,
+      ]
+    );
+    const reply = inserted.rows[0];
+    replyIds.push(reply.id);
+    if (randomInt(1, 100) <= 42) commentPool.push(reply);
+  }
+  return replyIds;
+}
+
+async function addReactionPlan(client, table, idColumn, id, prefix, maxTotal) {
+  const plan = reactionPlan(maxTotal);
+  const rows = [];
+  for (const [emoji, count] of plan) {
+    for (let i = 0; i < count; i += 1) {
+      rows.push([id, `${prefix}-${id.slice(0, 8)}-${emoji}-${i}`, emoji]);
+    }
+  }
+  for (let start = 0; start < rows.length; start += 500) {
+    const chunk = rows.slice(start, start + 500);
+    const params = [];
+    const values = chunk.map((row, i) => {
+      params.push(...row);
+      const base = i * 3;
+      return `($${base + 1}, $${base + 2}, $${base + 3})`;
+    });
+    await client.query(
+      `INSERT INTO ${table} (${idColumn}, voter_token, emoji)
+       VALUES ${values.join(', ')}
+       ON CONFLICT (${idColumn}, voter_token) DO UPDATE SET emoji = EXCLUDED.emoji`,
+      params
+    );
+  }
+  return rows.length;
 }
 
 async function seedReactionsAndVotes(client, postIds) {
   const voterTokens = Array.from({ length: AUTHOR_COUNT * 2 }, (_, i) => `demo-voter-${i + 1}`);
   for (const postId of postIds) {
+    await addReactionPlan(client, 'post_reactions', 'post_id', postId, 'demo-post-reaction', 340);
+
     const sampleSize = randomInt(5, 20);
     for (let i = 0; i < sampleSize; i += 1) {
       const token = `${pick(voterTokens)}-${postId.slice(0, 8)}-${i}`;
@@ -498,13 +667,73 @@ async function seedReactionsAndVotes(client, postIds) {
       );
       if (randomInt(1, 100) > 35) {
         await client.query(
-          `INSERT INTO post_reactions (post_id, voter_token, emoji)
+        `INSERT INTO post_reactions (post_id, voter_token, emoji)
            VALUES ($1, $2, $3)
            ON CONFLICT (post_id, voter_token) DO UPDATE SET emoji = EXCLUDED.emoji`,
-          [postId, token, pick(emojis)]
+        [postId, token, pick(reactionEmojis)]
         );
       }
     }
+  }
+}
+
+async function backfillExistingReactions(client) {
+  if (!BACKFILL_REACTIONS) return { posts: 0, comments: 0 };
+
+  const posts = await client.query(
+    `SELECT id FROM posts WHERE is_hidden = false ORDER BY created_at DESC`
+  );
+  const comments = await client.query(
+    `SELECT id FROM comments WHERE is_hidden = false AND is_deleted = false ORDER BY created_at DESC`
+  );
+
+  for (const row of posts.rows) {
+    await addReactionPlan(client, 'post_reactions', 'post_id', row.id, 'demo-backfill-post', 320);
+    const upvotes = weightedEngagement(260);
+    const downvotes = weightedEngagement(55);
+    await client.query(
+      `UPDATE posts
+       SET upvotes = GREATEST(upvotes, $2), downvotes = GREATEST(downvotes, $3)
+       WHERE id = $1`,
+      [row.id, upvotes, downvotes]
+    );
+  }
+
+  for (const row of comments.rows) {
+    await addReactionPlan(client, 'comment_reactions', 'comment_id', row.id, 'demo-backfill-comment', 260);
+    const upvotes = weightedEngagement(240);
+    const downvotes = weightedEngagement(42);
+    await client.query(
+      `UPDATE comments
+       SET upvotes = GREATEST(upvotes, $2), downvotes = GREATEST(downvotes, $3)
+       WHERE id = $1`,
+      [row.id, upvotes, downvotes]
+    );
+  }
+
+  return { posts: posts.rowCount, comments: comments.rowCount };
+}
+
+async function cleanUnsupportedReactions(client) {
+  if (!CLEAN_UNSUPPORTED_REACTIONS) return { posts: 0, comments: 0 };
+  if (RESET_DEMO_REACTIONS) {
+    await client.query("DELETE FROM post_reactions WHERE voter_token LIKE 'demo-%'");
+    await client.query("DELETE FROM comment_reactions WHERE voter_token LIKE 'demo-%'");
+  }
+  const postResult = await client.query(
+    'DELETE FROM post_reactions WHERE NOT (emoji = ANY($1::text[]))',
+    [reactionEmojis]
+  );
+  const commentResult = await client.query(
+    'DELETE FROM comment_reactions WHERE NOT (emoji = ANY($1::text[]))',
+    [reactionEmojis]
+  );
+  return { posts: postResult.rowCount, comments: commentResult.rowCount };
+}
+
+async function seedCommentReactions(client, commentIds) {
+  for (const commentId of commentIds) {
+    await addReactionPlan(client, 'comment_reactions', 'comment_id', commentId, 'demo-comment-reaction', 280);
   }
 }
 
@@ -553,11 +782,15 @@ async function main() {
     for (let i = 0; i < POST_COUNT; i += 1) {
       postIds.push(await seedPost(client, i, categories));
     }
-    await seedComments(client, postIds);
+    const commentIds = postIds.length ? await seedComments(client, postIds) : [];
+    const replyIds = await seedReplies(client, REPLY_COUNT);
     await seedReactionsAndVotes(client, postIds);
+    await seedCommentReactions(client, [...commentIds, ...replyIds]);
     await seedPolls(client, postIds);
+    const cleaned = await cleanUnsupportedReactions(client);
+    const backfilled = await backfillExistingReactions(client);
     await client.query('COMMIT');
-    console.log(`Listo: ${categories.length} categorias, ${postIds.length} posts, ${COMMENT_COUNT} comentarios, ${AUTHOR_COUNT} autores anonimos simulados.`);
+    console.log(`Listo: ${categories.length} categorias, ${postIds.length} posts, ${commentIds.length} comentarios, ${replyIds.length} respuestas, reacciones variadas ${reactionEmojis.join(' ')}, limpieza ${cleaned.posts} posts/${cleaned.comments} comentarios, backfill en ${backfilled.posts} posts y ${backfilled.comments} comentarios, ${AUTHOR_COUNT} autores anonimos simulados.`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('No se pudo sembrar contenido demo:', error);
