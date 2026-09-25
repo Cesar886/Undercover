@@ -10,7 +10,13 @@ export function isQuemaTime(now = new Date()): boolean {
     timeZone: QUEMA_TIMEZONE, weekday: 'short', hour: '2-digit', hourCycle: 'h23', minute: '2-digit',
   }).formatToParts(now);
   const get = (type: string) => parts.find(p => p.type === type)?.value;
-  return get('weekday') === 'Mon' && get('hour') === '05' && get('minute') === '00';
+  const regularWindow = get('weekday') === 'Mon' && get('hour') === '05' && get('minute') === '00';
+  // One-off, exact-time operational test. It is inert unless set on the server.
+  const testAt = process.env.WEEKLY_CLEANUP_TEST_AT;
+  const testInstant = testAt ? new Date(testAt) : null;
+  const oneOffTestWindow = Boolean(testInstant && !Number.isNaN(testInstant.getTime()) &&
+    now.getTime() >= testInstant.getTime() && now.getTime() < testInstant.getTime() + 60_000);
+  return regularWindow || oneOffTestWindow;
 }
 
 // Defaults to simulation, including when called outside the HTTP route.
