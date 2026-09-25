@@ -7,6 +7,12 @@ export interface Category {
   description: string;
   is_system: boolean;
   created_at?: string;
+  post_count?: number;
+  comment_count?: number;
+  reaction_count?: number;
+  vote_count?: number;
+  activity_score?: number;
+  last_activity_at?: string | null;
 }
 
 export const SYSTEM_CATEGORIES: Category[] = [

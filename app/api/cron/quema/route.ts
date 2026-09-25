@@ -20,7 +20,10 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const dryRun = new URL(request.url).searchParams.get('dryRun') !== 'false';
+  const params = new URL(request.url).searchParams;
+  const dryRun = params.get('dryRun') !== 'false';
+  const allowRepeatTest = !dryRun && params.get('repeatTest') === 'true' &&
+    process.env.WEEKLY_CLEANUP_REPEAT_TEST === 'true';
   if (!dryRun && process.env.WEEKLY_CLEANUP_ENABLED !== 'true') {
     return NextResponse.json({ error: 'Weekly cleanup is disabled' }, { status: 409 });
   }
@@ -30,7 +33,7 @@ async function handle(request: NextRequest) {
   }
 
   try {
-    const result = await runQuema({ dryRun });
+    const result = await runQuema({ dryRun, allowRepeatTest });
     if (!dryRun && !result.skipped) emitFeed({ type: 'quema:total' });
     console.log('[cron/quema] Borrado Total:', result);
     return NextResponse.json({ ok: true, ...result });

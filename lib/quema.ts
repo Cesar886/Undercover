@@ -19,7 +19,7 @@ export function isQuemaTime(now = new Date()): boolean {
 }
 
 // Defaults to simulation, including when called outside the HTTP route.
-export async function runQuema({ dryRun = true, now = new Date() } = {}) {
+export async function runQuema({ dryRun = true, now = new Date(), allowRepeatTest = false } = {}) {
   const id = randomUUID();
   const localDate = localCleanupDate(now);
   try {
@@ -29,7 +29,7 @@ export async function runQuema({ dryRun = true, now = new Date() } = {}) {
         if (!isQuemaTime(now)) throw new Error('Outside Monday 05:00 America/Monterrey');
         await client.query("SELECT pg_advisory_xact_lock(hashtext('weekly_cleanup'))");
         const previous = await client.query("SELECT id FROM weekly_cleanup_runs WHERE local_date=$1 AND status='success'", [localDate]);
-        if (previous.rowCount) return { dryRun, skipped: true, reason: 'already completed', counts: {} };
+        if (previous.rowCount && !allowRepeatTest) return { dryRun, skipped: true, reason: 'already completed', counts: {} };
         // Freeze candidate rows and dependencies until snapshot + deletion commit together.
         await client.query(`LOCK TABLE posts, comments, categories, image_reviews, votes, comment_votes,
           post_reactions, comment_reactions, post_polls, post_poll_options, post_poll_votes,
@@ -84,8 +84,10 @@ export async function runQuema({ dryRun = true, now = new Date() } = {}) {
       await client.query('DELETE FROM notifications WHERE id=ANY($1::uuid[])', [snapshot.notifications.map(r => (r as { id: string }).id)]);
       await client.query('DELETE FROM posts WHERE id=ANY($1::uuid[])', [postIds]);
       await client.query('DELETE FROM categories WHERE NOT is_system');
+      // Test repetitions remain auditable without weakening the one-success-per-day rule.
+      const status = allowRepeatTest ? 'test-success' : 'success';
       await client.query(`INSERT INTO weekly_cleanup_runs(id,started_at,local_date,status,backup_id,counts)
-        VALUES($1,$2,$3,'success',$4,$5::jsonb)`, [id, now, localDate, backup.rows[0].id, JSON.stringify(counts)]);
+        VALUES($1,$2,$3,$4,$5,$6::jsonb)`, [id, now, localDate, status, backup.rows[0].id, JSON.stringify(counts)]);
       await client.query('DELETE FROM weekly_cleanup_backups WHERE expires_at <= NOW()');
       return { dryRun, skipped: false, counts, backupId: backup.rows[0].id };
     });

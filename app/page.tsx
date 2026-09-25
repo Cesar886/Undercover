@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { PostForm } from '@/components/PostForm';
 import { PostSkeleton } from '@/components/PostSkeleton';
@@ -11,7 +11,7 @@ import { QuemaCountdown } from '@/components/QuemaCountdown';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { RulesCard } from '@/components/RulesCard';
 import { CreateCategory } from '@/components/CreateCategory';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, useCategoryPages } from '@/hooks/useCategories';
 import { toBoard } from '@/lib/boards';
 import type { Category } from '@/lib/categories';
 
@@ -22,9 +22,17 @@ interface BoardPreview {
 }
 
 export default function Home() {
-  const { categories, refresh: refreshCategories } = useCategories();
+  const { categories: allCategories, refresh: refreshAllCategories } = useCategories();
+  const {
+    categories,
+    loading: categoriesLoading,
+    hasMore: hasMoreCategories,
+    refresh: refreshVisibleCategories,
+    loadMore: loadMoreCategories,
+  } = useCategoryPages(10);
   const [previews, setPreviews] = useState<BoardPreview[]>([]);
   const { message, showToast } = useToast();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const fetchPreview = useCallback(async (slug: string) => {
     const result = await apiGet<{ posts: Post[] }>(`/api/posts?category=${encodeURIComponent(slug)}&sort=recent&page=1`);
@@ -44,15 +52,26 @@ export default function Home() {
     categories.forEach((category) => fetchPreview(category.slug));
   }, [categories, fetchPreview]);
 
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasMoreCategories) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreCategories();
+    }, { rootMargin: '600px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreCategories, loadMoreCategories]);
+
   function handlePostCreated() {
     categories.forEach((category) => fetchPreview(category.slug));
+    refreshVisibleCategories();
     showToast('Post publicado');
   }
 
   async function handleCategoryCreated(category: Category) {
     const board = toBoard(category);
     setPreviews((current) => [...current, { slug: board.slug, posts: [], loading: false }]);
-    await refreshCategories();
+    await Promise.all([refreshAllCategories(), refreshVisibleCategories()]);
     showToast(`Categoría “${category.name}” creada`);
   }
 
@@ -76,14 +95,14 @@ export default function Home() {
     <main className="max-w-[600px] lg:max-w-[900px] mx-auto px-4 py-6 lg:grid lg:grid-cols-[minmax(0,600px)_260px] lg:items-start lg:gap-5">
       <div className="space-y-4">
         <div className="space-y-1">
-          <PostForm onPostCreated={handlePostCreated} categories={categories} />
+          <PostForm onPostCreated={handlePostCreated} categories={allCategories} />
           <QuemaCountdown />
         </div>
 
         <div className="flex items-center justify-between px-1">
           <div>
             <h1 className="text-sm font-bold text-gray-800 dark:text-[#e9e5ff]">Categorías</h1>
-            <p className="text-[11px] text-gray-400">Las originales son permanentes.</p>
+            <p className="text-[11px] text-gray-400">Ordenadas por actividad de la comunidad.</p>
           </div>
           <CreateCategory onCreated={handleCategoryCreated} />
         </div>
@@ -123,6 +142,24 @@ export default function Home() {
               </section>
             );
           })}
+
+          <div ref={loadMoreRef} className="py-2">
+            {categoriesLoading && (
+              <div className="space-y-4">
+                <PostSkeleton />
+                <PostSkeleton />
+              </div>
+            )}
+            {!categoriesLoading && hasMoreCategories && (
+              <button
+                type="button"
+                onClick={loadMoreCategories}
+                className="w-full py-3 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:text-[#4a4870] dark:hover:text-violet-300"
+              >
+                Cargar más categorías
+              </button>
+            )}
+          </div>
         </div>
         <Toast message={message} />
       </div>
