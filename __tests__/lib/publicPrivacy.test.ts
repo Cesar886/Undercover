@@ -27,11 +27,11 @@ it('never returns raw IP, credentials, internal aliases or future database field
   const result = publicOwnedRow({
     id: thread, anon_id: internal, content: 'hello', owner_token: owner,
     poster_ip: '192.0.2.10', email: 'private@example.com', google_id: 'google-secret',
-    future_private_column: 'private', trust_score: 0.8123,
+    future_private_column: 'private', trust_score: 12, trust_unlocked: true,
     poll: { id: 'poll', anon_id: internal, options: [{ id: 'option', label: 'Yes', votes: 1, position: 0, voter: internal }] },
   }, owner);
-  expect(result).toMatchObject({ id: thread, content: 'hello', is_owner: true });
-  for (const key of ['owner_token', 'poster_ip', 'email', 'google_id', 'future_private_column', 'trust_score']) {
+  expect(result).toMatchObject({ id: thread, content: 'hello', is_owner: true, trust_score: 12, trust_unlocked: true });
+  for (const key of ['owner_token', 'poster_ip', 'email', 'google_id', 'future_private_column']) {
     expect(result).not.toHaveProperty(key);
   }
   expect(JSON.stringify(result)).not.toContain(internal);

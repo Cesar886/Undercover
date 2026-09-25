@@ -31,7 +31,7 @@ export async function ensureVisibilitySchema(): Promise<void> {
 const PUBLIC_FIELDS = [
   'id', 'post_id', 'parent_id', 'content', 'category', 'upvotes', 'downvotes',
   'report_count', 'is_hidden', 'image_webp', 'created_at', 'updated_at',
-  'last_bumped_at', 'archived', 'comment_count', 'is_deleted',
+  'last_bumped_at', 'archived', 'comment_count', 'is_deleted', 'trust_score', 'trust_unlocked',
 ] as const;
 
 export function publicOwnedRow<T extends Record<string, unknown>>(row: T, viewerToken: string | null): Record<string, unknown> & { owner_hidden: boolean; is_owner: boolean } {

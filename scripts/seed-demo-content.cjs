@@ -592,7 +592,9 @@ async function ensureSchema(client) {
   await client.query(`
     ALTER TABLE comments
       ADD COLUMN IF NOT EXISTS owner_token UUID,
-      ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE
+      ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS trust_score INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS trust_unlocked BOOLEAN NOT NULL DEFAULT FALSE
   `);
 }
 
@@ -606,6 +608,25 @@ function trustProfile() {
         ? randomInt(10, 34)
         : randomInt(35, 75);
   return { trustScore, trustUnlocked: trustScore >= 10 };
+}
+
+async function backfillDemoTrustProfiles(client) {
+  let updated = 0;
+  for (const table of ['posts', 'comments']) {
+    const rows = await client.query(
+      `SELECT id FROM ${table}
+       WHERE anon_id LIKE 'demo-anon-%' AND trust_score = 0 AND trust_unlocked = FALSE`
+    );
+    for (const row of rows.rows) {
+      const { trustScore, trustUnlocked } = trustProfile();
+      await client.query(
+        `UPDATE ${table} SET trust_score = $1, trust_unlocked = $2 WHERE id = $3`,
+        [trustScore, trustUnlocked, row.id]
+      );
+      updated += 1;
+    }
+  }
+  return updated;
 }
 
 async function seedCategories(client) {
@@ -657,11 +678,13 @@ async function seedComments(client, postIds) {
   for (let i = 0; i < COMMENT_COUNT; i += 1) {
     const postId = pick(postIds);
     const createdAt = daysAgo(randomInt(0, 14), randomInt(0, 23));
+    const { trustScore, trustUnlocked } = trustProfile();
     const inserted = await client.query(
       `INSERT INTO comments (
-         post_id, anon_id, content, upvotes, downvotes, owner_token, created_at
+         post_id, anon_id, content, upvotes, downvotes, owner_token, created_at,
+         trust_score, trust_unlocked
        )
-       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7)
+       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, $8, $9)
        RETURNING id`,
       [
         postId,
@@ -671,6 +694,8 @@ async function seedComments(client, postIds) {
         randomInt(0, 18),
         ownerToken(1000 + i),
         createdAt,
+        trustScore,
+        trustUnlocked,
       ]
     );
     commentIds.push(inserted.rows[0]?.id);
@@ -696,11 +721,13 @@ async function seedReplies(client, requestedCount) {
     const parent = pick(commentPool);
     const parentDate = new Date(parent.created_at);
     const createdAt = new Date(parentDate.getTime() + randomInt(3, 10080) * 60 * 1000);
+    const { trustScore, trustUnlocked } = trustProfile();
     const inserted = await client.query(
       `INSERT INTO comments (
-         post_id, parent_id, anon_id, content, upvotes, downvotes, owner_token, created_at
+         post_id, parent_id, anon_id, content, upvotes, downvotes, owner_token, created_at,
+         trust_score, trust_unlocked
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8, $9, $10)
        RETURNING id, post_id, created_at`,
       [
         parent.post_id,
@@ -711,6 +738,8 @@ async function seedReplies(client, requestedCount) {
         weightedEngagement(36),
         ownerToken(5000 + i),
         createdAt > new Date() ? new Date() : createdAt,
+        trustScore,
+        trustUnlocked,
       ]
     );
     const reply = inserted.rows[0];
@@ -872,6 +901,7 @@ async function main() {
   try {
     await client.query('BEGIN');
     await ensureSchema(client);
+    const backfilledTrustProfiles = await backfillDemoTrustProfiles(client);
     const categories = await seedCategories(client);
     const postIds = [];
     for (let i = 0; i < POST_COUNT; i += 1) {
@@ -885,7 +915,7 @@ async function main() {
     const cleaned = await cleanUnsupportedReactions(client);
     const backfilled = await backfillExistingReactions(client);
     await client.query('COMMIT');
-    console.log(`Listo: ${categories.length} categorias, ${postIds.length} posts, ${commentIds.length} comentarios, ${replyIds.length} respuestas, reacciones variadas ${reactionEmojis.join(' ')}, limpieza ${cleaned.posts} posts/${cleaned.comments} comentarios, backfill en ${backfilled.posts} posts y ${backfilled.comments} comentarios, ${AUTHOR_COUNT} autores anonimos simulados.`);
+    console.log(`Listo: ${categories.length} categorias, ${postIds.length} posts, ${commentIds.length} comentarios, ${replyIds.length} respuestas, perfiles de trust actualizados ${backfilledTrustProfiles}, reacciones variadas ${reactionEmojis.join(' ')}, limpieza ${cleaned.posts} posts/${cleaned.comments} comentarios, backfill en ${backfilled.posts} posts y ${backfilled.comments} comentarios, ${AUTHOR_COUNT} autores anonimos simulados.`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('No se pudo sembrar contenido demo:', error);
