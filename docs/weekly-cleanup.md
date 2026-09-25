@@ -12,7 +12,7 @@ Inventario verificado en sql/schema.sql, sql/migrations, sql/notifications.sql y
 | votes, comment_votes, post_reactions, comment_reactions | Dependencias del contenido eliminado; borrar por cascada. |
 | post_polls, post_poll_options, post_poll_votes | Encuestas dependientes; borrar por cascada. |
 | reports, notifications | Borrar únicamente referencias al contenido eliminado. |
-| categories | Conservar todas, incluidas las semilla is_system=true: general, quemones, infieles, confesiones, stickers. |
+| categories | Borrar las creadas por usuarios (`is_system=false`); conservar las oficiales `is_system=true`: general, quemones, infieles, confesiones, stickers. |
 | users, ip_bans, community_reports, community_sanctions | Conservar cuentas y datos de seguridad/moderación. |
 | image_admin_sessions, deploy_migrations | Conservar sesiones y metadatos de despliegue. |
 

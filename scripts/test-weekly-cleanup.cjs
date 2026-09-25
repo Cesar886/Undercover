@@ -35,6 +35,8 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
     ('u','hidden','general',true,'post-hidden',false),
     ('seed','seed','general',false,'seed-image',true) RETURNING id`)).rows;
   const [visible, hidden, seed] = posts.map(r => r.id);
+  await query(`INSERT INTO categories(slug,name,description,creator_anon_id)
+    VALUES('prueba','Prueba','Categoría creada por un usuario','u')`);
   const comment = (await query(`INSERT INTO comments(post_id,anon_id,content,image_webp) VALUES($1,'u','comment','comment-image') RETURNING id`, [visible])).rows[0].id;
   await query(`INSERT INTO image_reviews(post_id,image_data,status,public_visible) VALUES($1,'post-visible','approved',true),($2,'post-hidden','rejected',false)`, [visible, hidden]);
   await query(`INSERT INTO votes(post_id,voter_token,vote_type) VALUES($1,'v','up')`, [visible]);
@@ -42,7 +44,7 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
   await query(`INSERT INTO notifications(recipient_username,type,post_id,comment_id) VALUES('u','post_comment',$1,$2)`, [visible, comment]);
   const before = await scalar('SELECT jsonb_agg(to_jsonb(p))::text FROM posts p');
   const dry = await runQuema({ dryRun: true, now: monday });
-  assert.equal(dry.counts.posts, 2); assert.equal(dry.counts.comments, 1); assert.equal(dry.counts.images_hidden, 2);
+  assert.equal(dry.counts.posts, 2); assert.equal(dry.counts.comments, 1); assert.equal(dry.counts.categories, 1); assert.equal(dry.counts.images_hidden, 2);
   assert.equal(await scalar('SELECT jsonb_agg(to_jsonb(p))::text FROM posts p'), before);
   assert.equal(await scalar('SELECT count(*)::int FROM weekly_cleanup_backups'), 0);
   assert.equal(await scalar('SELECT count(*)::int FROM weekly_cleanup_runs'), 0);
@@ -64,6 +66,7 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
   assert.equal(await scalar('SELECT count(*)::int FROM reports'), 0);
   const backup = (await query('SELECT * FROM weekly_cleanup_backups')).rows[0];
   assert.equal(backup.payload.posts.length, 2); assert.equal(backup.payload.comments.length, 1);
+  assert.equal(backup.payload.categories.length, 1);
   assert.equal(backup.payload.votes.length, 1); assert.equal(backup.payload.notifications.length, 1);
   assert.equal(new Date(backup.expires_at) - new Date(backup.created_at), 21 * 86400000);
   const imageId = (await query('SELECT id FROM image_reviews WHERE post_id=$1', [visible])).rows[0].id;

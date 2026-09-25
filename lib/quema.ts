@@ -10,13 +10,7 @@ export function isQuemaTime(now = new Date()): boolean {
     timeZone: QUEMA_TIMEZONE, weekday: 'short', hour: '2-digit', hourCycle: 'h23', minute: '2-digit',
   }).formatToParts(now);
   const get = (type: string) => parts.find(p => p.type === type)?.value;
-  const regularWindow = get('weekday') === 'Mon' && get('hour') === '05' && get('minute') === '00';
-  // One-off, exact-time operational test. It is inert unless set on the server.
-  const testAt = process.env.WEEKLY_CLEANUP_TEST_AT;
-  const testInstant = testAt ? new Date(testAt) : null;
-  const oneOffTestWindow = Boolean(testInstant && !Number.isNaN(testInstant.getTime()) &&
-    now.getTime() >= testInstant.getTime() && now.getTime() < testInstant.getTime() + 60_000);
-  return regularWindow || oneOffTestWindow;
+  return get('weekday') === 'Mon' && get('hour') === '05' && get('minute') === '00';
 }
 
 // Defaults to simulation, including when called outside the HTTP route.
@@ -32,7 +26,7 @@ export async function runQuema({ dryRun = true, now = new Date() } = {}) {
         const previous = await client.query("SELECT id FROM weekly_cleanup_runs WHERE local_date=$1 AND status='success'", [localDate]);
         if (previous.rowCount) return { dryRun, skipped: true, reason: 'already completed', counts: {} };
         // Freeze candidate rows and dependencies until snapshot + deletion commit together.
-        await client.query(`LOCK TABLE posts, comments, image_reviews, votes, comment_votes,
+        await client.query(`LOCK TABLE posts, comments, categories, image_reviews, votes, comment_votes,
           post_reactions, comment_reactions, post_polls, post_poll_options, post_poll_votes,
           reports, notifications IN SHARE ROW EXCLUSIVE MODE`);
       }
@@ -59,6 +53,8 @@ export async function runQuema({ dryRun = true, now = new Date() } = {}) {
         (target_type='comment' AND target_id=ANY($2::uuid[]))`, [postIds, commentIds])).rows;
       snapshot.notifications = (await client.query(`SELECT * FROM notifications WHERE
         post_id=ANY($1::uuid[]) OR comment_id=ANY($2::uuid[])`, [postIds, commentIds])).rows;
+      // User-created boards are ephemeral too; system categories are permanent.
+      snapshot.categories = (await client.query('SELECT * FROM categories WHERE NOT is_system')).rows;
       for (const [table, rows] of Object.entries(snapshot)) counts[table] = rows.length;
       counts.posts_hidden = posts.rows.filter(r => r.is_hidden || r.owner_hidden).length;
       counts.posts_visible = posts.rows.length - counts.posts_hidden;
@@ -82,6 +78,7 @@ export async function runQuema({ dryRun = true, now = new Date() } = {}) {
       await client.query('DELETE FROM reports WHERE id=ANY($1::uuid[])', [snapshot.reports.map(r => (r as { id: string }).id)]);
       await client.query('DELETE FROM notifications WHERE id=ANY($1::uuid[])', [snapshot.notifications.map(r => (r as { id: string }).id)]);
       await client.query('DELETE FROM posts WHERE id=ANY($1::uuid[])', [postIds]);
+      await client.query('DELETE FROM categories WHERE NOT is_system');
       await client.query(`INSERT INTO weekly_cleanup_runs(id,started_at,local_date,status,backup_id,counts)
         VALUES($1,$2,$3,'success',$4,$5::jsonb)`, [id, now, localDate, backup.rows[0].id, JSON.stringify(counts)]);
       await client.query('DELETE FROM weekly_cleanup_backups WHERE expires_at <= NOW()');
