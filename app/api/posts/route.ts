@@ -17,10 +17,10 @@ export const dynamic = 'force-dynamic';
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 
-function buildOrderClause(sort: SortOption): string {
-  if (sort === 'top') return 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC';
-  if (sort === 'hot') return 'ORDER BY (p.upvotes + p.downvotes) DESC, p.created_at DESC';
-  return 'ORDER BY p.last_bumped_at DESC, p.created_at DESC';
+function buildOrderClause(sort: SortOption, alias = 'p'): string {
+  if (sort === 'top') return `ORDER BY (${alias}.upvotes - ${alias}.downvotes) DESC, ${alias}.created_at DESC`;
+  if (sort === 'hot') return `ORDER BY (${alias}.upvotes + ${alias}.downvotes) DESC, ${alias}.created_at DESC`;
+  return `ORDER BY ${alias}.last_bumped_at DESC, ${alias}.created_at DESC`;
 }
 
 export async function GET(request: NextRequest) {
@@ -43,14 +43,12 @@ export async function GET(request: NextRequest) {
 
   const params: unknown[] = [ownerToken];
   let sql = `
-    SELECT p.*,
-      (SELECT COUNT(*) FROM comments c
-       WHERE c.post_id = p.id AND c.is_hidden = false
-         AND (c.owner_hidden = false OR c.owner_token = $1::uuid))::int AS comment_count
-    FROM posts p
-    WHERE p.is_hidden = false
-      AND (p.owner_hidden = false OR p.owner_token = $1::uuid)
-      AND p.archived = $${params.length + 1}
+    WITH page_posts AS (
+      SELECT p.*
+      FROM posts p
+      WHERE p.is_hidden = false
+        AND (p.owner_hidden = false OR p.owner_token = $1::uuid)
+        AND p.archived = $${params.length + 1}
   `;
   params.push(archived);
 
@@ -69,7 +67,24 @@ export async function GET(request: NextRequest) {
   const order = archived
     ? 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC'
     : buildOrderClause(sort);
-  sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  const outerOrder = archived
+    ? 'ORDER BY (pp.upvotes - pp.downvotes) DESC, pp.created_at DESC'
+    : buildOrderClause(sort, 'pp');
+  sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    ),
+    comment_counts AS (
+      SELECT c.post_id, COUNT(*)::int AS comment_count
+      FROM comments c
+      JOIN page_posts pp ON pp.id = c.post_id
+      WHERE c.is_hidden = false
+        AND c.is_deleted = false
+        AND (c.owner_hidden = false OR c.owner_token = $1::uuid)
+      GROUP BY c.post_id
+    )
+    SELECT pp.*, COALESCE(cc.comment_count, 0)::int AS comment_count
+    FROM page_posts pp
+    LEFT JOIN comment_counts cc ON cc.post_id = pp.id
+    ${outerOrder}`;
   params.push(limit, offset);
 
   const result = await query(sql, params);
