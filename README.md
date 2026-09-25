@@ -102,7 +102,7 @@ Create `/etc/apache2/sites-available/quemadosum.conf`:
     ProxyPass / http://localhost:3000/
     ProxyPassReverse / http://localhost:3000/
 
-    # Forward real client IP for rate limiting
+    # Forward client IP for infrastructure logs only; never use it for identity or limits
     RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}s"
 
     ErrorLog ${APACHE_LOG_DIR}/quemadosum-error.log
@@ -133,8 +133,33 @@ sudo certbot --apache -d yourdomain.com
 
 ## Architecture Notes
 
-- **Anonymity:** No cookies, no sessions, no user accounts.
+- **Anonymous identity:** `deepum_owner_token` in localStorage, sent as `X-Owner-Token`. No IP or anonymous cookies. Clearing storage creates a new identity; quotas and sanctions are evadable. Existing optional account/admin sessions are separate.
 - **Voter tokens:** SHA-256 hash of `IP + postId + ANON_SALT`. Raw IPs never stored.
 - **Temporary links:** HMAC-signed URLs expire after `SHARE_LINK_TTL_SECONDS` (two hours by default).
-- **Rate limiting:** In-memory, resets on server restart. For multi-instance, replace with Redis.
+- **Rate limiting:** Reports: 10 accepted/hour per browser ID, persisted in PostgreSQL. Other browser quotas are in memory and reset on restart. None uses IP. See `docs/community-moderation.md`.
 - **Auto-moderation:** Posts hidden automatically at 10 reports.
+
+## Public anonymity boundaries
+
+Public posts and comments use a server-generated HMAC pseudonym scoped to the
+root post ID. The same author has the same alias throughout that thread and a
+different alias in another thread. `anon_id` in the public API is this pseudonym,
+not the database identity. Legacy usernames are pseudonymized too. Never use a
+public alias as proof of ownership: edit/delete checks remain server-side, and
+clients display author controls using the server's `is_owner` flag.
+
+`publicOwnedRow` explicitly selects public fields. IPs (including old records),
+ownership tokens, account identifiers and future database columns are excluded.
+Image moderation events use the same serializer; shared events omit ownership
+and personal poll choices. `/api/identity?thread=<post UUID>` returns only the
+requester's alias for that thread; without a thread it returns a generic label.
+Public aliases depend on the existing required `ANON_SALT`; keep it secret.
+
+This protects against linking authors by a global public identifier. It does not
+make activity unlinkable to the database operator: internal identities and
+ownership credentials remain for moderation and authorization. Text, images,
+timing and copies already obtained can still identify people. This change does
+not erase historical data, server logs, backups or permanent image archives.
+
+Validation: `npm test -- --runInBand` and `npx tsc --noEmit`. Deploy a fresh build
+so the updated frontend and PWA NetworkOnly rules take effect together.

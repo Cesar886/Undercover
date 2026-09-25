@@ -1,10 +1,11 @@
+import { publicOwnedRow } from './visibility';
 import { query, withTransaction } from './db';
 import type { PoolClient } from 'pg';
 import { emitFeed } from './events';
 
 export type ImageReviewDecision = 'approved' | 'rejected' | 'hidden';
 
-// Pending and reviewed bytes remain private here until an administrator deletes them.
+// Private image bytes are retained permanently, independent of their source.
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS image_reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,8 +42,7 @@ export async function queueImage(client: PoolClient, kind: 'post' | 'comment', i
 }
 
 function publicRow(row: Record<string, unknown>) {
-  const { owner_token: _owner, poster_ip: _ip, ...safe } = row;
-  return safe;
+  return publicOwnedRow(row, null);
 }
 
 export async function reviewImage(id: string, decision: ImageReviewDecision): Promise<boolean> {
@@ -68,12 +68,16 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
     let restored = false;
 
     if (decision === 'approved') {
-      if (!imageData || !target) return null;
+      if (!imageData) return null;
+      if (!target) {
+        await client.query(`UPDATE image_reviews SET status = $2, reviewed_at = NOW(), public_visible = FALSE WHERE id = $1`, [id, decision]);
+        return { kind, targetId, changedTarget, hiddenByReview, restored, decision };
+      }
       const updated = kind === 'post'
         ? await client.query(
             `UPDATE posts SET image_webp = $1,
                is_hidden = CASE WHEN $3::boolean THEN FALSE ELSE is_hidden END
-             WHERE id = $2 AND NOT archived AND (NOT is_hidden OR $3::boolean) RETURNING *`,
+             WHERE id = $2 AND NOT archived AND NOT owner_hidden AND (NOT is_hidden OR $3::boolean) RETURNING *`,
             [imageData, targetId, wasHiddenByReview]
           )
         : await client.query(
@@ -88,9 +92,9 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
             [imageData, targetId, wasHiddenByReview]
           );
       changedTarget = updated.rows[0] ?? null;
-      if (!changedTarget) return null;
-      restored = wasHiddenByReview;
-      hiddenByReview = false;
+      // Moderation remains available even if the source cannot be republished.
+      restored = wasHiddenByReview && Boolean(changedTarget);
+      hiddenByReview = changedTarget ? false : wasHiddenByReview;
     } else if (target) {
       const imageOnly = !String(target.content ?? '').trim();
       if (kind === 'post') {
@@ -119,16 +123,17 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
     await client.query(
       `UPDATE image_reviews
        SET status = $2, image_data = COALESCE(image_data, $3),
-           target_hidden_by_review = $4, reviewed_at = NOW()
+           target_hidden_by_review = $4, reviewed_at = NOW(),
+           public_visible = ($2 = 'approved' AND $5::boolean)
        WHERE id = $1`,
-      [id, decision, imageData, hiddenByReview]
+      [id, decision, imageData, hiddenByReview, Boolean(changedTarget)]
     );
 
     return { kind, targetId, changedTarget, hiddenByReview, restored, decision };
   });
 
   if (!outcome) return false;
-  if (outcome.changedTarget) {
+  if (outcome.changedTarget && !outcome.changedTarget.owner_hidden) {
     const safe = publicRow(outcome.changedTarget);
     if (outcome.kind === 'post') {
       if (outcome.decision !== 'approved' && outcome.hiddenByReview) {
@@ -149,70 +154,7 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
   return true;
 }
 
+// Compatibility for old clients: DELETE now means hide, never destroy bytes.
 export async function deleteImageReview(id: string): Promise<boolean> {
-  await ensureImageReviewSchema();
-  const outcome = await withTransaction(async (client) => {
-    const result = await client.query('SELECT * FROM image_reviews WHERE id = $1 FOR UPDATE', [id]);
-    const review = result.rows[0];
-    if (!review) return null;
-
-    const kind = review.post_id ? 'post' as const : 'comment' as const;
-    const targetId = review.post_id ?? review.comment_id;
-    const targetResult = await client.query(
-      kind === 'post'
-        ? 'SELECT * FROM posts WHERE id = $1 FOR UPDATE'
-        : 'SELECT * FROM comments WHERE id = $1 FOR UPDATE',
-      [targetId]
-    );
-    const target = targetResult.rows[0] ?? null;
-
-    // Delete the private bytes first so a hard-deleted comment cannot remove the row unexpectedly via CASCADE.
-    await client.query('DELETE FROM image_reviews WHERE id = $1', [id]);
-    if (!target) return { kind, targetId, changedTarget: null, hard: false, hidden: false };
-
-    const imageOnly = !String(target.content ?? '').trim();
-    if (kind === 'post') {
-      const updated = await client.query(
-        `UPDATE posts SET image_webp = NULL,
-           is_hidden = CASE WHEN $2::boolean THEN TRUE ELSE is_hidden END
-         WHERE id = $1 RETURNING *`,
-        [targetId, imageOnly]
-      );
-      return { kind, targetId, changedTarget: updated.rows[0] ?? null, hard: false, hidden: imageOnly };
-    }
-
-    if (imageOnly) {
-      const replies = await client.query(
-        'SELECT EXISTS(SELECT 1 FROM comments WHERE parent_id = $1) AS has_replies',
-        [targetId]
-      );
-      const hasReplies = Boolean(replies.rows[0]?.has_replies);
-      if (hasReplies) {
-        const updated = await client.query(
-          `UPDATE comments SET is_deleted = TRUE, content = '', image_webp = NULL WHERE id = $1 RETURNING *`,
-          [targetId]
-        );
-        return { kind, targetId, changedTarget: updated.rows[0] ?? target, hard: false, hidden: true };
-      }
-      await client.query('DELETE FROM comments WHERE id = $1', [targetId]);
-      return { kind, targetId, changedTarget: target, hard: true, hidden: true };
-    }
-
-    const updated = await client.query('UPDATE comments SET image_webp = NULL WHERE id = $1 RETURNING *', [targetId]);
-    return { kind, targetId, changedTarget: updated.rows[0] ?? null, hard: false, hidden: false };
-  });
-
-  if (!outcome) return false;
-  if (outcome.changedTarget) {
-    const safe = publicRow(outcome.changedTarget);
-    if (outcome.kind === 'post') {
-      if (outcome.hidden) emitFeed({ type: 'post:hidden', postId: outcome.targetId });
-      else emitFeed({ type: 'post:edited', post: safe as never });
-    } else if (outcome.hidden) {
-      emitFeed({ type: 'comment:deleted', postId: String(safe.post_id), commentId: outcome.targetId, soft: !outcome.hard });
-    } else {
-      emitFeed({ type: 'comment:edited', postId: String(safe.post_id), comment: safe as never });
-    }
-  }
-  return true;
+  return reviewImage(id, 'hidden');
 }

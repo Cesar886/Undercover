@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Never deploy local .env files, databases, uploads or node_modules.
+# Publish app + API + database migrations. Preserve remote data and secrets.
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SERVER="root@164.90.129.213"
 BASE="/srv/quemonesum"
@@ -8,7 +8,7 @@ SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
 MODE="${1:-deploy}"
 case "$MODE" in
   --help|-h)
-    printf '%s\n' 'Uso: ./deploy.sh [--check]' 'Sin argumentos: compila, respalda la DB, sube una versión y reinicia solo quemonesum-test.' '--check: comprueba requisitos y acceso sin modificar el servidor.'
+    printf '%s\n' 'Uso: ./deploy.sh [--check]' 'Sin argumentos: compila frontend/backend, respalda y migra la DB remota, publica y activa la limpieza semanal.' '--check: comprueba requisitos y acceso sin modificar el servidor.'
     exit 0 ;;
   deploy|--check) ;;
   *) printf 'Opción desconocida: %s\n' "$MODE" >&2; exit 2 ;;
@@ -31,7 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 RELEASE="$(date -u +%Y%m%dT%H%M%SZ)-$(node -e 'process.stdout.write(require("crypto").randomBytes(4).toString("hex"))')"
-SOURCE=(app components hooks lib public types sql scripts deploy middleware.ts package.json package-lock.json next.config.mjs next-env.d.ts postcss.config.mjs tailwind.config.ts tsconfig.json)
+SOURCE=(app components hooks lib public types sql scripts deploy docs deploy.sh README.md vercel.json middleware.ts package.json package-lock.json next.config.mjs next-env.d.ts postcss.config.mjs tailwind.config.ts tsconfig.json)
 echo 'Preparando una copia de los cambios locales para compilar…'
 tar --exclude='.env*' --exclude='*.dump' --exclude='*.sqlite*' --exclude='uploads' -cf - "${SOURCE[@]}" | tar -xf - -C "$STAGING"
 ln -s "$ROOT/node_modules" "$STAGING/node_modules"

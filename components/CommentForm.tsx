@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImagePicker } from '@/components/ImagePicker';
+import { ImageReviewNoticeModal } from '@/components/ImageReviewNoticeModal';
 import { apiPost } from '@/lib/apiClient';
 import { containsUrl } from '@/lib/linkDetection';
 import { ensureOwnerToken } from '@/lib/ownerToken';
@@ -13,7 +14,7 @@ export function CommentForm({ postId }: { postId: string }) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [imageReviewOpen, setImageReviewOpen] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -32,7 +33,6 @@ export function CommentForm({ postId }: { postId: string }) {
     }
     setLoading(true);
     setError('');
-    setNotice('');
     setImageError(null);
 
     const result = await apiPost(`/api/posts/${postId}/comments`, {
@@ -41,7 +41,7 @@ export function CommentForm({ postId }: { postId: string }) {
     });
 
     if (result.ok) {
-      setNotice(image ? 'Imagen enviada: pendiente de revisión.' : '');
+      if (image) setImageReviewOpen(true);
       setContent('');
       setImage(null);
       router.refresh();
@@ -92,8 +92,8 @@ export function CommentForm({ postId }: { postId: string }) {
           {loading ? 'Enviando...' : 'Comentar'}
         </button>
       </div>
-      {notice && <p role="status" className="text-xs">{notice}</p>}
       {error && <p className="text-red-500 text-xs">{error}</p>}
+      <ImageReviewNoticeModal open={imageReviewOpen} onClose={() => setImageReviewOpen(false)} />
     </form>
   );
 }

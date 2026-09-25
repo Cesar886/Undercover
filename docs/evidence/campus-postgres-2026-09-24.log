@@ -1,0 +1,47 @@
+PostgreSQL 18.4 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+PASS legacy network constraint migration is idempotent and preserves report rows
+PASS report accepts no IP header and emits no anonymous cookie
+PASS same ID concurrent quota is 10; another ID on same IP can report a comment and post
+PASS legacy IP ban cannot block posting or commenting from campus
+PASS same localStorage ID: one report across tabs/IPs; new ID on same IP accepted
+PASS exact threshold: reports 1–4 visible, fifth hidden, read=404 and owner unhide=403
+PASS 20 rounds of 5 simultaneous distinct reports: 100 accepted, none lost, one hide/strike each
+PASS quota: 10/hour per identity across IPs and targets; 11th rejected; other identity on same IP unaffected; expires
+PASS independent identities on a shared network do not accumulate a shared budget
+PASS quota: 15 concurrent different identities on same IP => all 15 accepted
+PASS sanctions: 3=1h, 5=24h, 10=7d; 11th renews seven days without permanent escalation
+PASS active sanction blocks actual create post/comment, edit post/comment and report routes; expiration reopens all five
+Community report failed: error: audit rollback
+    at /home/daniel/QuemadosUm/node_modules/pg/lib/client.js:631:17
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async /home/daniel/QuemadosUm/lib/communityModeration.ts:108:24
+    at async withTransaction (/home/daniel/QuemadosUm/lib/db.ts:33:20)
+    at async reportContent (/home/daniel/QuemadosUm/lib/communityModeration.ts:71:21)
+    at async /home/daniel/QuemadosUm/scripts/test-community-postgres.cjs:177:40
+    at async test (/home/daniel/QuemadosUm/scripts/test-community-postgres.cjs:53:3)
+    at async /home/daniel/QuemadosUm/scripts/test-community-postgres.cjs:173:3 {
+  length: 131,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function fail_audit_strike() line 1 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3923',
+  routine: 'exec_stmt_raise'
+}
+PASS transaction rollback: failed sanction cannot commit fifth report or hide; retry gives one strike
+PASS new post/comment images stay private pending; only manual review publishes; community-hidden posts remain hidden
+{"job":"weekly-cleanup","id":"65fa0bf2-9d08-4424-90ae-f28ac96a2f8f","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T21:03:27.154Z","timeZone":"America/Monterrey","dryRun":true,"skipped":false,"counts":{"posts":101,"comments":6,"votes":0,"comment_votes":0,"post_reactions":0,"comment_reactions":0,"post_polls":0,"post_poll_options":0,"post_poll_votes":0,"reports":0,"notifications":0,"posts_hidden":36,"posts_visible":65,"comments_hidden":0,"comments_visible":6,"images_hidden":1}}
+{"job":"weekly-cleanup","id":"26d8a160-607d-4c76-b95f-ab4b5af4cc57","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T21:03:27.188Z","timeZone":"America/Monterrey","dryRun":false,"skipped":false,"counts":{"posts":101,"comments":6,"votes":0,"comment_votes":0,"post_reactions":0,"comment_reactions":0,"post_polls":0,"post_poll_options":0,"post_poll_votes":0,"reports":0,"notifications":0,"posts_hidden":36,"posts_visible":65,"comments_hidden":0,"comments_visible":6,"images_hidden":1},"backupId":"872aaebe-b73b-4e21-9257-1ea68a8ee82e"}
+{"job":"weekly-cleanup","id":"2aeead91-86b5-41a1-a978-2c4a5e722f1e","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T21:03:27.197Z","timeZone":"America/Monterrey","dryRun":false,"skipped":true,"reason":"already completed","counts":{}}
+PASS weekly Monday 05:00 Monterrey deletes community-hidden and owner-hidden posts equally; preserves sanctions and seed exception
+PASS 15 PostgreSQL integration groups

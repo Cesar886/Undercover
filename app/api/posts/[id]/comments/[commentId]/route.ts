@@ -1,3 +1,4 @@
+import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { isUuid, validateEditCommentInput } from '@/lib/validation';
@@ -16,6 +17,8 @@ export async function PATCH(
   await ensureVisibilitySchema();
   const ownerToken = ownerTokenFromRequest(request);
   const { anonId } = getAnonId(request);
+  const suspended = await communitySuspension(anonId);
+  if (suspended) return suspended;
 
   let body: unknown;
   try {
@@ -28,7 +31,7 @@ export async function PATCH(
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
   const owner = await query(
-    'SELECT anon_id, is_deleted FROM comments WHERE id = $1 AND post_id = $2',
+    'SELECT anon_id, is_deleted FROM comments WHERE id = $1 AND post_id = $2 AND is_hidden = false',
     [params.commentId, params.id]
   );
   if (owner.rows.length === 0) {
@@ -45,14 +48,15 @@ export async function PATCH(
   }
 
   const result = await query(
-    `UPDATE comments SET content = $1, updated_at = NOW() WHERE id = $2 AND is_deleted = false RETURNING *`,
+    `UPDATE comments SET content = $1, updated_at = NOW() WHERE id = $2 AND is_deleted = false AND is_hidden = false RETURNING *`,
     [v.value.content, params.commentId]
   );
 
+  if (!result.rows.length) return NextResponse.json({ error: 'Comentario no encontrado' }, { status: 404 });
   const comment = publicOwnedRow(result.rows[0], ownerToken);
-  emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
+  if (!comment.owner_hidden) emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
 
-  return NextResponse.json({ comment });
+  return NextResponse.json({ comment }, { headers: { 'Cache-Control': 'private, no-store' } });
 }
 
 export async function DELETE(

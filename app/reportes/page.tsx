@@ -46,7 +46,7 @@ export default function ReportesPage() {
               que aparece en la esquina de la publicación.
             </li>
             <li>Selecciona el motivo del reporte.</li>
-            <li>El reporte se envía de forma anónima al equipo de moderación.</li>
+            <li>Tu reporte es privado y cuenta para la moderación automática de la comunidad.</li>
           </ol>
         </div>
 
@@ -64,8 +64,7 @@ export default function ReportesPage() {
         </div>
 
         <p className="text-xs text-zinc-400 dark:text-zinc-600">
-          Todos los reportes son revisados por el equipo de moderación. El abuso del sistema de reportes
-          puede resultar en la suspensión de tu cuenta.
+          No hay moderadores. Con 5 reportes de identificadores de navegador distintos, el post o comentario se oculta. Solo cuenta un reporte por identificador de navegador para cada contenido, con un máximo de 10 por hora por identificador. Compartir la red no afecta los reportes ni sus límites. Reportar contenido propio no está permitido. Los reportes pendientes no generan sanciones. Al acumular 3 contenidos ocultos, la identidad del autor no puede publicar, comentar, editar ni reportar durante 1 hora; desde 5, durante 24 horas; desde 10, durante 7 días. Cada nuevo contenido oculto renueva la sanción correspondiente.
         </p>
 
       </div>

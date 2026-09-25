@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-24T17:31:14.673Z",
+  "results": [
+    {
+      "name": "same cookie across reload/tabs/localStorage changes: exactly one report; new cookie on same IP rejected",
+      "status": "passed",
+      "durationMs": 1362
+    },
+    {
+      "name": "exact threshold: reports 1–4 visible, fifth hidden, read=404 and owner unhide=403",
+      "status": "passed",
+      "durationMs": 180
+    },
+    {
+      "name": "20 rounds of 5 simultaneous distinct reports: 100 accepted, none lost, one hide/strike each",
+      "status": "passed",
+      "durationMs": 3143
+    },
+    {
+      "name": "quota: 10/hour per identity across IPs and targets; 11th rejected; other identity+IP unaffected; expires",
+      "status": "passed",
+      "durationMs": 470
+    },
+    {
+      "name": "identity and IP budgets are independent, never the sum of two unrelated histories",
+      "status": "passed",
+      "durationMs": 503
+    },
+    {
+      "name": "quota: 15 concurrent different identities on same IP => 10 accepted, 5 throttled across different posts",
+      "status": "passed",
+      "durationMs": 636
+    },
+    {
+      "name": "sanctions: 3=1h, 5=24h, 10=7d; 11th renews seven days without permanent escalation",
+      "status": "passed",
+      "durationMs": 1375
+    },
+    {
+      "name": "active sanction blocks actual create post/comment, edit post/comment and report routes; expiration reopens all five",
+      "status": "passed",
+      "durationMs": 197
+    },
+    {
+      "name": "transaction rollback: failed sanction cannot commit fifth report or hide; retry gives one strike",
+      "status": "passed",
+      "durationMs": 204
+    },
+    {
+      "name": "new post/comment images stay private pending; only manual review publishes; community-hidden posts remain hidden",
+      "status": "passed",
+      "durationMs": 369
+    },
+    {
+      "name": "weekly Monday 05:00 Monterrey deletes community-hidden and owner-hidden posts equally; preserves sanctions and seed exception",
+      "status": "passed",
+      "durationMs": 902
+    }
+  ]
+}

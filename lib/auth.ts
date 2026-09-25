@@ -1,3 +1,4 @@
+import { getAnonId } from './anon';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionValue, SessionPayload } from './session';
@@ -22,15 +23,13 @@ export async function getVoterKey(
 ): Promise<{ key: string; username: string | null }> {
   const session = await getSession();
   if (session?.username) return { key: `user:${session.username}`, username: session.username };
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return { key: `ip:${ip}`, username: null };
+  return { key: `anon:${getAnonId(request).anonId}`, username: null };
 }
 
 export async function getReporterId(request: NextRequest): Promise<string> {
   const session = await getSession();
   if (session?.username) return `user:${session.username}`;
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0';
-  return `anon:${ip}`;
+  return `anon:${getAnonId(request).anonId}`;
 }
 
 export function unauthorized() {

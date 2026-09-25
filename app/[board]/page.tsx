@@ -184,7 +184,7 @@ export default function BoardPage({ params }: { params: { board: string } }) {
                   onVoteError={(msg) => showToast(msg)}
                   onDeleted={handleDeleted}
                   onActionError={(msg) => showToast(msg)}
-                  onReported={() => showToast('Gracias, lo revisaremos.')}
+                  onReported={() => showToast('Reporte registrado.')}
                   style={isNew ? undefined : { animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
                   className={isNew ? 'animate-new-post-slide' : 'opacity-0 animate-fade-slide-in'}
                 />

@@ -77,7 +77,7 @@ export default function PostPage() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [commentCount, setCommentCount] = useState(0);
-  const { anonId: username } = useAnonId();
+  const { anonId: username } = useAnonId(id);
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -171,7 +171,7 @@ export default function PostPage() {
   const editedTitle = post.updated_at
     ? `Editado el ${format(new Date(post.updated_at), "d 'de' MMMM, HH:mm", { locale: es })}`
     : undefined;
-  const isAuthor = !!username && username === post.anon_id;
+  const isAuthor = Boolean(post.is_owner);
 
   async function handleSaveEdit(content: string) {
     setSavingEdit(true);
@@ -210,11 +210,12 @@ export default function PostPage() {
 
   async function handleReport(reason: ReportReason, detail?: string) {
     setSendingReport(true);
-    const r = await apiPost(`/api/posts/${post.id}/report`, { reason, detail });
+    const r = await apiPost<{ is_hidden: boolean }>(`/api/posts/${post.id}/report`, { reason, detail });
     setSendingReport(false);
     if (r.ok) {
       setReportOpen(false);
-      showToast('Gracias, lo revisaremos.');
+      showToast('Reporte registrado.');
+      if (r.data.is_hidden) setState({ kind: 'notfound' });
     } else {
       showToast(r.error);
     }

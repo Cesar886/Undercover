@@ -2,23 +2,23 @@ import { hashVoterToken, generateAnonId } from '@/lib/hash';
 
 describe('hashVoterToken', () => {
   it('returns a 64-character hex string', () => {
-    const token = hashVoterToken('127.0.0.1', 'post-id-123', 'salt-value');
+    const token = hashVoterToken('browser-one', 'post-id-123', 'salt-value');
     expect(token).toHaveLength(64);
     expect(token).toMatch(/^[a-f0-9]+$/);
   });
   it('returns different hashes for different post IDs', () => {
-    const a = hashVoterToken('127.0.0.1', 'post-1', 'salt');
-    const b = hashVoterToken('127.0.0.1', 'post-2', 'salt');
+    const a = hashVoterToken('browser-one', 'post-1', 'salt');
+    const b = hashVoterToken('browser-one', 'post-2', 'salt');
     expect(a).not.toBe(b);
   });
   it('returns same hash for identical inputs (deterministic)', () => {
-    const a = hashVoterToken('127.0.0.1', 'post-1', 'salt');
-    const b = hashVoterToken('127.0.0.1', 'post-1', 'salt');
+    const a = hashVoterToken('browser-one', 'post-1', 'salt');
+    const b = hashVoterToken('browser-one', 'post-1', 'salt');
     expect(a).toBe(b);
   });
-  it('returns different hashes for different IPs', () => {
-    const a = hashVoterToken('192.168.1.1', 'post-1', 'salt');
-    const b = hashVoterToken('10.0.0.1', 'post-1', 'salt');
+  it('returns different hashes for different browser identifiers', () => {
+    const a = hashVoterToken('browser-one', 'post-1', 'salt');
+    const b = hashVoterToken('browser-two', 'post-1', 'salt');
     expect(a).not.toBe(b);
   });
 });

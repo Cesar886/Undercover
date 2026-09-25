@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction } from '@/lib/db';
-import { getAnonId, setAnonCookie } from '@/lib/anon';
+import { getAnonId } from '@/lib/anon';
 import { emitFeed } from '@/lib/events';
 import { ensurePollSchema, getPollForPost, publicPoll } from '@/lib/polls';
 import { isUuid } from '@/lib/validation';
@@ -31,9 +31,8 @@ export async function POST(
   }
 
   let anonId: string;
-  let newToken: string | undefined;
   try {
-    ({ anonId, newToken } = getAnonId(request));
+    ({ anonId } = getAnonId(request));
   } catch {
     return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
   }
@@ -89,6 +88,5 @@ export async function POST(
   emitFeed({ type: 'post:poll', postId: params.id, poll: publicPoll(outcome.poll) });
 
   const response = NextResponse.json({ poll: outcome.poll });
-  if (newToken) setAnonCookie(response, newToken);
   return response;
 }

@@ -5,7 +5,6 @@ jest.mock('@/lib/imageAdmin', () => ({
 }));
 jest.mock('@/lib/db', () => ({ query: jest.fn() }));
 jest.mock('@/lib/imageReviews', () => ({ ensureImageReviewSchema: jest.fn(), reviewImage: jest.fn(), deleteImageReview: jest.fn() }));
-jest.mock('@/lib/ipban', () => ({ getRealIp: () => '127.0.0.1' }));
 
 import { NextRequest } from 'next/server';
 import { DELETE, GET, POST } from '@/app/api/image-admin/route';
@@ -19,9 +18,9 @@ import { isImageAdminOrigin } from '@/lib/imageAdminOrigin';
 
 const ID = '12345678-1234-1234-1234-123456789012';
 const req = (method = 'GET', body?: unknown, origin = 'http://localhost') => new NextRequest('http://localhost/api/image-admin', {
-  method, headers: { 'Content-Type': 'application/json', origin }, ...(body ? { body: JSON.stringify(body) } : {}),
+  method, headers: { 'Content-Type': 'application/json', origin, 'x-owner-token': '12345678-1234-4234-8234-123456789012' }, ...(body ? { body: JSON.stringify(body) } : {}),
 });
-beforeEach(() => { jest.clearAllMocks(); _resetForTesting(); });
+beforeEach(() => { process.env.ANON_SALT = "test-only"; jest.clearAllMocks(); _resetForTesting(); (query as jest.Mock).mockResolvedValue({ rows: [] }); });
 
 it('accepts the public HTTPS origin behind the production reverse proxy', () => {
   const request = new NextRequest('http://localhost:3000/api/image-admin', {
@@ -85,7 +84,7 @@ it('revokes the session and removes its cookie on logout', async () => {
   expect(res.cookies.get('image_admin_session')?.maxAge).toBe(0);
 });
 
-it('permanently deletes a reviewed image only after an authenticated same-origin request', async () => {
+it('accepts legacy hide requests only after an authenticated same-origin request', async () => {
   (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
   (deleteImageReview as jest.Mock).mockResolvedValue(true);
   const request = new NextRequest('http://localhost/api/image-admin?id=' + ID, {
@@ -94,4 +93,12 @@ it('permanently deletes a reviewed image only after an authenticated same-origin
   const res = await DELETE(request);
   expect(res.status).toBe(200);
   expect(deleteImageReview).toHaveBeenCalledWith(ID);
+});
+
+it.each([true, false])('reports actual public visibility after an admin decision (%s)', async (publicVisible) => {
+  (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
+  (reviewImage as jest.Mock).mockResolvedValue(true);
+  (query as jest.Mock).mockResolvedValue({ rows: [{ public_visible: publicVisible }] });
+  const res = await POST(req('POST', { id: ID, decision: 'approved' }));
+  expect(await res.json()).toEqual({ ok: true, publicVisible });
 });

@@ -13,10 +13,8 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
-  Trash2,
   X,
 } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const ADMIN = '/imagenes-dnewjlfe99474ef8wu-admin';
 type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
@@ -67,7 +65,6 @@ export function ImageReviewQueue() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Review | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -116,6 +113,7 @@ export function ImageReviewQueue() {
         setError(response?.error ?? 'No se pudo guardar la decisión.');
         return;
       }
+      const result = await res.json() as { publicVisible?: boolean };
       setCounts((current) => ({
         ...current,
         [item.status]: Math.max(0, current[item.status] - 1),
@@ -124,30 +122,13 @@ export function ImageReviewQueue() {
       setImages((current) => filter === 'all'
         ? current.map((image) => image.id === item.id ? { ...image, status: decision, reviewed_at: new Date().toISOString() } : image)
         : current.filter((image) => image.id !== item.id));
-      setNotice(decision === 'approved' ? 'Imagen aprobada y visible.' : decision === 'rejected' ? 'Imagen marcada como rechazada.' : 'Imagen oculta; permanece en el historial.');
+      setNotice(decision === 'approved'
+        ? result.publicVisible
+          ? (item.status === 'hidden' ? 'Imagen desocultada y visible nuevamente.' : 'Imagen aprobada y visible.')
+          : 'Imagen aprobada en el archivo privado. Su publicación no está disponible para mostrarla.'
+        : decision === 'rejected' ? 'Imagen marcada como rechazada.' : 'Imagen oculta; puedes desocultarla desde este panel.');
     } catch {
       setError('No se pudo guardar la decisión. Intenta nuevamente.');
-    } finally { setBusy(null); }
-  }
-
-  async function permanentlyDelete() {
-    if (!deleteTarget) return;
-    const item = deleteTarget;
-    setBusy(item.id); setError('');
-    try {
-      const res = await fetch('/api/image-admin?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
-      if (res.status === 401) { window.location.replace(ADMIN + '/login'); return; }
-      if (!res.ok) {
-        const response = await res.json().catch(() => null) as { error?: string } | null;
-        setError(response?.error ?? 'No se pudo eliminar la imagen.');
-        return;
-      }
-      setImages((current) => current.filter((image) => image.id !== item.id));
-      setCounts((current) => ({ ...current, all: Math.max(0, current.all - 1), [item.status]: Math.max(0, current[item.status] - 1) }));
-      setDeleteTarget(null);
-      setNotice('Imagen eliminada permanentemente.');
-    } catch {
-      setError('No se pudo eliminar la imagen. Intenta nuevamente.');
     } finally { setBusy(null); }
   }
 
@@ -198,10 +179,9 @@ export function ImageReviewQueue() {
             </div>
             <div className="p-4"><p className="mb-1 text-[10px] font-medium text-stone-400">Enviada {formatDate(item.created_at)}</p>{item.reviewed_at && <p className="mb-3 text-[10px] text-stone-400">Última revisión {formatDate(item.reviewed_at)}</p>}<p className="mb-4 min-h-[40px] line-clamp-2 text-sm leading-5 text-stone-600 dark:text-[#aaa4c4]">{item.content || <span className="italic text-stone-400">Sin texto asociado</span>}</p>
               <div className="grid grid-cols-3 gap-2">
-                {item.status !== 'approved' && <button disabled={!!busy || !item.has_image} onClick={() => review(item, 'approved')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-bold text-white disabled:opacity-40"><Check size={14} />Aprobar</button>}
+                {item.status !== 'approved' && <button disabled={!!busy || !item.has_image} onClick={() => review(item, 'approved')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-bold text-white disabled:opacity-40"><Check size={14} />{item.status === 'hidden' ? 'Desocultar' : 'Aprobar'}</button>}
                 {item.status !== 'rejected' && <button disabled={!!busy} onClick={() => review(item, 'rejected')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-red-50 text-[11px] font-bold text-red-700 dark:bg-red-400/10 dark:text-red-300"><X size={14} />Rechazar</button>}
                 {item.status !== 'hidden' && <button disabled={!!busy} onClick={() => review(item, 'hidden')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-stone-100 text-[11px] font-bold text-stone-600 dark:bg-white/10 dark:text-stone-300"><EyeOff size={14} />Ocultar</button>}
-                <button disabled={!!busy} onClick={() => setDeleteTarget(item)} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 text-[11px] font-bold text-red-600 dark:border-red-400/20 dark:text-red-300"><Trash2 size={14} />Borrar</button>
               </div>
             </div>
           </article>;
@@ -209,6 +189,5 @@ export function ImageReviewQueue() {
 
       {!loading && (images.length > 0 || page > 1) && <nav className="mt-7 flex items-center justify-between rounded-2xl border border-black/[0.05] bg-white/70 px-3 py-2 dark:border-violet-400/10 dark:bg-white/[0.02]"><button disabled={!!busy || page === 1} onClick={() => setPage((current) => current - 1)} className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold disabled:opacity-35"><ChevronLeft size={15} />Anterior</button><span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Página {page}</span><button disabled={!!busy || !hasMore} onClick={() => setPage((current) => current + 1)} className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold disabled:opacity-35">Siguiente<ChevronRight size={15} /></button></nav>}
     </div>
-    <ConfirmDialog open={!!deleteTarget} title="¿Eliminar esta imagen definitivamente?" description="Se borrará del archivo privado y ya no podrás recuperarla. Si estaba publicada, también desaparecerá del contenido." confirmLabel="Eliminar definitivamente" busy={!!busy} onConfirm={() => void permanentlyDelete()} onCancel={() => setDeleteTarget(null)} />
   </main>;
 }

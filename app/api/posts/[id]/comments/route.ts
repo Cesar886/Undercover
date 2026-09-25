@@ -1,3 +1,4 @@
+import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { validateAndConvertImage } from '@/lib/imageValidation';
@@ -5,8 +6,7 @@ import { ensureImageReviewSchema, queueImage } from '@/lib/imageReviews';
 import { emitFeed } from '@/lib/events';
 import { validateCommentInput, isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
-import { getAnonId, setAnonCookie } from '@/lib/anon';
-import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
+import { getAnonId } from '@/lib/anon';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 import type { Comment } from '@/types';
 import { shareGrantCoversComment, shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
@@ -56,11 +56,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   if (postCheck.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   if (postCheck.rows[0].archived) return NextResponse.json({ error: 'Este hilo está archivado.' }, { status: 403 });
 
-  const ip = getRealIp(request);
-  const ban = await getBanStatus(ip);
-  if (ban.banned) return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
-
-  const { anonId, newToken } = getAnonId(request);
+  const { anonId } = getAnonId(request);
+  const suspended = await communitySuspension(anonId);
+  if (suspended) return suspended;
   const rate = checkRateLimit(`comments:anon:${anonId}`, RATE_LIMITS.comments);
   if (!rate.ok) {
     return NextResponse.json({ error: 'Demasiados comentarios. Espera un momento.' }, {
@@ -92,11 +90,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const inserted = await withTransaction(async (client) => {
     const result = await client.query(
-      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, poster_ip, owner_token)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::uuid) RETURNING *`,
-      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ip, ownerToken]
+      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, owner_token)
+       VALUES ($1, $2, $3, $4, $5, $6::uuid) RETURNING *`,
+      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken]
     );
-    if (pendingImage) await queueImage(client, 'comment', result.rows[0].id, pendingImage);
+    if (pendingImage) {
+      await queueImage(client, 'comment', result.rows[0].id, pendingImage);
+    }
     return result.rows[0];
   });
 
@@ -107,6 +107,5 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const response = NextResponse.json({ comment, image_status: pendingImage ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
-  if (newToken) setAnonCookie(response, newToken);
   return response;
 }

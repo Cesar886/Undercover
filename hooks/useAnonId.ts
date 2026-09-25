@@ -1,19 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { apiGet } from '@/lib/apiClient';
 import { anonDisplayName } from '@/lib/anonDisplay';
 
-function readAnonPub(): string {
-  if (typeof document === 'undefined') return '';
-  const m = document.cookie.match(/(?:^|;\s*)anon_pub=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
-
-export function useAnonId() {
+export function useAnonId(threadId?: string) {
   const [anonId, setAnonId] = useState('');
 
   useEffect(() => {
-    setAnonId(readAnonPub());
-  }, []);
+    let active = true;
+    setAnonId('');
+    apiGet<{ anonId: string }>(threadId ? `/api/identity?thread=${encodeURIComponent(threadId)}` : '/api/identity').then(result => {
+      if (active && result.ok) setAnonId(result.data.anonId);
+    });
+    return () => { active = false; };
+  }, [threadId]);
 
   return {
     anonId,

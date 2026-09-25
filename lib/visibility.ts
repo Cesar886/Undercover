@@ -1,3 +1,4 @@
+import { threadAlias } from './publicIdentity';
 import type { NextRequest } from 'next/server';
 import { query } from '@/lib/db';
 
@@ -26,11 +27,36 @@ export async function ensureVisibilitySchema(): Promise<void> {
   return globalVisibility.__visibilitySchema;
 }
 
-export function publicOwnedRow<T extends Record<string, unknown>>(row: T, viewerToken: string | null) {
-  const { owner_token, ...safe } = row;
+// Explicit public contract. New database columns are private by default.
+const PUBLIC_FIELDS = [
+  'id', 'post_id', 'parent_id', 'content', 'category', 'upvotes', 'downvotes',
+  'report_count', 'is_hidden', 'image_webp', 'created_at', 'updated_at',
+  'last_bumped_at', 'archived', 'comment_count', 'is_deleted',
+] as const;
+
+export function publicOwnedRow<T extends Record<string, unknown>>(row: T, viewerToken: string | null): Record<string, unknown> & { owner_hidden: boolean; is_owner: boolean } {
+  const safe: Record<string, unknown> = {};
+  for (const field of PUBLIC_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(row, field)) safe[field] = row[field];
+  }
+  const threadId = row.post_id ?? row.id;
+  // Fail closed for malformed records; legacy usernames are also pseudonymized.
+  safe.anon_id = typeof row.anon_id === 'string' && typeof threadId === 'string'
+    ? threadAlias(row.anon_id, threadId) : '';
+  if (row.poll === null) safe.poll = null;
+  else if (row.poll && typeof row.poll === 'object') {
+    const poll = row.poll as Record<string, unknown>;
+    safe.poll = {
+      id: poll.id, post_id: poll.post_id, question: poll.question,
+      total_votes: poll.total_votes, user_vote_option_id: poll.user_vote_option_id,
+      options: Array.isArray(poll.options) ? poll.options.map(option => ({
+        id: option.id, label: option.label, votes: option.votes, position: option.position,
+      })) : [],
+    };
+  }
   return {
     ...safe,
     owner_hidden: Boolean(row.owner_hidden),
-    is_owner: Boolean(viewerToken && owner_token === viewerToken),
+    is_owner: Boolean(viewerToken && row.owner_token === viewerToken),
   };
 }

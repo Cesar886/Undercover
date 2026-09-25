@@ -25,6 +25,6 @@ export function ensureOwnerToken(): string | null {
 }
 
 export function ownerTokenHeaders(): Record<string, string> {
-  const token = readOwnerToken();
+  const token = ensureOwnerToken();
   return token ? { 'X-Owner-Token': token } : {};
 }

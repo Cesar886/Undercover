@@ -72,7 +72,7 @@ export function ReportDialog({ open, busy = false, onCancel, onSubmit }: ReportD
           Reportar
         </h2>
         <p className="text-[13px] text-stone-500 dark:text-[#6b6a8f] mb-4">
-          Selecciona el motivo. Lo revisará el equipo de moderación.
+          Selecciona el motivo. La comunidad modera mediante reportes; al alcanzar 5 reportes únicos, el contenido se oculta automáticamente.
         </p>
 
         <div className="space-y-1.5">

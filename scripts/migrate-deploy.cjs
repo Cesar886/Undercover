@@ -3,16 +3,20 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
-require('@next/env').loadEnvConfig(process.cwd(), false);
 const filesAt = (dir) => fs.readdirSync(dir).filter(n => /^\d.*\.sql$/.test(n)).sort();
 const hash = (sql) => crypto.createHash('sha256').update(sql).digest('hex');
 function assertAdditive(name, sql) {
-  const stripped = sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
+  const stripped = sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '')
+    // The trigger compares TG_OP to this literal; it is not a SQL statement.
+    .replace(/\bTG_OP\s+IN\s*\(\s*'DELETE'\s*,\s*'TRUNCATE'\s*\)/gi, "TG_OP IN ('event-one', 'event-two')")
+    // A BEFORE TRUNCATE trigger prevents truncation; it does not execute it.
+    .replace(/\bBEFORE\s+TRUNCATE\s+ON\b/gi, 'BEFORE protection ON');
   if (/\b(?:TRUNCATE|DELETE\s+FROM|DROP\s+(?:TABLE|DATABASE|SCHEMA)|DROP\s+COLUMN)\b/i.test(stripped)) {
     throw new Error(name + ': operación destructiva no permitida en el despliegue automático.');
   }
 }
 async function main() {
+  require('@next/env').loadEnvConfig(process.cwd(), false);
   const args = process.argv.slice(2);
   if (args.length !== 2 || args[0] !== '--baseline-from') throw new Error('Expected --baseline-from <previous deployed migrations>');
   const baselineDir = path.resolve(args[1]);
@@ -63,4 +67,5 @@ async function main() {
     throw error;
   } finally { client.release(); await pool.end(); }
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+module.exports = { assertAdditive };
+if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

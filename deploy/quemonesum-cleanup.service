@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up and clean weekly user content
+After=network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/quemonesum/current
+ExecStart=/usr/bin/node scripts/weekly-cleanup-request.cjs
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal

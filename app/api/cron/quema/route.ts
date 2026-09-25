@@ -20,13 +20,18 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!isQuemaTime()) {
+  const dryRun = new URL(request.url).searchParams.get('dryRun') !== 'false';
+  if (!dryRun && process.env.WEEKLY_CLEANUP_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Weekly cleanup is disabled' }, { status: 409 });
+  }
+
+  if (!dryRun && !isQuemaTime()) {
     return NextResponse.json({ skipped: true, reason: 'not quema time' });
   }
 
   try {
-    const result = await runQuema();
-    emitFeed({ type: 'quema:total' });
+    const result = await runQuema({ dryRun });
+    if (!dryRun && !result.skipped) emitFeed({ type: 'quema:total' });
     console.log('[cron/quema] Borrado Total:', result);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

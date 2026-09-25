@@ -22,9 +22,9 @@ describe('CategoryPill', () => {
     render(<CategoryPill category="confesiones" />);
     expect(screen.getByText('Confesiones')).toBeInTheDocument();
   });
-  it('applies orange color class for quemones', () => {
+  it('applies the current mauve color for quemones', () => {
     const { container } = render(<CategoryPill category="quemones" />);
-    expect(container.firstChild).toHaveClass('text-orange-500');
+    expect(container.firstChild).toHaveClass('text-mauve-600');
   });
   it('applies pink color class for infieles', () => {
     const { container } = render(<CategoryPill category="infieles" />);

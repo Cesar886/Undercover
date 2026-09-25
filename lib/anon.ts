@@ -1,31 +1,13 @@
 import crypto from 'crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { ownerTokenFromRequest } from './visibility';
 
-const COOKIE_NAME = 'anon_token';
-const COOKIE_OPTIONS = {
-  path: '/',
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  maxAge: 60 * 60 * 24 * 365,
-  sameSite: 'lax' as const,
-};
-
-function deriveAnonId(token: string): string {
+// The only anonymous identity input is the UUID stored in localStorage.
+// Hashing hides the ownership credential; it does not prevent new identities.
+export function getAnonId(request: NextRequest): { anonId: string } {
+  const token = ownerTokenFromRequest(request);
+  if (!token) throw new Error('Browser identifier missing or invalid');
   const salt = process.env.ANON_SALT;
   if (!salt) throw new Error('ANON_SALT env var is required');
-  return crypto
-    .createHash('sha256')
-    .update(`${token}:${salt}`)
-    .digest('hex'); // full 64-char hex — used for auth comparisons in DB
-}
-
-export function getAnonId(request: NextRequest): { anonId: string; newToken?: string } {
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-  if (token) return { anonId: deriveAnonId(token) };
-  const newToken = crypto.randomUUID();
-  return { anonId: deriveAnonId(newToken), newToken };
-}
-
-export function setAnonCookie(response: NextResponse, token: string): void {
-  response.cookies.set(COOKIE_NAME, token, COOKIE_OPTIONS);
+  return { anonId: crypto.createHash('sha256').update(`${token}:${salt}`).digest('hex') };
 }

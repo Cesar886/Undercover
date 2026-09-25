@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BarChart3, Plus, X } from 'lucide-react';
 import { PostCategory } from '@/types';
 import { ImagePicker } from '@/components/ImagePicker';
+import { ImageReviewNoticeModal } from '@/components/ImageReviewNoticeModal';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { AnonAvatar } from '@/components/AnonAvatar';
@@ -39,6 +40,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
   const [category, setCategory] = useState<PostCategory>(defaultCategory);
   const [loading, setLoading]   = useState(false);
   const [image, setImage]       = useState<string | null>(null);
+  const [imageReviewOpen, setImageReviewOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [pollEnabled, setPollEnabled] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -106,11 +108,13 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
     });
 
     if (result.ok) {
+      const sentImage = !!image;
       setContent('');
       setImage(null);
       setPollEnabled(false);
       setPollOptions(['', '']);
-      showToast(image ? 'Imagen enviada: pendiente de revisión.' : 'Publicado');
+      if (sentImage) setImageReviewOpen(true);
+      else showToast('Publicado');
       onPostCreated();
     } else if (
       result.error.toLowerCase().includes('imagen') ||
@@ -166,7 +170,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
 
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-zinc-400 dark:text-[#4a4870] font-semibold tracking-widest uppercase mb-1.5 font-mono">
-              {displayName}
+              {displayName} · Tu alias cambia en cada hilo
             </p>
             {category !== 'stickers' && (
               <textarea
@@ -349,6 +353,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
       </form>
 
       <Toast message={message} />
+      <ImageReviewNoticeModal open={imageReviewOpen} onClose={() => setImageReviewOpen(false)} />
     </>
   );
 }

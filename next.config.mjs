@@ -8,6 +8,11 @@ const withPWA = nextPWA({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
+      // Identity-dependent responses and legacy identifiers must never be cached.
+      urlPattern: /\/api\/(?:posts|identity|stream|notifications)(?:\/|\?|$)/,
+      handler: 'NetworkOnly',
+    },
+    {
       urlPattern: /\/(?:api\/image-admin(?:\/|\?|$)|imagenes-dnewjlfe99474ef8wu-admin(?:\/|\?|$))/,
       handler: 'NetworkOnly',
     },

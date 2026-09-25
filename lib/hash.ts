@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
 
-export function hashVoterToken(ip: string, postId: string, salt: string): string {
+export function hashVoterToken(browserId: string, postId: string, salt: string): string {
   return crypto
     .createHash('sha256')
-    .update(`${ip}:${postId}:${salt}`)
+    .update(`${browserId}:${postId}:${salt}`)
     .digest('hex');
 }
 

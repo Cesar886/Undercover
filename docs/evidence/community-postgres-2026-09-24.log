@@ -1,0 +1,43 @@
+PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+PASS same cookie across reload/tabs/localStorage changes: exactly one report; new cookie on same IP rejected
+PASS exact threshold: reports 1–4 visible, fifth hidden, read=404 and owner unhide=403
+PASS 20 rounds of 5 simultaneous distinct reports: 100 accepted, none lost, one hide/strike each
+PASS quota: 10/hour per identity across IPs and targets; 11th rejected; other identity+IP unaffected; expires
+PASS identity and IP budgets are independent, never the sum of two unrelated histories
+PASS quota: 15 concurrent different identities on same IP => 10 accepted, 5 throttled across different posts
+PASS sanctions: 3=1h, 5=24h, 10=7d; 11th renews seven days without permanent escalation
+PASS active sanction blocks actual create post/comment, edit post/comment and report routes; expiration reopens all five
+Community report failed: error: audit rollback
+    at /srv/quemonesum/app/node_modules/pg/lib/client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /tmp/quemados-report-audit-runtime/lib/communityModeration.ts:122:32
+    at async withTransaction (/tmp/quemados-report-audit-runtime/lib/db.ts:25:24)
+    at async reportContent (/tmp/quemados-report-audit-runtime/lib/communityModeration.ts:90:25)
+    at async /tmp/quemados-report-audit-runtime/scripts/test-community-postgres.cjs:144:40
+    at async test (/tmp/quemados-report-audit-runtime/scripts/test-community-postgres.cjs:52:3)
+    at async /tmp/quemados-report-audit-runtime/scripts/test-community-postgres.cjs:140:3 {
+  length: 131,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function fail_audit_strike() line 1 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3897',
+  routine: 'exec_stmt_raise'
+}
+PASS transaction rollback: failed sanction cannot commit fifth report or hide; retry gives one strike
+PASS new post/comment images stay private pending; only manual review publishes; community-hidden posts remain hidden
+{"job":"weekly-cleanup","id":"cd258627-a669-459e-8712-d015b648c720","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T17:31:14.492Z","timeZone":"America/Monterrey","dryRun":true,"skipped":false,"counts":{"posts":79,"comments":3,"votes":0,"comment_votes":0,"post_reactions":0,"comment_reactions":0,"post_polls":0,"post_poll_options":0,"post_poll_votes":0,"reports":0,"notifications":0,"posts_hidden":36,"posts_visible":43,"comments_hidden":0,"comments_visible":3,"images_hidden":1}}
+{"job":"weekly-cleanup","id":"1e8ffdbe-3f17-4a4f-834c-c922705949ed","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T17:31:14.652Z","timeZone":"America/Monterrey","dryRun":false,"skipped":false,"counts":{"posts":79,"comments":3,"votes":0,"comment_votes":0,"post_reactions":0,"comment_reactions":0,"post_polls":0,"post_poll_options":0,"post_poll_votes":0,"reports":0,"notifications":0,"posts_hidden":36,"posts_visible":43,"comments_hidden":0,"comments_visible":3,"images_hidden":1},"backupId":"69119598-c091-4045-9ba6-d44646c00e09"}
+{"job":"weekly-cleanup","id":"e736576e-cbdc-43a8-95f7-bc6b3d0da111","startedAt":"2026-09-28T11:00:00.000Z","finishedAt":"2026-09-24T17:31:14.668Z","timeZone":"America/Monterrey","dryRun":false,"skipped":true,"reason":"already completed","counts":{}}
+PASS weekly Monday 05:00 Monterrey deletes community-hidden and owner-hidden posts equally; preserves sanctions and seed exception
+PASS 11 PostgreSQL integration groups

@@ -26,7 +26,8 @@ fi
 ln -s "$BASE/shared/.env.production" "$TARGET/.env.production"
 
 echo 'Instalando dependencias de producción…'
-(cd "$TARGET" && npm ci --omit=dev --prefer-offline --no-audit --no-fund)
+# ONNX bundles the CPU runtime; downloading CUDA is unnecessary on this server.
+(cd "$TARGET" && npm_config_onnxruntime_node_install_cuda=skip npm ci --omit=dev --prefer-offline --no-audit --no-fund)
 
 echo 'Respaldando exclusivamente quemonesum_test…'
 BACKUP="$BASE/backups/$RELEASE.dump"
@@ -34,20 +35,27 @@ docker exec marketplace-um-postgres-1 sh -c 'exec pg_dump -U "$POSTGRES_USER" -d
 [[ -s "$BACKUP" ]]
 docker exec -i marketplace-um-postgres-1 pg_restore --list < "$BACKUP" >/dev/null
 
+# Suspend scheduling while migrating/switching. A failed deploy must not leave an
+# old application executing the newly authorized deletion policy.
+if systemctl cat quemonesum-cleanup.timer >/dev/null 2>&1; then
+  systemctl disable --now quemonesum-cleanup.timer
+fi
+
 echo 'Aplicando únicamente migraciones nuevas…'
 (cd "$TARGET" && node scripts/migrate-deploy.cjs --baseline-from "$PREVIOUS/sql/migrations")
 
 start_version() {
   local directory="$1"
-  node - "$directory" "$BASE/pm2-deploy.json" <<'NODE'
+  local cleanup_enabled="${2:-false}"
+  node - "$directory" "$BASE/pm2-deploy.json" "$cleanup_enabled" <<'NODE'
 const fs = require('fs'), path = require('path');
-const [directory, target] = process.argv.slice(2);
+const [directory, target, cleanupEnabled] = process.argv.slice(2);
 fs.writeFileSync(target, JSON.stringify({ apps: [{
   name: 'quemonesum-test', cwd: directory,
   script: path.join(directory, 'node_modules/next/dist/bin/next'),
   args: 'start -H 127.0.0.1 -p 3107',
   exec_mode: 'fork', instances: 1,
-  env: { NODE_ENV: 'production' }, autorestart: true
+  env: { NODE_ENV: 'production', WEEKLY_CLEANUP_ENABLED: cleanupEnabled }, autorestart: true
 }] }));
 NODE
   # PM2 reload retains the previous pm_cwd/pm_exec_path on some versions.
@@ -62,6 +70,7 @@ SWITCHED=0
 rollback_code() {
   local code=$?
   trap - ERR
+  systemctl disable --now quemonesum-cleanup.timer >/dev/null 2>&1 || true
   if [[ "$SWITCHED" == 1 ]]; then
     echo 'Falló la nueva versión. Restaurando solo el código anterior…' >&2
     if start_version "$PREVIOUS"; then
@@ -76,7 +85,8 @@ rollback_code() {
 }
 trap rollback_code ERR
 SWITCHED=1
-start_version "$TARGET"
+(cd "$TARGET" && node scripts/ensure-cleanup-secret.cjs)
+start_version "$TARGET" true
 healthy=0
 for attempt in {1..30}; do
   if curl -fsS --max-time 5 http://127.0.0.1:3107/api/posts >/dev/null &&
@@ -87,12 +97,25 @@ for attempt in {1..30}; do
 done
 [[ "$healthy" == 1 ]]
 # Check that PM2 really changed its working directory, not just its restart counter.
-pm2 jlist | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>{const p=JSON.parse(s).find(x=>x.name==="quemonesum-test");if(!p||p.pm2_env.pm_cwd!==process.argv[1]||p.pm2_env.status!=="online")process.exit(1);});' "$TARGET"
+pm2 jlist | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>{const p=JSON.parse(s).find(x=>x.name==="quemonesum-test");if(!p||p.pm2_env.pm_cwd!==process.argv[1]||p.pm2_env.status!=="online"||p.pm2_env.WEEKLY_CLEANUP_ENABLED!=="true")process.exit(1);});' "$TARGET"
 curl -fsS --max-time 15 https://quemonesum.site/api/posts >/dev/null
 ln -sfn "$TARGET" "$BASE/current"
+# Validate backup/deletion candidates through the authenticated API without changes.
+echo 'Probando la limpieza semanal en modo simulación…'
+(cd "$TARGET" && node scripts/weekly-cleanup-request.cjs --dry-run)
+
+install -m 644 "$TARGET/deploy/quemonesum-cleanup.service" /etc/systemd/system/quemonesum-cleanup.service
+install -m 644 "$TARGET/deploy/quemonesum-cleanup.timer" /etc/systemd/system/quemonesum-cleanup.timer
+systemctl daemon-reload
+systemd-analyze calendar 'Mon *-*-* 05:00:00 America/Monterrey'
+systemctl enable --now quemonesum-cleanup.timer
+systemctl is-enabled --quiet quemonesum-cleanup.timer
+systemctl is-active --quiet quemonesum-cleanup.timer
+systemctl list-timers --no-pager quemonesum-cleanup.timer
 pm2 save
 trap - ERR
 echo "Versión activa: $RELEASE"
 echo "Anterior conservada: $PREVIOUS"
 echo "Respaldo DB conservado: $BACKUP"
+echo 'Limpieza semanal activada: lunes 05:00 America/Monterrey. Simulación verificada; las ejecuciones reales quedan a cargo del programador.'
 echo 'Solo se reinició quemonesum-test. Los demás procesos no se modificaron.'

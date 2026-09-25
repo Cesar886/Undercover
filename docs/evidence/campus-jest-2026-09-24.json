@@ -1,0 +1,880 @@
+{
+  "success": true,
+  "numTotalTestSuites": 22,
+  "numPassedTestSuites": 22,
+  "numTotalTests": 190,
+  "numPassedTests": 190,
+  "numFailedTests": 0,
+  "tests": [
+    {
+      "file": "__tests__/lib/image-admin-session.test.ts",
+      "results": [
+        {
+          "name": "rejects absent and malformed cookies without database access",
+          "status": "passed"
+        },
+        {
+          "name": "checks both the session hash and expiry in PostgreSQL",
+          "status": "passed"
+        },
+        {
+          "name": "persists only hashes of randomly generated session tokens",
+          "status": "passed"
+        },
+        {
+          "name": "removes the stored session when logging out",
+          "status": "passed"
+        },
+        {
+          "name": "rejects wrong usernames and passwords",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/vote.test.ts",
+      "results": [
+        {
+          "name": "PATCH /api/posts/[id]/vote returns 400 for invalid vote_type",
+          "status": "passed"
+        },
+        {
+          "name": "PATCH /api/posts/[id]/vote returns 400 for invalid post id",
+          "status": "passed"
+        },
+        {
+          "name": "PATCH /api/posts/[id]/vote keeps repeated votes idempotent without adding another vote",
+          "status": "passed"
+        },
+        {
+          "name": "PATCH /api/posts/[id]/vote returns 200 with updated vote counts on success",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/components/CategoryPill.test.tsx",
+      "results": [
+        {
+          "name": "CategoryPill renders Quemones label",
+          "status": "passed"
+        },
+        {
+          "name": "CategoryPill renders Infieles label",
+          "status": "passed"
+        },
+        {
+          "name": "CategoryPill renders Confesiones label",
+          "status": "passed"
+        },
+        {
+          "name": "CategoryPill renders Confesiones label (alias check)",
+          "status": "passed"
+        },
+        {
+          "name": "CategoryPill applies the current mauve color for quemones",
+          "status": "passed"
+        },
+        {
+          "name": "CategoryPill applies pink color class for infieles",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/anonymousIdentity.test.ts",
+      "results": [
+        {
+          "name": "separates browser IDs sharing both IP and legacy cookies",
+          "status": "passed"
+        },
+        {
+          "name": "changing IP or cookies cannot reset the same browser identity",
+          "status": "passed"
+        },
+        {
+          "name": "posts limits are independent on the same campus IP",
+          "status": "passed"
+        },
+        {
+          "name": "comments limits are independent on the same campus IP",
+          "status": "passed"
+        },
+        {
+          "name": "votes limits are independent on the same campus IP",
+          "status": "passed"
+        },
+        {
+          "name": "rejects absent/invalid identifiers instead of falling back to IP or cookie",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/community-suspension.test.ts",
+      "results": [
+        {
+          "name": "blocks suspended identities from post before writing",
+          "status": "passed"
+        },
+        {
+          "name": "blocks suspended identities from comment before writing",
+          "status": "passed"
+        },
+        {
+          "name": "blocks suspended identities from editPost before writing",
+          "status": "passed"
+        },
+        {
+          "name": "blocks suspended identities from editComment before writing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/image-admin.test.ts",
+      "results": [
+        {
+          "name": "accepts the public HTTPS origin behind the production reverse proxy",
+          "status": "passed"
+        },
+        {
+          "name": "requires authentication for queue, preview and decisions",
+          "status": "passed"
+        },
+        {
+          "name": "rejects cross-origin decisions even with a session",
+          "status": "passed"
+        },
+        {
+          "name": "serves previews privately from the moderation history",
+          "status": "passed"
+        },
+        {
+          "name": "accepts one-click decisions without a reason",
+          "status": "passed"
+        },
+        {
+          "name": "does not create a session with incorrect credentials",
+          "status": "passed"
+        },
+        {
+          "name": "sets a private expiring cookie after valid login",
+          "status": "passed"
+        },
+        {
+          "name": "throttles repeated login attempts",
+          "status": "passed"
+        },
+        {
+          "name": "revokes the session and removes its cookie on logout",
+          "status": "passed"
+        },
+        {
+          "name": "accepts legacy hide requests only after an authenticated same-origin request",
+          "status": "passed"
+        },
+        {
+          "name": "reports actual public visibility after an admin decision (true)",
+          "status": "passed"
+        },
+        {
+          "name": "reports actual public visibility after an admin decision (false)",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/image-moderation.test.ts",
+      "results": [
+        {
+          "name": "queues new post images privately until manual admin approval",
+          "status": "passed"
+        },
+        {
+          "name": "queues new comment images privately until manual admin approval",
+          "status": "passed"
+        },
+        {
+          "name": "rejects invalid image data before any insertion",
+          "status": "passed"
+        },
+        {
+          "name": "approval publishes and preserves the private post image",
+          "status": "passed"
+        },
+        {
+          "name": "approval publishes and preserves the private comment image",
+          "status": "passed"
+        },
+        {
+          "name": "rejecting an image-only comment hides it without destroying its review",
+          "status": "passed"
+        },
+        {
+          "name": "keeps comment text while removing a rejected attachment",
+          "status": "passed"
+        },
+        {
+          "name": "can approve again and restore a comment hidden by moderation",
+          "status": "passed"
+        },
+        {
+          "name": "supports a reversible hidden status while retaining bytes",
+          "status": "passed"
+        },
+        {
+          "name": "legacy delete hides the public attachment while retaining the private review",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/posts.test.ts",
+      "results": [
+        {
+          "name": "GET /api/posts returns posts array",
+          "status": "passed"
+        },
+        {
+          "name": "GET /api/posts filters by category when provided",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts returns 400 for empty content",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts returns 400 for invalid category",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts returns 400 for old category values",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts returns 429 when rate limit exceeded",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts returns 201 and created post on success",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/report.test.ts",
+      "results": [
+        {
+          "name": "escalates strike 3",
+          "status": "passed"
+        },
+        {
+          "name": "escalates strike 5",
+          "status": "passed"
+        },
+        {
+          "name": "escalates strike 10",
+          "status": "passed"
+        },
+        {
+          "name": "escalates strike 11",
+          "status": "passed"
+        },
+        {
+          "name": "does not suspend the first two strikes",
+          "status": "passed"
+        },
+        {
+          "name": "validates the id and reason",
+          "status": "passed"
+        },
+        {
+          "name": "rejects unavailable, self, duplicate and excessive reports ({\"missing\":true})",
+          "status": "passed"
+        },
+        {
+          "name": "rejects unavailable, self, duplicate and excessive reports ({\"alreadyHidden\":true})",
+          "status": "passed"
+        },
+        {
+          "name": "rejects unavailable, self, duplicate and excessive reports ({\"author\":\"reader\"})",
+          "status": "passed"
+        },
+        {
+          "name": "rejects unavailable, self, duplicate and excessive reports ({\"duplicate\":true})",
+          "status": "passed"
+        },
+        {
+          "name": "rejects unavailable, self, duplicate and excessive reports ({\"count\":10})",
+          "status": "passed"
+        },
+        {
+          "name": "records a pending report without penalizing anyone",
+          "status": "passed"
+        },
+        {
+          "name": "hides post and applies strike 3 atomically",
+          "status": "passed"
+        },
+        {
+          "name": "hides comment and applies strike 5 atomically",
+          "status": "passed"
+        },
+        {
+          "name": "hides post and applies strike 10 atomically",
+          "status": "passed"
+        },
+        {
+          "name": "blocks active suspensions and permits expired ones",
+          "status": "passed"
+        },
+        {
+          "name": "does not announce success when the transaction fails",
+          "status": "passed"
+        },
+        {
+          "name": "rejects reports from suspended identities before opening a transaction",
+          "status": "passed"
+        },
+        {
+          "name": "rejects a comment report if its parent post is hidden or missing",
+          "status": "passed"
+        },
+        {
+          "name": "accepts reports without any IP headers",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/comments.test.ts",
+      "results": [
+        {
+          "name": "GET /api/posts/[id]/comments returns comments array",
+          "status": "passed"
+        },
+        {
+          "name": "GET /api/posts/[id]/comments returns 400 for invalid post id",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts/[id]/comments returns 400 for empty content",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts/[id]/comments returns 400 when content exceeds 300 chars",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts/[id]/comments returns 400 for invalid parent_id",
+          "status": "passed"
+        },
+        {
+          "name": "POST /api/posts/[id]/comments returns 201 with the new comment",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/rateLimit.test.ts",
+      "results": [
+        {
+          "name": "checkRateLimit allows up to max requests",
+          "status": "passed"
+        },
+        {
+          "name": "checkRateLimit blocks past max with retryAfter",
+          "status": "passed"
+        },
+        {
+          "name": "checkRateLimit keys are independent",
+          "status": "passed"
+        },
+        {
+          "name": "checkRateLimit resets after window",
+          "status": "passed"
+        },
+        {
+          "name": "checkRateLimit different limit configs apply per call",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/imageValidation.test.ts",
+      "results": [
+        {
+          "name": "validateAndConvertImage rejects non-string input",
+          "status": "passed"
+        },
+        {
+          "name": "validateAndConvertImage rejects empty string",
+          "status": "passed"
+        },
+        {
+          "name": "validateAndConvertImage rejects garbage that is not an image",
+          "status": "passed"
+        },
+        {
+          "name": "validateAndConvertImage rejects images larger than 2MB",
+          "status": "passed"
+        },
+        {
+          "name": "validateAndConvertImage accepts a valid PNG and converts to webp",
+          "status": "passed"
+        },
+        {
+          "name": "validateAndConvertImage accepts a data URL prefixed PNG",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/validation.test.ts",
+      "results": [
+        {
+          "name": "containsUrl detects common and obfuscated URLs",
+          "status": "passed"
+        },
+        {
+          "name": "containsUrl does not reject normal text without URLs",
+          "status": "passed"
+        },
+        {
+          "name": "isUuid accepts a valid uuid",
+          "status": "passed"
+        },
+        {
+          "name": "isUuid rejects garbage",
+          "status": "passed"
+        },
+        {
+          "name": "isUuid rejects non-strings",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects empty content",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects content > 500 chars",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects invalid category",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput accepts valid input",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput accepts images and sticker posts for moderation",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput accepts a poll with 2 to 6 options",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects polls without pregunta",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects polls with fewer than 2 options",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects polls with more than 6 options",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects duplicate or URL poll options",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects non-object body",
+          "status": "passed"
+        },
+        {
+          "name": "validatePostInput rejects URLs in content",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput rejects empty content with no image",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput accepts images for moderation, including image-only comments",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput rejects content > 300 chars",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput rejects invalid parent_id",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput accepts valid uuid parent_id",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput accepts null parent_id",
+          "status": "passed"
+        },
+        {
+          "name": "validateCommentInput rejects URLs in content",
+          "status": "passed"
+        },
+        {
+          "name": "validateVoteInput accepts up",
+          "status": "passed"
+        },
+        {
+          "name": "validateVoteInput accepts down",
+          "status": "passed"
+        },
+        {
+          "name": "validateVoteInput rejects bogus",
+          "status": "passed"
+        },
+        {
+          "name": "validateVoteInput rejects missing",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects empty body",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects missing reason",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects unknown reason",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput accepts spam",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput accepts inappropriate",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects detail when reason !== other",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput accepts other with detail",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects other with detail > 200 chars",
+          "status": "passed"
+        },
+        {
+          "name": "validateReportInput rejects other with detail containing URL",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditPostInput rejects empty content",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditPostInput rejects content > 500 chars",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditPostInput accepts valid content",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditPostInput rejects URLs in content",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditCommentInput rejects empty content",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditCommentInput rejects content > 300 chars",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditCommentInput accepts valid content",
+          "status": "passed"
+        },
+        {
+          "name": "validateEditCommentInput rejects URLs in content",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/quema.test.ts",
+      "results": [
+        {
+          "name": "requires authorization even for simulation",
+          "status": "passed"
+        },
+        {
+          "name": "defaults to simulation and allows it outside scheduled time without feed events",
+          "status": "passed"
+        },
+        {
+          "name": "requires explicit activation for destructive runs",
+          "status": "passed"
+        },
+        {
+          "name": "never deletes outside Monterrey schedule",
+          "status": "passed"
+        },
+        {
+          "name": "only emits feed reset after a successful real run",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/apiClient.test.ts",
+      "results": [
+        {
+          "name": "apiGet returns ok on 200",
+          "status": "passed"
+        },
+        {
+          "name": "apiGet returns error with server message on 400",
+          "status": "passed"
+        },
+        {
+          "name": "apiGet reads Retry-After on 429",
+          "status": "passed"
+        },
+        {
+          "name": "apiGet returns network error message when fetch throws",
+          "status": "passed"
+        },
+        {
+          "name": "apiPost serializes body and returns parsed result",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/publicOrigin.test.ts",
+      "results": [
+        {
+          "name": "uses the configured public domain instead of the internal request origin",
+          "status": "passed"
+        },
+        {
+          "name": "uses reverse-proxy headers when no public URL is configured",
+          "status": "passed"
+        },
+        {
+          "name": "ignores invalid configured protocols",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/hash.test.ts",
+      "results": [
+        {
+          "name": "hashVoterToken returns a 64-character hex string",
+          "status": "passed"
+        },
+        {
+          "name": "hashVoterToken returns different hashes for different post IDs",
+          "status": "passed"
+        },
+        {
+          "name": "hashVoterToken returns same hash for identical inputs (deterministic)",
+          "status": "passed"
+        },
+        {
+          "name": "hashVoterToken returns different hashes for different browser identifiers",
+          "status": "passed"
+        },
+        {
+          "name": "generateAnonId matches the \"An\u00f3nimo #XXXX\" pattern",
+          "status": "passed"
+        },
+        {
+          "name": "generateAnonId generates IDs within 1000-9999 range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/categoryAvailability.test.ts",
+      "results": [
+        {
+          "name": "retired categories blocks stickers without changing stored data",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories blocks confesiones without changing stored data",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories keeps general available",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories keeps quemones available",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories keeps infieles available",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories keeps custom-category available",
+          "status": "passed"
+        },
+        {
+          "name": "retired categories excludes retired categories from the database listing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/trust.test.ts",
+      "results": [
+        {
+          "name": "applyTrustDelta 1. fase lenta positiva: score=9, baseDelta=+2 \u2192 delta=+1, newScore=10, shouldUnlock=true",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 2. penalizaci\u00f3n aumentada: score=-1, baseDelta=-2 \u2192 delta=-3, newScore=-4, primera suspensi\u00f3n 24h",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 5. primera suspensi\u00f3n 24h: score=-1, baseDelta=-2, is_suspended=false, suspension_count=0",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 6. primera suspensi\u00f3n 7d: score=-11, baseDelta=-1, is_suspended=false, suspension_count=0",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 7. permanente por reincidencia: score=-5, baseDelta=-1, suspension_count=1",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 8. suspensi\u00f3n expirada tratada como no-suspendida: is_suspended=true, suspension_end=ayer \u2192 nueva suspensi\u00f3n 24h",
+          "status": "passed"
+        },
+        {
+          "name": "applyTrustDelta 9. usuario no existe: rows vac\u00edas \u2192 retorna sin UPDATE",
+          "status": "passed"
+        },
+        {
+          "name": "shouldApplyTrustForVote 3. auto-voto \u2192 false",
+          "status": "passed"
+        },
+        {
+          "name": "shouldApplyTrustForVote 4. an\u00f3nimo vota \u2192 true",
+          "status": "passed"
+        },
+        {
+          "name": "shouldApplyTrustForVote usuario diferente vota \u2192 true",
+          "status": "passed"
+        },
+        {
+          "name": "formatSuspensionDate formatea una fecha en DD/MM/YYYY HH:mm",
+          "status": "passed"
+        },
+        {
+          "name": "formatSuspensionDate acepta un string ISO y retorna el formato correcto",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/shareLinks.test.ts",
+      "results": [
+        {
+          "name": "temporary share tokens creates a grant valid for two hours by default",
+          "status": "passed"
+        },
+        {
+          "name": "temporary share tokens still accepts an explicit positive duration override",
+          "status": "passed"
+        },
+        {
+          "name": "temporary share tokens rejects a modified signature",
+          "status": "passed"
+        },
+        {
+          "name": "temporary share tokens rejects a token once its two hours have elapsed",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/lib/sanitize.test.ts",
+      "results": [
+        {
+          "name": "sanitize strips HTML tags",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize strips nested tags",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize trims whitespace",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize passes through plain text",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize returns empty string for empty input",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize strips HTML attributes",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize removes control characters",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize preserves newlines and tabs",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize collapses excessive spaces",
+          "status": "passed"
+        },
+        {
+          "name": "sanitize normalizes unicode (NFKC)",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "__tests__/api/health.test.ts",
+      "results": [
+        {
+          "name": "GET /api/health returns 200 with status ok",
+          "status": "passed"
+        },
+        {
+          "name": "GET /api/health includes a timestamp",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

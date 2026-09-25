@@ -6,7 +6,7 @@ Desde la raíz del proyecto:
 
 ```bash
 ./deploy.sh --check  # Solo comprobar acceso y requisitos
-./deploy.sh          # Compilar y publicar los cambios actuales
+./deploy.sh          # Publicar frontend/backend, migrar DB y activar limpieza semanal
 ```
 
 El script incluye los cambios locales aunque aún no tengan commit. Compila una
@@ -24,7 +24,8 @@ al último aplicado. La tabla `deploy_migrations` registra sus checksums para
 ejecutarlas una sola vez; modificar una migración ya aplicada aborta el despliegue.
 El primer uso registra las migraciones que ya estaban en el servidor sin
 repetirlas. Las nuevas se aplican en una transacción y se rechazan sentencias
-destructivas comunes. Escribe siempre migraciones aditivas compatibles con la
+destructivas comunes. Se permiten triggers que bloquean TRUNCATE, sin permitir
+sentencias de borrado o truncado dentro de sus funciones. Escribe siempre migraciones aditivas compatibles con la
 versión anterior: no borres tablas, columnas ni datos existentes.
 
 Las versiones quedan en `/srv/quemonesum/releases/`; `current` apunta a la activa.
@@ -51,6 +52,27 @@ The old database was not migrated; this is a new database authorized for testing
 
 For updates, build locally and upload the application and `.next` output excluding
 `.next/cache`, `.env*`, and local dependencies. Install runtime dependencies on the
-server with `npm ci --omit=dev`, then restart only `quemonesum-test`. Preserve the
+server with `npm_config_onnxruntime_node_install_cuda=skip npm ci --omit=dev`, then restart only `quemonesum-test`. Preserve the
 other PM2 processes and Nginx sites. `scripts/provision-test-env.cjs` is first-run
 only and refuses to overwrite an existing environment.
+
+## Limpieza semanal
+
+Ver [alcance, respaldo, simulación y activación](../docs/weekly-cleanup.md).
+Las unidades `quemonesum-cleanup.timer` y `.service` programan los lunes a las
+05:00 de `America/Monterrey`. Cada deploy configura `WEEKLY_CLEANUP_ENABLED=true` en PM2, conserva o genera
+CRON_SECRET en el servidor, verifica una simulación y habilita automáticamente
+el timer. Si falla, el código anterior vuelve con la limpieza desactivada.
+
+Se suben frontend, backend/API, archivos públicos, dependencias y migraciones de
+la base. Los datos remotos permanecen en PostgreSQL; no se reemplazan por una
+copia de la DB local. También se incluyen deploy.sh, documentación y configuración.
+
+## Error ENOSPC al instalar ONNX
+
+El servidor usa el runtime CPU incluido en ONNX. El despliegue omite la descarga
+de CUDA con `npm_config_onnxruntime_node_install_cuda=skip`, manteniendo activos
+los demás scripts de instalación. La comprobación inicial exige al menos 768 MiB
+libres; es un mínimo, y una base grande puede requerir más espacio para su respaldo.
+Si falta espacio, revisa versiones inactivas antes de eliminarlas; conserva la
+versión activa, una versión anterior y los respaldos de la base.

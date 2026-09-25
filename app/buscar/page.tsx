@@ -117,7 +117,7 @@ export default function BuscarPage() {
                 onVoteError={(msg) => showToast(msg)}
                 onDeleted={handleDeleted}
                 onActionError={(msg) => showToast(msg)}
-                onReported={() => showToast('Gracias, lo revisaremos.')}
+                onReported={() => showToast('Reporte registrado.')}
                 style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
                 className="opacity-0 animate-fade-slide-in"
               />

@@ -21,6 +21,7 @@ export interface PostPoll {
 
 export interface Post {
   id: string;
+  /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
   content: string;
   category: PostCategory;
@@ -45,6 +46,7 @@ export interface Comment {
   id: string;
   post_id: string;
   parent_id?: string | null;
+  /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
   content: string;
   image_webp: string | null;

@@ -1,9 +1,10 @@
+import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { isUuid, validateEditPostInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
 import { getAnonId } from '@/lib/anon';
-import { attachPollsToPosts, getPollForPost } from '@/lib/polls';
+import { attachPollsToPosts, getPollForPost, publicPoll } from '@/lib/polls';
 import { Post } from '@/types';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 import { shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
-  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
+  const viewerAnonId = ownerToken ? getAnonId(request).anonId : null;
   const [post] = await attachPollsToPosts([safe], viewerAnonId);
   return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
@@ -46,6 +47,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   await ensureVisibilitySchema();
   const ownerToken = ownerTokenFromRequest(request);
   const { anonId } = getAnonId(request);
+  const suspended = await communitySuspension(anonId);
+  if (suspended) return suspended;
 
   let body: unknown;
   try { body = await request.json(); }
@@ -54,17 +57,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const validated = validateEditPostInput(body);
   if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: validated.status });
 
-  const owner = await query('SELECT anon_id FROM posts WHERE id = $1', [params.id]);
+  const owner = await query('SELECT anon_id FROM posts WHERE id = $1 AND is_hidden = false', [params.id]);
   if (owner.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
   const result = await query(
-    `UPDATE posts SET content = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+    `UPDATE posts SET content = $1, updated_at = NOW() WHERE id = $2 AND is_hidden = false RETURNING *`,
     [validated.value.content, params.id]
   );
+  if (!result.rows.length) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
   const post: Post = { ...safe, poll: await getPollForPost(params.id, anonId) };
-  emitFeed({ type: 'post:edited', post: { ...post, is_owner: false } });
+  if (!post.owner_hidden) emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 

@@ -1,4 +1,13 @@
-jest.mock('@/lib/db', () => ({ query: jest.fn() }));
+jest.mock('@/lib/categories', () => ({ categoryExists: async (slug: string) => ['quemones', 'rumores', 'general'].includes(slug) }));
+jest.mock('@/lib/polls', () => ({ attachPollsToPosts: async (rows: unknown[]) => rows, ensurePollSchema: async () => {} }));
+jest.mock('@/lib/db', () => ({ query: jest.fn(), withTransaction: jest.fn() }));
+jest.mock('@/lib/anon', () => ({ getAnonId: () => ({ anonId: 'tester' }) }));
+jest.mock('@/lib/communityModeration', () => ({ communitySuspension: jest.fn().mockResolvedValue(null) }));
+jest.mock('@/lib/visibility', () => ({
+  ensureVisibilitySchema: async () => {},
+  ownerTokenFromRequest: () => '12345678-1234-4234-8234-123456789012',
+  publicOwnedRow: (row: unknown) => row,
+}));
 jest.mock('@/lib/rateLimit', () => ({
   checkRateLimit: jest.fn().mockReturnValue({ ok: true, retryAfter: 0 }),
   RATE_LIMITS: { posts: { windowMs: 1000, max: 40 } },
@@ -6,7 +15,7 @@ jest.mock('@/lib/rateLimit', () => ({
 
 import { GET, POST } from '@/app/api/posts/route';
 import { NextRequest } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 const mockQuery = query as jest.Mock;
@@ -14,6 +23,7 @@ const mockRateLimit = checkRateLimit as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (withTransaction as jest.Mock).mockImplementation(fn => fn({ query: mockQuery }));
   mockRateLimit.mockReturnValue({ ok: true, retryAfter: 0 });
 });
 

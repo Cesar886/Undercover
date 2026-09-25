@@ -1,3 +1,4 @@
+import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
@@ -6,11 +7,10 @@ import { validatePostInput } from '@/lib/validation';
 import { validateAndConvertImage } from '@/lib/imageValidation';
 import { ensureImageReviewSchema, queueImage } from '@/lib/imageReviews';
 import { Post, PostCategory } from '@/types';
-import { getAnonId, setAnonCookie } from '@/lib/anon';
+import { getAnonId } from '@/lib/anon';
 import { pruneCategory } from '@/lib/ephemeral';
-import { getRealIp, getBanStatus, banMessage } from '@/lib/ipban';
 import { categoryExists } from '@/lib/categories';
-import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost } from '@/lib/polls';
+import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost, publicPoll } from '@/lib/polls';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 
 export const dynamic = 'force-dynamic';
@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
   params.push(limit, offset);
 
   const result = await query(sql, params);
-  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as Post[];
-  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
+  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as unknown as Post[];
+  const viewerAnonId = ownerToken ? getAnonId(request).anonId : null;
   const posts = await attachPollsToPosts(safeRows, viewerAnonId);
   return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
 }
@@ -86,17 +86,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Token de propiedad inválido o ausente' }, { status: 400 });
   }
 
-  const ip = getRealIp(request);
-  const ban = await getBanStatus(ip);
-  if (ban.banned) return NextResponse.json({ error: banMessage(ban.expiresAt) }, { status: 403 });
-
   let anonId: string;
-  let newToken: string | undefined;
   try {
-    ({ anonId, newToken } = getAnonId(request));
+    ({ anonId } = getAnonId(request));
   } catch {
     return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
   }
+
+  const suspended = await communitySuspension(anonId);
+  if (suspended) return suspended;
 
   const rl = checkRateLimit(`posts:anon:${anonId}`, RATE_LIMITS.posts);
   if (!rl.ok) {
@@ -128,12 +126,14 @@ export async function POST(request: NextRequest) {
     created = await withTransaction(async (client) => {
       await ensurePollSchema(client);
       const inserted = await client.query<Post>(
-        `INSERT INTO posts (anon_id, content, category, image_webp, poster_ip, owner_token)
-         VALUES ($1, $2, $3, $4, $5, $6::uuid) RETURNING *`,
-        [anonId, validated.value.content, validated.value.category, null, ip, ownerToken]
+        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token)
+         VALUES ($1, $2, $3, $4, $5::uuid) RETURNING *`,
+        [anonId, validated.value.content, validated.value.category, null, ownerToken]
       );
       let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
-      if (pendingImage) await queueImage(client, 'post', post.id, pendingImage);
+      if (pendingImage) {
+        await queueImage(client, 'post', post.id, pendingImage);
+      }
       if (validated.value.poll_options?.length) {
         await createPollForPost(client, post.id, validated.value.poll_options, validated.value.poll_question ?? '');
         post = { ...post, poll: await getPollForPost(post.id, anonId, client) };
@@ -148,11 +148,10 @@ export async function POST(request: NextRequest) {
 
   if (!created) return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   const post = publicOwnedRow(created as unknown as Record<string, unknown>, ownerToken) as unknown as Post;
-  emitFeed({ type: 'post:new', post: { ...post, is_owner: false } });
+  emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
 
   const response = NextResponse.json({ post, image_status: pendingImage ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
-  if (newToken) setAnonCookie(response, newToken);
   return response;
 }

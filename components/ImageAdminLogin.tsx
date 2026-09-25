@@ -1,4 +1,5 @@
 'use client';
+import { ownerTokenHeaders } from '@/lib/ownerToken';
 
 import Link from 'next/link';
 import { useState } from 'react';
@@ -32,7 +33,7 @@ export function ImageAdminLogin() {
     try {
       const res = await fetch('/api/image-admin/session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...ownerTokenHeaders() },
         body: JSON.stringify({
           username: data.get('username'),
           password: data.get('password'),

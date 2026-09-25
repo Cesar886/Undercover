@@ -1,7 +1,7 @@
-/** Convert an anon_id (64-char hex hash) to a short display label. */
+/** Display a thread-scoped public pseudonym. Never pass an internal identity. */
 export function anonDisplayName(anonId: string): string {
   if (/^[0-9a-f]{64}$/.test(anonId)) {
-    return `Anon#${anonId.slice(0, 4).toUpperCase()}`;
+    return `Anon#${anonId.slice(0, 8).toUpperCase()}`;
   }
-  return anonId; // legacy username from before the anonymous migration
+  return 'Anónimo';
 }

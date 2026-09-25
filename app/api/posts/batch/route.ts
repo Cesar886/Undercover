@@ -1,3 +1,4 @@
+import { getAnonId } from '@/lib/anon';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSessionUsername, unauthorized } from '@/lib/auth';
@@ -27,9 +28,9 @@ export async function GET(request: NextRequest) {
     [ids, ownerToken]
   );
 
-  const viewerAnonId = request.cookies.get('anon_pub')?.value ?? null;
-  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as Post[];
+  const viewerAnonId = ownerToken ? getAnonId(request).anonId : null;
+  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as unknown as Post[];
   const posts = await attachPollsToPosts(safeRows, viewerAnonId);
 
-  return NextResponse.json({ posts });
+  return NextResponse.json({ posts }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

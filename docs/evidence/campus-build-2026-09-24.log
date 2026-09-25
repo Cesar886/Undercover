@@ -1,0 +1,84 @@
+
+> quemadosum@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: /home/daniel/QuemadosUm/node_modules/next-pwa/register.js
+> [PWA] Service worker: /tmp/campus-build-avhx69ej/public/sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/28) ...
+   Generating static pages (7/28) 
+   Generating static pages (14/28) 
+   Generating static pages (21/28) 
+ ✓ Generating static pages (28/28)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                          Size     First Load JS
+┌ ○ /                                                4.77 kB         119 kB
+├ ○ /_not-found                                      870 B          88.1 kB
+├ ƒ /[board]                                         2.3 kB          164 kB
+├ ƒ /api/admin/ban                                   0 B                0 B
+├ ƒ /api/auth/check-username                         0 B                0 B
+├ ƒ /api/auth/complete-registro                      0 B                0 B
+├ ○ /api/auth/google                                 0 B                0 B
+├ ƒ /api/auth/google/callback                        0 B                0 B
+├ ƒ /api/auth/login                                  0 B                0 B
+├ ƒ /api/auth/logout                                 0 B                0 B
+├ ƒ /api/auth/register                               0 B                0 B
+├ ƒ /api/categories                                  0 B                0 B
+├ ƒ /api/cron/cleanup                                0 B                0 B
+├ ƒ /api/cron/quema                                  0 B                0 B
+├ ○ /api/health                                      0 B                0 B
+├ ƒ /api/identity                                    0 B                0 B
+├ ƒ /api/image-admin                                 0 B                0 B
+├ ƒ /api/image-admin/[id]                            0 B                0 B
+├ ƒ /api/image-admin/session                         0 B                0 B
+├ ƒ /api/notifications                               0 B                0 B
+├ ƒ /api/notifications/[id]/read                     0 B                0 B
+├ ƒ /api/posts                                       0 B                0 B
+├ ƒ /api/posts/[id]                                  0 B                0 B
+├ ƒ /api/posts/[id]/comments                         0 B                0 B
+├ ƒ /api/posts/[id]/comments/[commentId]             0 B                0 B
+├ ƒ /api/posts/[id]/comments/[commentId]/reactions   0 B                0 B
+├ ƒ /api/posts/[id]/comments/[commentId]/report      0 B                0 B
+├ ƒ /api/posts/[id]/comments/[commentId]/visibility  0 B                0 B
+├ ƒ /api/posts/[id]/comments/[commentId]/vote        0 B                0 B
+├ ƒ /api/posts/[id]/poll/vote                        0 B                0 B
+├ ƒ /api/posts/[id]/reactions                        0 B                0 B
+├ ƒ /api/posts/[id]/report                           0 B                0 B
+├ ƒ /api/posts/[id]/sticker-pack                     0 B                0 B
+├ ƒ /api/posts/[id]/visibility                       0 B                0 B
+├ ƒ /api/posts/[id]/vote                             0 B                0 B
+├ ƒ /api/posts/batch                                 0 B                0 B
+├ ƒ /api/share-links                                 0 B                0 B
+├ ƒ /api/stream                                      0 B                0 B
+├ ○ /archivo                                         2.14 kB         157 kB
+├ ○ /buscar                                          1.74 kB         157 kB
+├ ○ /guardados                                       856 B          96.8 kB
+├ ƒ /imagenes-dnewjlfe99474ef8wu-admin               5.84 kB        93.1 kB
+├ ƒ /imagenes-dnewjlfe99474ef8wu-admin/login         4.99 kB         101 kB
+├ ƒ /posts/[id]                                      12 kB           163 kB
+├ ○ /privacidad                                      178 B          96.1 kB
+├ ○ /reportes                                        856 B          96.8 kB
+└ ○ /terminos                                        178 B          96.1 kB
++ First Load JS shared by all                        87.3 kB
+  ├ chunks/570-e2b25d7f5459cfaf.js                   31.7 kB
+  ├ chunks/b151cb0e-e62312968083bb99.js              53.6 kB
+  └ other shared chunks (total)                      1.91 kB
+
+
+ƒ Middleware                                         26.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

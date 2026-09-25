@@ -8,6 +8,7 @@ import { Tooltip } from '@mantine/core';
 import { AnonAvatar } from '@/components/AnonAvatar';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { ImagePicker } from '@/components/ImagePicker';
+import { ImageReviewNoticeModal } from '@/components/ImageReviewNoticeModal';
 import { PostImage } from '@/components/PostImage';
 import { Toast } from '@/components/Toast';
 import { AuthorMenu } from '@/components/AuthorMenu';
@@ -235,7 +236,7 @@ function CommentItem({
     : undefined;
   const isReplying = replyingTo?.id === comment.id;
   const isEditing = editingId === comment.id;
-  const isAuthor = !!username && username === comment.anon_id && !comment.is_deleted;
+  const isAuthor = Boolean(comment.is_owner) && !comment.is_deleted;
   const [ownerHidden, setOwnerHidden] = useState(Boolean(comment.owner_hidden));
   const hasReplies = (comment.replies?.length ?? 0) > 0;
   const [savingEdit, setSavingEdit] = useState(false);
@@ -435,10 +436,11 @@ export function LocalComments({ postId, archived, onCountChange }: {
   const [content, setContent]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused]       = useState(false);
-  const { anonId: username }        = useAnonId();
+  const { anonId: username }        = useAnonId(postId);
   const [replyingTo, setReplyingTo] = useState<{ id: string; anonId: string } | null>(null);
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [image, setImage]           = useState<string | null>(null);
+  const [imageReviewOpen, setImageReviewOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; hasReplies: boolean } | null>(null);
   const [deleting, setDeleting]     = useState(false);
@@ -482,7 +484,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: image ?? undefined,
     });
     if (result.ok) {
-      if (image) showToast('Imagen enviada: pendiente de revisión.');
+      if (image) setImageReviewOpen(true);
       setComments((prev) => [...prev, result.data.comment]);
       setContent('');
       setImage(null);
@@ -517,7 +519,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: img ?? undefined,
     });
     if (result.ok) {
-      if (img) showToast('Imagen enviada: pendiente de revisión.');
+      if (img) setImageReviewOpen(true);
       setComments((prev) => [...prev, result.data.comment]);
       setReplyingTo(null);
     } else {
@@ -568,14 +570,15 @@ export function LocalComments({ postId, archived, onCountChange }: {
   async function submitReport(reason: ReportReason, detail?: string) {
     if (!reportTarget) return;
     setSendingReport(true);
-    const r = await apiPost(
+    const r = await apiPost<{ is_hidden: boolean }>(
       `/api/posts/${postId}/comments/${reportTarget}/report`,
       { reason, detail }
     );
     setSendingReport(false);
     if (r.ok) {
+      if (r.data.is_hidden) setComments(prev => prev.filter(c => c.id !== reportTarget));
       setReportTarget(null);
-      showToast('Gracias, lo revisaremos.');
+      showToast('Reporte registrado. La comunidad decide mediante reportes.');
     } else {
       showToast(r.error);
     }
@@ -586,13 +589,13 @@ export function LocalComments({ postId, archived, onCountChange }: {
       (ev) => {
         if (ev.type === 'comment:new' && ev.postId === postId) {
           setComments((prev) => prev.some((c) => c.id === ev.comment.id)
-            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment } : c)
+            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment, is_owner: c.is_owner } : c)
             : [...prev, ev.comment]);
           return;
         }
         if (ev.type === 'comment:edited' && ev.postId === postId) {
           setComments((prev) => prev.some((c) => c.id === ev.comment.id)
-            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment } : c)
+            ? prev.map((c) => c.id === ev.comment.id ? { ...c, ...ev.comment, is_owner: c.is_owner } : c)
             : [...prev, ev.comment]);
           return;
         }
@@ -769,6 +772,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       />
 
       <Toast message={message} />
+      <ImageReviewNoticeModal open={imageReviewOpen} onClose={() => setImageReviewOpen(false)} />
     </div>
   );
 }

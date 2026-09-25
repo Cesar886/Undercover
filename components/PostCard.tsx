@@ -73,7 +73,7 @@ export function PostCard({
   const [sendingReport, setSendingReport] = useState(false);
   const articleRef = useRef<HTMLDivElement>(null);
 
-  const isAuthor = !!currentUsername && currentUsername === post.anon_id;
+  const isAuthor = Boolean(post.is_owner);
 
   const created = new Date(post.created_at);
   const timeAgo = timeAgoCompact(created);
@@ -136,11 +136,12 @@ export function PostCard({
 
   async function handleReport(reason: ReportReason, detail?: string) {
     setSendingReport(true);
-    const r = await apiPost(`/api/posts/${post.id}/report`, { reason, detail });
+    const r = await apiPost<{ is_hidden: boolean }>(`/api/posts/${post.id}/report`, { reason, detail });
     setSendingReport(false);
     if (r.ok) {
       setReportOpen(false);
       onReported?.();
+      if (r.data.is_hidden) onDeleted?.(post.id);
     } else {
       onActionError?.(r.error);
     }

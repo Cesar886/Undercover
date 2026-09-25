@@ -1,4 +1,11 @@
-jest.mock('@/lib/db', () => ({ query: jest.fn() }));
+jest.mock('@/lib/db', () => ({ query: jest.fn(), withTransaction: jest.fn() }));
+jest.mock('@/lib/anon', () => ({ getAnonId: () => ({ anonId: 'tester' }) }));
+jest.mock('@/lib/communityModeration', () => ({ communitySuspension: jest.fn().mockResolvedValue(null) }));
+jest.mock('@/lib/visibility', () => ({
+  ensureVisibilitySchema: async () => {},
+  ownerTokenFromRequest: () => '12345678-1234-4234-8234-123456789012',
+  publicOwnedRow: (row: unknown) => row,
+}));
 jest.mock('next/headers', () => ({
   cookies: jest.fn(() => ({
     get: (name: string) =>
@@ -14,12 +21,16 @@ jest.mock('@/lib/rateLimit', () => ({
 
 import { GET, POST } from '@/app/api/posts/[id]/comments/route';
 import { NextRequest } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 
 const mockQuery = query as jest.Mock;
 const POST_ID = '11111111-1111-1111-1111-111111111111';
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockQuery.mockResolvedValue({ rows: [{ archived: false }] });
+  (withTransaction as jest.Mock).mockImplementation(fn => fn({ query: mockQuery }));
+});
 
 describe('GET /api/posts/[id]/comments', () => {
   const params = { id: POST_ID };

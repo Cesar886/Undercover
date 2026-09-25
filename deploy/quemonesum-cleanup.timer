@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly cleanup at Monterrey local time
+[Timer]
+OnCalendar=Mon *-*-* 05:00:00 America/Monterrey
+AccuracySec=1s
+Persistent=false
+Unit=quemonesum-cleanup.service
+[Install]
+WantedBy=timers.target

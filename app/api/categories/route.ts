@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAnonId, setAnonCookie } from '@/lib/anon';
+import { getAnonId } from '@/lib/anon';
 import { categorySlug, ensureCategoriesSchema, listCategories } from '@/lib/categories';
 import { query } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rateLimit';
@@ -19,9 +19,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   let anonId: string;
-  let newToken: string | undefined;
   try {
-    ({ anonId, newToken } = getAnonId(request));
+    ({ anonId } = getAnonId(request));
   } catch {
     return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
   }
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
       [slug, name, description, anonId]
     );
     const response = NextResponse.json({ category: result.rows[0] }, { status: 201 });
-    if (newToken) setAnonCookie(response, newToken);
     return response;
   } catch (error: unknown) {
     if ((error as { code?: string }).code === '23505') {

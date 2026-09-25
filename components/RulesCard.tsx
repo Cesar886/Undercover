@@ -12,20 +12,11 @@ const sections = [
     ],
   },
   {
-    emoji: '👁️',
-    title: 'Confianza invisible',
-    lines: [
-      'Cada ID empieza con 1 punto (rango −5 a +5).',
-      'Reportar bien sube; abusar o que te oculten baja.',
-      'Más confianza = reportes más pesados.',
-    ],
-  },
-  {
     emoji: '🚩',
     title: 'Reportes',
     lines: [
-      'Sin revisión humana. El umbral oculta automático.',
-      'Oculto = permanente. Máx. 10 reportes/hora.',
+      '5 reportes de identificadores de navegador distintos ocultan el contenido.',
+      'Oculto = permanente. Máx. 10 reportes/hora por identificador.',
     ],
   },
   {
@@ -39,7 +30,7 @@ const sections = [
     emoji: '⚡',
     title: 'Sanciones',
     lines: [
-      '3 ocultos → 1 h · 5 ocultos → 24 h · 10 ocultos → 7 días.',
+      'Posts y comentarios: 3 ocultos → 1 h · 5 ocultos → 24 h · 10 ocultos → 7 días.',
     ],
   },
 ];

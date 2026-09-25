@@ -1,0 +1,23 @@
+jest.mock('@/lib/communityModeration', () => ({ communitySuspension: jest.fn() }));
+jest.mock('@/lib/db', () => ({ query: jest.fn().mockResolvedValue({ rows: [{ archived: false }] }), withTransaction: jest.fn() }));
+jest.mock('@/lib/anon', () => ({ getAnonId: () => ({ anonId: 'author' }) }));
+jest.mock('@/lib/visibility', () => ({ ensureVisibilitySchema: async () => {}, ownerTokenFromRequest: () => 'owner' }));
+import { NextRequest, NextResponse } from 'next/server';
+import { POST as post } from '@/app/api/posts/route';
+import { POST as comment } from '@/app/api/posts/[id]/comments/route';
+import { PATCH as editPost } from '@/app/api/posts/[id]/route';
+import { PATCH as editComment } from '@/app/api/posts/[id]/comments/[commentId]/route';
+import { communitySuspension } from '@/lib/communityModeration';
+import { query, withTransaction } from '@/lib/db';
+const id = '11111111-1111-1111-1111-111111111111';
+it.each(['post', 'comment', 'editPost', 'editComment'])('blocks suspended identities from %s before writing', async kind => {
+  jest.clearAllMocks();
+  (communitySuspension as jest.Mock).mockResolvedValue(NextResponse.json({ error: 'Suspendido' }, { status: 403 }));
+  const req = new NextRequest('http://localhost/api/posts', { method: kind.startsWith('edit') ? 'PATCH' : 'POST', body: JSON.stringify({ content: 'test', category: 'general' }) });
+  const handlers = { post, comment, editPost, editComment };
+  const res = await handlers[kind as keyof typeof handlers](req, { params: { id, commentId: id } });
+  expect(res.status).toBe(403);
+  expect(communitySuspension).toHaveBeenCalledWith('author');
+  expect(withTransaction).not.toHaveBeenCalled();
+  expect((query as jest.Mock).mock.calls.some(([sql]) => /INSERT|UPDATE/.test(sql))).toBe(false);
+});

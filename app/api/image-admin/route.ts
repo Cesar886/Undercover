@@ -58,7 +58,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Solicitud inválida' }, { status: 400, headers });
   }
   const changed = await reviewImage(body.id, body.decision);
-  return NextResponse.json(changed ? { ok: true } : { error: 'La imagen o su contenido ya no están disponibles' }, { status: changed ? 200 : 409, headers });
+  if (!changed) return NextResponse.json({ error: 'La imagen no está disponible' }, { status: 409, headers });
+  const visibility = await query(`SELECT CASE WHEN r.post_id IS NOT NULL THEN
+      p.image_webp IS NOT NULL AND NOT (p.is_hidden OR p.owner_hidden OR p.archived)
+    ELSE c.image_webp IS NOT NULL AND NOT (c.is_hidden OR c.owner_hidden OR c.is_deleted
+      OR parent.is_hidden OR parent.owner_hidden OR parent.archived) END AS public_visible
+    FROM image_reviews r LEFT JOIN posts p ON p.id=r.post_id
+    LEFT JOIN comments c ON c.id=r.comment_id LEFT JOIN posts parent ON parent.id=c.post_id
+    WHERE r.id=$1`, [body.id]);
+  return NextResponse.json({ ok: true, publicVisible: Boolean(visibility.rows[0]?.public_visible) }, { headers });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -67,5 +75,5 @@ export async function DELETE(request: NextRequest) {
   const id = new URL(request.url).searchParams.get('id');
   if (!isUuid(id)) return NextResponse.json({ error: 'Solicitud inválida' }, { status: 400, headers });
   const deleted = await deleteImageReview(id);
-  return NextResponse.json(deleted ? { ok: true } : { error: 'La imagen ya fue eliminada' }, { status: deleted ? 200 : 404, headers });
+  return NextResponse.json(deleted ? { ok: true } : { error: 'La imagen no está disponible' }, { status: deleted ? 200 : 404, headers });
 }
