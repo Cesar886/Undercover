@@ -585,13 +585,27 @@ async function ensureSchema(client) {
       ADD COLUMN IF NOT EXISTS last_bumped_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS owner_token UUID,
-      ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS trust_score INT NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS trust_unlocked BOOLEAN NOT NULL DEFAULT FALSE
   `);
   await client.query(`
     ALTER TABLE comments
       ADD COLUMN IF NOT EXISTS owner_token UUID,
       ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE
   `);
+}
+
+function trustProfile() {
+  const roll = randomInt(1, 100);
+  const trustScore = roll <= 8
+    ? randomInt(-8, -1)
+    : roll <= 28
+      ? randomInt(0, 9)
+      : roll <= 88
+        ? randomInt(10, 34)
+        : randomInt(35, 75);
+  return { trustScore, trustUnlocked: trustScore >= 10 };
 }
 
 async function seedCategories(client) {
@@ -612,13 +626,15 @@ async function seedPost(client, i, categories) {
   const createdAt = daysAgo(randomInt(0, 18), randomInt(0, 23));
   const upvotes = randomInt(0, 180);
   const downvotes = randomInt(0, 45);
+  const { trustScore, trustUnlocked } = trustProfile();
   const bumpedAt = new Date(createdAt.getTime() + randomInt(0, 72) * 60 * 60 * 1000);
   const category = pick(categories.filter((categorySlug) => categorySlug !== 'stickers'));
   const result = await client.query(
     `INSERT INTO posts (
-       anon_id, content, category, upvotes, downvotes, owner_token, created_at, last_bumped_at
+       anon_id, content, category, upvotes, downvotes, owner_token, created_at, last_bumped_at,
+       trust_score, trust_unlocked
      )
-     VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, $8)
+     VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, $8, $9, $10)
      RETURNING id`,
     [
       pick(authors),
@@ -629,6 +645,8 @@ async function seedPost(client, i, categories) {
       ownerToken(i),
       createdAt,
       bumpedAt > new Date() ? new Date() : bumpedAt,
+      trustScore,
+      trustUnlocked,
     ]
   );
   return result.rows[0].id;
