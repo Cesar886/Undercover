@@ -8,7 +8,8 @@
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "migrate": "ts-node scripts/migrate.ts"
+    "migrate": "ts-node scripts/migrate.ts",
+    "seed:demo": "node scripts/seed-demo-content.cjs"
   },
   "dependencies": {
     "@imgly/background-removal-node": "^1.4.5",
