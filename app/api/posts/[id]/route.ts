@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const validated = validateEditPostInput(body);
   if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: validated.status });
 
-  const owner = await query('SELECT anon_id FROM posts WHERE id = $1 AND is_hidden = false', [params.id]);
+  const owner = await query('SELECT anon_id, owner_hidden FROM posts WHERE id = $1 AND is_hidden = false', [params.id]);
   if (owner.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
@@ -71,8 +71,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (!result.rows.length) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
   const post: Post = { ...safe, poll: await getPollForPost(params.id, anonId) };
-  if (post.owner_hidden) emitFeed({ type: 'post:visibility', postId: params.id, hidden: true });
-  else emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  const wasOwnerHidden = Boolean(owner.rows[0].owner_hidden);
+  if (post.owner_hidden && !wasOwnerHidden) emitFeed({ type: 'post:visibility', postId: params.id, hidden: true });
+  else if (!post.owner_hidden && wasOwnerHidden) emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  else if (!post.owner_hidden) emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 

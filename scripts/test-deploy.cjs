@@ -37,6 +37,9 @@ try {
     write(path.join(base, 'app/.env.production'), 'CRON_SECRET=test\n');
     fs.mkdirSync(path.join(base, 'incoming'), { recursive: true });
     fs.mkdirSync(path.join(base, 'units'), { recursive: true });
+    const oldRelease = path.join(base, 'releases/20260923T120000Z-deadbeef');
+    fs.mkdirSync(oldRelease, { recursive: true });
+    write(path.join(oldRelease, 'old.txt'), 'old release');
     const payload = path.join(base, 'payload');
     for (const file of ['deploy/quemonesum-cleanup.service', 'deploy/quemonesum-cleanup.timer']) write(path.join(payload, file), fs.readFileSync(path.join(root, file)));
     assert.equal(run('tar', ['-czf', path.join(base, 'incoming', release + '.tar.gz'), '-C', payload, '.']).status, 0);
@@ -78,6 +81,8 @@ try {
       assert.equal(active.env.WEEKLY_CLEANUP_ENABLED, 'true');
       assert.equal(fs.realpathSync(path.join(base, 'current')), base + '/releases/' + release);
       assert(fs.existsSync(path.join(base, 'units/quemonesum-cleanup.timer')));
+      assert(!fs.existsSync(oldRelease));
+      assert(fs.existsSync(path.join(base, 'releases', release)));
     }
     assert.equal(fs.readFileSync(path.join(base, 'shared/.env.production'), 'utf8'), 'CRON_SECRET=test\n');
   }

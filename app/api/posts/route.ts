@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
     emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   }
 
-  const response = NextResponse.json({ post, image_status: pendingImage ? 'pending' : null }, {
+  const response = NextResponse.json({ post, image_status: pendingImage && !post.owner_hidden ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
   return response;

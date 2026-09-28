@@ -131,10 +131,10 @@ systemctl is-enabled --quiet quemonesum-cleanup.timer
 systemctl is-active --quiet quemonesum-cleanup.timer
 systemctl list-timers --no-pager quemonesum-cleanup.timer
 pm2 save
-prune_old_deploy_artifacts "$TARGET" "$PREVIOUS" "$ARCHIVE"
+prune_old_deploy_artifacts "$TARGET" "" "$ARCHIVE"
 trap - ERR
 echo "Versión activa: $RELEASE"
-echo "Anterior conservada: $PREVIOUS"
+echo "Versiones anteriores eliminadas tras validar la nueva versión."
 echo "Respaldo DB conservado: $BACKUP"
 echo 'Limpieza semanal activada: lunes 05:00 America/Monterrey. Simulación verificada; las ejecuciones reales quedan a cargo del programador.'
 echo 'Solo se reinició quemonesum-test. Los demás procesos no se modificaron.'
