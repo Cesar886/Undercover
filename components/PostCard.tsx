@@ -48,6 +48,7 @@ interface PostCardProps {
   onDeleted?: (id: string) => void;
   onActionError?: (msg: string) => void;
   onReported?: () => void;
+  allowOwnerVisibilityToggle?: boolean;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -60,6 +61,7 @@ export function PostCard({
   onDeleted,
   onActionError,
   onReported,
+  allowOwnerVisibilityToggle = true,
   style,
   className,
 }: PostCardProps) {
@@ -189,14 +191,18 @@ export function PostCard({
       )}
 
       <div className="pl-5 pr-4 pt-4 pb-3.5">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
-            <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
-            <span className="text-stone-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
-            <CategoryPill category={post.category} />
-            {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
+        <div className="mb-2.5 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
+              <span className="min-w-0 break-words text-stone-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
+            </div>
+            <div className="mt-2 flex max-w-full flex-wrap items-start gap-1.5">
+              <CategoryPill category={post.category} />
+              {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
+            </div>
           </div>
-          <div className="relative z-[2] flex items-center gap-1.5">
+          <div className="relative z-[2] flex shrink-0 items-center gap-1.5 whitespace-nowrap">
             <span className="text-stone-400 dark:text-[#4a4870] text-[11px]">
               <Tooltip
                 label="La confianza sube con votos positivos y baja con reportes o votos negativos."
@@ -224,7 +230,7 @@ export function PostCard({
                 size="sm"
                 onEdit={isAuthor ? () => setEditing(true) : undefined}
                 onDelete={isAuthor ? () => setConfirmDelete(true) : undefined}
-                onToggleHidden={post.is_owner ? handleToggleHidden : undefined}
+                onToggleHidden={post.is_owner && allowOwnerVisibilityToggle ? handleToggleHidden : undefined}
                 hidden={post.owner_hidden}
               />
             )}

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, memo } from 'react';
 import { apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { useLikeButton } from '@/hooks/useLikeButton';
@@ -57,13 +57,55 @@ interface ReactionPickerProps {
 
 const ReactionPicker = memo(function ReactionPicker({ voted, myReaction, onVote, onReact }: ReactionPickerProps) {
   const isDownActive = voted === 'down';
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [xOffset, setXOffset] = useState(0);
+  useLayoutEffect(() => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+
+    const edgePadding = 12;
+
+    function keepPickerInViewport() {
+      if (!picker) return;
+      setXOffset(0);
+
+      requestAnimationFrame(() => {
+        const rect = picker.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        let nextOffset = 0;
+
+        if (rect.right > viewportWidth - edgePadding) {
+          nextOffset = viewportWidth - edgePadding - rect.right;
+        }
+
+        if (rect.left + nextOffset < edgePadding) {
+          nextOffset += edgePadding - (rect.left + nextOffset);
+        }
+
+        setXOffset(nextOffset);
+      });
+    }
+
+    keepPickerInViewport();
+    window.addEventListener('resize', keepPickerInViewport);
+    window.addEventListener('orientationchange', keepPickerInViewport);
+
+    return () => {
+      window.removeEventListener('resize', keepPickerInViewport);
+      window.removeEventListener('orientationchange', keepPickerInViewport);
+    };
+  }, []);
+
   return (
     <div
+      ref={pickerRef}
       role="dialog"
       aria-label="Elige una reacción"
-      className="absolute bottom-full left-0 pb-2 z-50 animate-picker-in origin-bottom-left"
+      className="absolute bottom-full left-0 pb-2 z-50"
+      style={{ transform: `translateX(${xOffset}px)` }}
     >
       <div className="
+        animate-picker-in origin-bottom-left
         flex items-end gap-0.5 px-2 py-2 rounded-2xl
         bg-white dark:bg-[#0d0b1a]
         border border-stone-200 dark:border-violet-500/20

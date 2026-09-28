@@ -180,6 +180,7 @@ export default function BoardPage({ params }: { params: { board: string } }) {
                   key={post.id}
                   post={post}
                   currentUsername={username}
+                  allowOwnerVisibilityToggle={false}
                   onVoted={() => showToast('Voto guardado')}
                   onVoteError={(msg) => showToast(msg)}
                   onDeleted={handleDeleted}

@@ -8,13 +8,13 @@ const config: Record<PostCategory, { label: string; className: string }> = {
   stickers:    { label: 'Stickers',    className: 'border border-yellow-500/40 dark:border-yellow-400/20 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 dark:bg-yellow-400/6' },
 };
 
-export function CategoryPill({ category }: { category: PostCategory }) {
+export function CategoryPill({ category, className: extraClassName = '' }: { category: PostCategory; className?: string }) {
   const { label, className } = config[category] ?? {
     label: category.split('-').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
     className: 'border border-sky-500/30 text-sky-600 dark:text-sky-300 bg-sky-500/10',
   };
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${className}`}>
+    <span className={`inline-flex max-w-full whitespace-normal break-words rounded-full px-2 py-0.5 text-xs font-medium leading-snug [overflow-wrap:anywhere] ${className} ${extraClassName}`}>
       {label}
     </span>
   );
