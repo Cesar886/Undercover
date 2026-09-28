@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
   }
 
-  const autoHidden = shouldHideContent(validated.value.content);
+  const ownerHidden = shouldHideContent(validated.value.content);
 
   let pendingImage: string | null = null;
   if (validated.value.image) {
@@ -167,19 +167,19 @@ export async function POST(request: NextRequest) {
     created = await withTransaction(async (client) => {
       await ensurePollSchema(client);
       const inserted = await client.query<Post>(
-        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token, is_hidden)
+        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token, owner_hidden)
          VALUES ($1, $2, $3, $4, $5::uuid, $6) RETURNING *`,
-        [anonId, validated.value.content, validated.value.category, null, ownerToken, autoHidden]
+        [anonId, validated.value.content, validated.value.category, null, ownerToken, ownerHidden]
       );
       let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
-      if (pendingImage && !autoHidden) {
+      if (pendingImage && !ownerHidden) {
         await queueImage(client, 'post', post.id, pendingImage);
       }
-      if (validated.value.poll_options?.length && !autoHidden) {
+      if (validated.value.poll_options?.length && !ownerHidden) {
         await createPollForPost(client, post.id, validated.value.poll_options, validated.value.poll_question ?? '');
         post = { ...post, poll: await getPollForPost(post.id, anonId, client) };
       }
-      if (!autoHidden) await pruneCategory(validated.value.category, client);
+      if (!ownerHidden) await pruneCategory(validated.value.category, client);
       return post;
     });
   } catch (error) {
@@ -190,9 +190,9 @@ export async function POST(request: NextRequest) {
         ownerToken,
         content: validated.value.content,
         category: validated.value.category,
-        isHidden: autoHidden,
+        ownerHidden,
       });
-      if (!autoHidden) emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
+      if (!ownerHidden) emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
       return NextResponse.json(
         { post: fallbackPost, image_status: null, devMemoryFallback: true },
         { status: 201, headers: { 'Cache-Control': 'no-store' } }
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
 
   if (!created) return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   const post = publicOwnedRow(created as unknown as Record<string, unknown>, ownerToken) as unknown as Post;
-  if (!post.is_hidden) {
+  if (!post.is_hidden && !post.owner_hidden) {
     emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   }
 

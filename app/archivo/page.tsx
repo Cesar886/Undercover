@@ -122,13 +122,6 @@ export default function ArchivoPage() {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-black/[0.04] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-violet-500/10 dark:bg-[#0d0b1a] dark:shadow-none">
-        <p className="text-sm font-semibold text-stone-800 dark:text-[#e9e5ff]">Lo más prendido de los últimos 7 días</p>
-        <p className="mt-1 text-xs leading-relaxed text-stone-400 dark:text-[#4a4870]">
-          Ranking por comentarios, likes, reacciones y actividad reciente. Se actualiza solo cuando el hilo se mueve.
-        </p>
-      </section>
-
       <div className="space-y-3">
         {loading && posts.length === 0 ? (
           <>

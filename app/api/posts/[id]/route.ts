@@ -63,15 +63,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (owner.rows.length === 0) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
+  const ownerHidden = shouldHideContent(validated.value.content);
   const result = await query(
-    `UPDATE posts SET content = $1, updated_at = NOW(), is_hidden = $3 WHERE id = $2 AND is_hidden = false RETURNING *`,
-    [validated.value.content, params.id, shouldHideContent(validated.value.content)]
+    `UPDATE posts SET content = $1, updated_at = NOW(), owner_hidden = $3 WHERE id = $2 AND is_hidden = false RETURNING *`,
+    [validated.value.content, params.id, ownerHidden]
   );
   if (!result.rows.length) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
   const post: Post = { ...safe, poll: await getPollForPost(params.id, anonId) };
-  if (post.is_hidden) emitFeed({ type: 'post:hidden', postId: params.id });
-  else if (!post.owner_hidden) emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  if (post.owner_hidden) emitFeed({ type: 'post:visibility', postId: params.id, hidden: true });
+  else emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 

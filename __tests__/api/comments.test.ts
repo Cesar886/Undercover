@@ -97,4 +97,29 @@ describe('POST /api/posts/[id]/comments', () => {
     const body = await res.json();
     expect(body.comment.content).toBe('hello');
   });
+
+  it('stores comments containing blocked keywords as private link-only content', async () => {
+    const fakeComment = {
+      id: 'c1',
+      post_id: POST_ID,
+      anon_id: 'tester',
+      content: 'Hola123',
+      is_hidden: false,
+      owner_hidden: true,
+    };
+    mockQuery.mockResolvedValue({ rows: [fakeComment] });
+    const req = new NextRequest(`http://localhost/api/posts/${POST_ID}/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: 'Hola123' }),
+    });
+
+    const res = await POST(req, { params });
+    const insertCall = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO comments'));
+
+    expect(res.status).toBe(201);
+    expect(insertCall?.[1]?.[6]).toBe(true);
+    expect(String(insertCall?.[0])).toContain('owner_hidden');
+    expect(String(insertCall?.[0])).not.toContain('is_hidden)');
+  });
 });

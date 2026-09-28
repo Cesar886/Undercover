@@ -104,8 +104,8 @@ describe('POST /api/posts', () => {
     expect(body.post.id).toBe('uuid');
   });
 
-  it('stores posts containing blocked keywords as hidden', async () => {
-    const fakePost = { id: 'hidden-uuid', anon_id: 'tester', content: 'Hola123', category: 'general', is_hidden: true };
+  it('stores posts containing blocked keywords as private link-only content', async () => {
+    const fakePost = { id: 'hidden-uuid', anon_id: 'tester', content: 'Hola123', category: 'general', is_hidden: false, owner_hidden: true };
     mockQuery.mockResolvedValue({ rows: [fakePost] });
     const req = new NextRequest('http://localhost/api/posts', {
       method: 'POST',
@@ -118,5 +118,7 @@ describe('POST /api/posts', () => {
 
     expect(res.status).toBe(201);
     expect(insertCall?.[1]?.[5]).toBe(true);
+    expect(String(insertCall?.[0])).toContain('owner_hidden');
+    expect(String(insertCall?.[0])).not.toContain('is_hidden)');
   });
 });

@@ -50,15 +50,15 @@ export async function PATCH(
 
   const shouldHide = shouldHideCommentContent(v.value.content);
   const result = await query(
-    `UPDATE comments SET content = $1, updated_at = NOW(), is_hidden = $3 WHERE id = $2 AND is_deleted = false AND is_hidden = false RETURNING *`,
+    `UPDATE comments SET content = $1, updated_at = NOW(), owner_hidden = $3 WHERE id = $2 AND is_deleted = false AND is_hidden = false RETURNING *`,
     [v.value.content, params.commentId, shouldHide]
   );
 
   if (!result.rows.length) return NextResponse.json({ error: 'Comentario no encontrado' }, { status: 404 });
   const comment = publicOwnedRow(result.rows[0], ownerToken);
-  if (comment.is_hidden) {
+  if (comment.owner_hidden) {
     emitFeed({ type: 'comment:visibility', postId: params.id, commentId: params.commentId, hidden: true });
-  } else if (!comment.owner_hidden) {
+  } else {
     emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
   }
 
