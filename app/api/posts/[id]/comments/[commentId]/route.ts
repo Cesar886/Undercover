@@ -5,6 +5,7 @@ import { isUuid, validateEditCommentInput } from '@/lib/validation';
 import { emitFeed } from '@/lib/events';
 import { getAnonId } from '@/lib/anon';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
+import { shouldHideCommentContent } from '@/lib/keywordModeration';
 
 export async function PATCH(
   request: NextRequest,
@@ -47,14 +48,19 @@ export async function PATCH(
     );
   }
 
+  const shouldHide = shouldHideCommentContent(v.value.content);
   const result = await query(
-    `UPDATE comments SET content = $1, updated_at = NOW() WHERE id = $2 AND is_deleted = false AND is_hidden = false RETURNING *`,
-    [v.value.content, params.commentId]
+    `UPDATE comments SET content = $1, updated_at = NOW(), is_hidden = $3 WHERE id = $2 AND is_deleted = false AND is_hidden = false RETURNING *`,
+    [v.value.content, params.commentId, shouldHide]
   );
 
   if (!result.rows.length) return NextResponse.json({ error: 'Comentario no encontrado' }, { status: 404 });
   const comment = publicOwnedRow(result.rows[0], ownerToken);
-  if (!comment.owner_hidden) emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
+  if (comment.is_hidden) {
+    emitFeed({ type: 'comment:visibility', postId: params.id, commentId: params.commentId, hidden: true });
+  } else if (!comment.owner_hidden) {
+    emitFeed({ type: 'comment:edited', postId: params.id, comment: { ...comment, is_owner: false } as never });
+  }
 
   return NextResponse.json({ comment }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

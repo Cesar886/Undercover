@@ -55,10 +55,10 @@ export function CreateCategory({ onCreated }: { onCreated: (category: Category) 
       <div className="space-y-2">
         <input
           value={name}
-          onChange={(event) => setName(event.target.value.slice(0, 40))}
+          onChange={(event) => setName(event.target.value.slice(0, 32))}
           placeholder="Nombre de la categoría"
           minLength={3}
-          maxLength={40}
+          maxLength={32}
           required
           className="w-full rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm outline-none focus:border-violet-400 dark:border-violet-500/20"
         />

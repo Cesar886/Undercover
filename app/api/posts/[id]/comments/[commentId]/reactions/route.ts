@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { emitFeed } from '@/lib/events';
 import { isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { getVoterKey } from '@/lib/auth';
@@ -89,6 +90,7 @@ export async function POST(
   }
 
   const counts = await getReactionCounts(commentId);
+  emitFeed({ type: 'comment:reaction', postId: params.id, commentId, counts });
 
   return NextResponse.json({
     counts,

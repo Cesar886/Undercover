@@ -17,6 +17,7 @@ export type FeedEvent =
   | { type: 'comment:edited'; postId: string; comment: Comment }
   | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean }
   | { type: 'comment:visibility'; postId: string; commentId: string; hidden: boolean }
+  | { type: 'comment:reaction'; postId: string; commentId: string; counts: ReactionCounts }
   | { type: 'notification:new'; recipient: string; notification: Notification }
   | { type: 'quema:total' };
 

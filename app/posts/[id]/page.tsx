@@ -249,14 +249,14 @@ export default function PostPage() {
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cat.bar}`} />
 
         <div className="pl-5 pr-4 pt-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
-              <span className="text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
-              <CategoryPill category={post.category} />
+              <span className="min-w-0 max-w-[8.5rem] truncate text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
+              <CategoryPill category={post.category} className="shrink-0" />
               {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
               <span className="text-gray-400 text-[11px]">
                 <Tooltip
                   label="La confianza sube con votos positivos y baja con reportes o votos negativos."

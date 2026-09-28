@@ -6,7 +6,6 @@ import { ImagePicker } from '@/components/ImagePicker';
 import { ImageReviewNoticeModal } from '@/components/ImageReviewNoticeModal';
 import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
-import { AnonAvatar } from '@/components/AnonAvatar';
 import { apiPost } from '@/lib/apiClient';
 import { useAnonId } from '@/hooks/useAnonId';
 import { containsUrl } from '@/lib/linkDetection';
@@ -46,7 +45,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const { message, showToast }  = useToast();
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
-  const { anonId, displayName } = useAnonId();
+  const { displayName } = useAnonId();
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -162,11 +161,12 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
         aria-busy={loading}
       >
         <div className="flex gap-3 px-4 pt-4 pb-3">
-          <AnonAvatar
-            name={anonId || 'AN'}
-            size={36}
-            className="ring-2 ring-white shadow-sm flex-shrink-0"
-          />
+          <div
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 ring-2 ring-white shadow-sm dark:bg-violet-500/15 dark:text-violet-200"
+            aria-hidden="true"
+          >
+            DA
+          </div>
 
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-zinc-400 dark:text-[#4a4870] font-semibold tracking-widest uppercase mb-1.5 font-mono">

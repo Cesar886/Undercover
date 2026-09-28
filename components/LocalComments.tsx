@@ -31,6 +31,7 @@ interface Comment {
   image_webp?: string | null;
   created_at: string;
   updated_at?: string | null;
+  is_hidden?: boolean;
   owner_hidden?: boolean;
   is_owner?: boolean;
   is_deleted?: boolean;
@@ -225,7 +226,7 @@ function CommentItem({
   onCancelReply: () => void;
   onStartEdit: (id: string) => void;
   onCancelEdit: () => void;
-  onSavedEdit: (id: string, content: string, updated_at: string) => void;
+  onSavedEdit: (id: string, content: string, updated_at: string, hidden?: boolean) => void;
   onAskDelete: (id: string, hasReplies: boolean) => void;
   onAskReport: (id: string) => void;
 }) {
@@ -259,7 +260,12 @@ function CommentItem({
     );
     setSavingEdit(false);
     if (r.ok) {
-      onSavedEdit(comment.id, r.data.comment.content, r.data.comment.updated_at ?? new Date().toISOString());
+      onSavedEdit(
+        comment.id,
+        r.data.comment.content,
+        r.data.comment.updated_at ?? new Date().toISOString(),
+        Boolean(r.data.comment.is_hidden)
+      );
       onCancelEdit();
     }
   }
@@ -484,8 +490,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: image ?? undefined,
     });
     if (result.ok) {
-      if (image) setImageReviewOpen(true);
-      setComments((prev) => [...prev, result.data.comment]);
+      if (image && !result.data.comment.is_hidden) setImageReviewOpen(true);
+      if (!result.data.comment.is_hidden) {
+        setComments((prev) => [...prev, result.data.comment]);
+      }
       setContent('');
       setImage(null);
       setFocused(false);
@@ -519,8 +527,10 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: img ?? undefined,
     });
     if (result.ok) {
-      if (img) setImageReviewOpen(true);
-      setComments((prev) => [...prev, result.data.comment]);
+      if (img && !result.data.comment.is_hidden) setImageReviewOpen(true);
+      if (!result.data.comment.is_hidden) {
+        setComments((prev) => [...prev, result.data.comment]);
+      }
       setReplyingTo(null);
     } else {
       showToast(result.error);
@@ -536,10 +546,11 @@ export function LocalComments({ postId, archived, onCountChange }: {
     textareaRef.current?.blur();
   }
 
-  function handleSavedEdit(id: string, newContent: string, updated_at: string) {
-    setComments((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, content: newContent, updated_at } : c))
-    );
+  function handleSavedEdit(id: string, newContent: string, updated_at: string, hidden = false) {
+    setComments((prev) => {
+      if (hidden) return prev.filter((c) => c.id !== id);
+      return prev.map((c) => (c.id === id ? { ...c, content: newContent, updated_at } : c));
+    });
   }
 
   async function confirmDelete() {

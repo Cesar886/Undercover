@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnonId } from '@/lib/anon';
-import { categorySlug, ensureCategoriesSchema, listCategories } from '@/lib/categories';
+import { categorySlug, ensureCategoriesSchema, fallbackCategories, listCategories } from '@/lib/categories';
 import { query } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitize } from '@/lib/sanitize';
@@ -104,7 +104,25 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('[GET /api/categories]', error);
-    return NextResponse.json({ error: 'No se pudieron cargar las categorías' }, { status: 500 });
+    const paged = request.nextUrl.searchParams.get('paged') === 'true';
+    const rawLimit = parseInt(request.nextUrl.searchParams.get('limit') || '12', 10);
+    const limit = Math.min(24, Math.max(4, Number.isFinite(rawLimit) ? rawLimit : 12));
+    const categories = fallbackCategories().slice(0, limit).map((category) => ({
+      ...category,
+      post_count: 0,
+      comment_count: 0,
+      vote_count: 0,
+      reaction_count: 0,
+      activity_score: 0,
+      last_activity_at: null,
+    }));
+    if (paged) {
+      return NextResponse.json(
+        { categories, page: 1, limit, hasMore: false },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+    return NextResponse.json({ categories }, { headers: { 'Cache-Control': 'no-store' } });
   }
 }
 
@@ -138,8 +156,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Esta categoría ya no está disponible' }, { status: 400 });
   }
 
-  if (name.length < 3 || name.length > 40) {
-    return NextResponse.json({ error: 'El nombre debe tener entre 3 y 40 caracteres' }, { status: 400 });
+  if (name.length < 3 || name.length > 32) {
+    return NextResponse.json({ error: 'El nombre debe tener entre 3 y 32 caracteres' }, { status: 400 });
   }
   if (!slug || slug.length < 3) {
     return NextResponse.json({ error: 'Usa un nombre con al menos 3 letras o números' }, { status: 400 });

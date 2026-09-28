@@ -7,6 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { FeedStreamProvider } from '@/components/FeedStreamProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Footer } from '@/components/Footer';
+import { DevServiceWorkerCleanup } from '@/components/DevServiceWorkerCleanup';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -115,6 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" data-mantine-color-scheme="auto" suppressHydrationWarning className={`${fraunces.variable} ${instrumentSans.variable}`}>
       <body suppressHydrationWarning className="font-sans bg-[#F9F9F9] dark:bg-[#06050f] text-stone-900 dark:text-[#e9e5ff] min-h-screen pt-20 antialiased selection:bg-mauve-200 selection:text-mauve-900 dark:selection:bg-violet-600/30 dark:selection:text-violet-100 transition-colors duration-200">
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var s=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';if((s||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();" }} />
+        <DevServiceWorkerCleanup />
         <div className="fixed inset-0 z-[-1] pointer-events-none hidden dark:block bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/50 via-[#06050f] to-[#06050f]"></div>
         <div className="fixed bottom-0 left-1/2 z-[-1] hidden h-[300px] w-[600px] -translate-x-1/2 bg-app-bottom-glow-dark pointer-events-none dark:block"></div>
         <MantineSetup>

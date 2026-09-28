@@ -192,15 +192,11 @@ export function PostCard({
 
       <div className="pl-5 pr-4 pt-4 pb-3.5">
         <div className="mb-2.5 flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
-              <span className="min-w-0 break-words text-stone-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
-            </div>
-            <div className="mt-2 flex max-w-full flex-wrap items-start gap-1.5">
-              <CategoryPill category={post.category} />
-              {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
-            </div>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
+            <span className="min-w-0 max-w-[8.5rem] truncate text-stone-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
+            <CategoryPill category={post.category} className="shrink-0" />
+            {post.owner_hidden && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
           </div>
           <div className="relative z-[2] flex shrink-0 items-center gap-1.5 whitespace-nowrap">
             <span className="text-stone-400 dark:text-[#4a4870] text-[11px]">

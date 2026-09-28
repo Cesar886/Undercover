@@ -24,74 +24,83 @@ function buildOrderClause(sort: SortOption, alias = 'p'): string {
 }
 
 export async function GET(request: NextRequest) {
-  await ensureVisibilitySchema();
-  const ownerToken = ownerTokenFromRequest(request);
-  const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category') as PostCategory | null;
-  const rawSort = searchParams.get('sort') ?? 'recent';
-  const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? rawSort as SortOption : 'recent';
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const archived = searchParams.get('archived') === 'true';
-  const limit = 10;
-  const offset = (page - 1) * limit;
-  const q = searchParams.get('q')?.trim() ?? '';
+  try {
+    await ensureVisibilitySchema();
+    const ownerToken = ownerTokenFromRequest(request);
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get('category') as PostCategory | null;
+    const rawSort = searchParams.get('sort') ?? 'recent';
+    const sort: SortOption = VALID_SORTS.includes(rawSort as SortOption) ? rawSort as SortOption : 'recent';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const archived = searchParams.get('archived') === 'true';
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const q = searchParams.get('q')?.trim() ?? '';
 
-  const validCategory = category ? await categoryExists(category) : false;
-  if (category && !validCategory) {
-    return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 });
+    const validCategory = category ? await categoryExists(category) : false;
+    if (category && !validCategory) {
+      return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 });
+    }
+
+    const params: unknown[] = [ownerToken];
+    let sql = `
+      WITH page_posts AS (
+        SELECT p.*, u.trust_score, u.trust_unlocked
+        FROM posts p
+        LEFT JOIN users u ON u.username = p.anon_id
+        WHERE p.is_hidden = false
+          AND (p.owner_hidden = false OR p.owner_token = $1::uuid)
+          AND p.archived = $${params.length + 1}
+    `;
+    params.push(archived);
+
+    if (q) {
+      params.push(`%${q}%`);
+      sql += ` AND p.content ILIKE $${params.length}`;
+    }
+    if (category && validCategory) {
+      params.push(category);
+      sql += ` AND p.category = $${params.length}`;
+    } else if (!category) {
+      sql += ` AND p.category != 'stickers'`;
+    }
+    if (sort === 'top') sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
+
+    const order = archived
+      ? 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC'
+      : buildOrderClause(sort);
+    const outerOrder = archived
+      ? 'ORDER BY (pp.upvotes - pp.downvotes) DESC, pp.created_at DESC'
+      : buildOrderClause(sort, 'pp');
+    sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      ),
+      comment_counts AS (
+        SELECT c.post_id, COUNT(*)::int AS comment_count
+        FROM comments c
+        JOIN page_posts pp ON pp.id = c.post_id
+        WHERE c.is_hidden = false
+          AND c.is_deleted = false
+          AND (c.owner_hidden = false OR c.owner_token = $1::uuid)
+        GROUP BY c.post_id
+      )
+      SELECT pp.*, COALESCE(cc.comment_count, 0)::int AS comment_count
+      FROM page_posts pp
+      LEFT JOIN comment_counts cc ON cc.post_id = pp.id
+      ${outerOrder}`;
+    params.push(limit, offset);
+
+    const result = await query(sql, params);
+    const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as unknown as Post[];
+    const viewerAnonId = ownerToken ? getAnonId(request).anonId : null;
+    const posts = await attachPollsToPosts(safeRows, viewerAnonId);
+    return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    console.error('[GET /api/posts]', error);
+    return NextResponse.json(
+      { posts: [], page: 1, limit: 10, databaseUnavailable: true },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   }
-
-  const params: unknown[] = [ownerToken];
-  let sql = `
-    WITH page_posts AS (
-      SELECT p.*
-      FROM posts p
-      WHERE p.is_hidden = false
-        AND (p.owner_hidden = false OR p.owner_token = $1::uuid)
-        AND p.archived = $${params.length + 1}
-  `;
-  params.push(archived);
-
-  if (q) {
-    params.push(`%${q}%`);
-    sql += ` AND p.content ILIKE $${params.length}`;
-  }
-  if (category && validCategory) {
-    params.push(category);
-    sql += ` AND p.category = $${params.length}`;
-  } else if (!category) {
-    sql += ` AND p.category != 'stickers'`;
-  }
-  if (sort === 'top') sql += ` AND p.created_at > NOW() - INTERVAL '7 days'`;
-
-  const order = archived
-    ? 'ORDER BY (p.upvotes - p.downvotes) DESC, p.created_at DESC'
-    : buildOrderClause(sort);
-  const outerOrder = archived
-    ? 'ORDER BY (pp.upvotes - pp.downvotes) DESC, pp.created_at DESC'
-    : buildOrderClause(sort, 'pp');
-  sql += ` ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-    ),
-    comment_counts AS (
-      SELECT c.post_id, COUNT(*)::int AS comment_count
-      FROM comments c
-      JOIN page_posts pp ON pp.id = c.post_id
-      WHERE c.is_hidden = false
-        AND c.is_deleted = false
-        AND (c.owner_hidden = false OR c.owner_token = $1::uuid)
-      GROUP BY c.post_id
-    )
-    SELECT pp.*, COALESCE(cc.comment_count, 0)::int AS comment_count
-    FROM page_posts pp
-    LEFT JOIN comment_counts cc ON cc.post_id = pp.id
-    ${outerOrder}`;
-  params.push(limit, offset);
-
-  const result = await query(sql, params);
-  const safeRows = result.rows.map((row) => publicOwnedRow(row, ownerToken)) as unknown as Post[];
-  const viewerAnonId = ownerToken ? getAnonId(request).anonId : null;
-  const posts = await attachPollsToPosts(safeRows, viewerAnonId);
-  return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: NextRequest) {

@@ -1,0 +1,11 @@
+11:31:26  INFO    Lista: prueba.txt | Total: 1 | Ya enviados: 0 | Pendientes: 1
+11:31:26  CRITICAL Error fatal: Falta QUEMONES_SMTP_PASS. Define tu clave SMTP de Brevo antes de enviar.
+11:31:26  INFO    --------------------------------------------------
+11:31:26  INFO    Enviados totales en esta lista: 0
+11:31:26  INFO    Fallidos totales en esta lista: 0
+11:31:39  INFO    Lista: prueba.txt | Total: 1 | Ya enviados: 0 | Pendientes: 1
+11:31:40  INFO    Sesion SMTP iniciada.
+11:31:41  INFO    [1/1] OK 1220326@alumno.um.edu.mx
+11:31:42  INFO    --------------------------------------------------
+11:31:42  INFO    Enviados totales en esta lista: 1
+11:31:42  INFO    Fallidos totales en esta lista: 0

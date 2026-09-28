@@ -21,6 +21,10 @@ export const SYSTEM_CATEGORIES: Category[] = [
   { slug: 'infieles', name: 'Infieles', description: 'Entre todos nos cuidamos', is_system: true },
 ];
 
+export function fallbackCategories(): Category[] {
+  return SYSTEM_CATEGORIES.filter((category) => isCategoryAvailable(category.slug));
+}
+
 let schemaReady: Promise<void> | null = null;
 
 export function ensureCategoriesSchema(): Promise<void> {
@@ -41,7 +45,7 @@ export function ensureCategoriesSchema(): Promise<void> {
 
         CREATE TABLE IF NOT EXISTS categories (
           slug VARCHAR(40) PRIMARY KEY,
-          name VARCHAR(40) NOT NULL,
+          name VARCHAR(32) NOT NULL,
           description VARCHAR(120) NOT NULL DEFAULT '',
           creator_anon_id TEXT,
           is_system BOOLEAN NOT NULL DEFAULT FALSE,

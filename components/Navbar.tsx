@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Sun, Moon, Archive } from 'lucide-react';
+import { Search, Sun, Moon, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useCategories } from '@/hooks/useCategories';
 
@@ -33,10 +33,10 @@ export function Navbar() {
           <Link
             href="/archivo"
             className="text-gray-400 dark:text-[#4a4870] hover:text-gray-700 dark:hover:text-violet-300 transition-colors p-1"
-            aria-label="Archivo"
-            title="Archivo"
+            aria-label="Top semanal"
+            title="Top semanal"
           >
-            <Archive size={18} strokeWidth={1.5} />
+            <TrendingUp size={18} strokeWidth={1.5} />
           </Link>
 
           <button

@@ -10,6 +10,7 @@ import { getAnonId } from '@/lib/anon';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 import type { Comment } from '@/types';
 import { shareGrantCoversComment, shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
+import { shouldHideCommentContent } from '@/lib/keywordModeration';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const directAccess = Boolean(directCommentId && shareGrantCoversComment(shareGrant, params.id, directCommentId));
 
   const result = await query(
-    `SELECT c.* FROM comments c
+    `SELECT c.*, u.trust_score, u.trust_unlocked
+     FROM comments c
+     LEFT JOIN users u ON u.username = c.anon_id
      WHERE c.post_id = $1 AND c.is_hidden = false
        AND (c.owner_hidden = false OR c.owner_token = $2::uuid OR (c.id = $3::uuid AND $4::boolean))
      ORDER BY c.created_at ASC`,
@@ -89,22 +92,30 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   const inserted = await withTransaction(async (client) => {
+    const autoHidden = shouldHideCommentContent(validated.value.content);
     const result = await client.query(
-      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, owner_token)
-       VALUES ($1, $2, $3, $4, $5, $6::uuid) RETURNING *`,
-      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken]
+      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, owner_token, is_hidden)
+       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7)
+       RETURNING *,
+         (SELECT trust_score FROM users WHERE username = $3) AS trust_score,
+         (SELECT trust_unlocked FROM users WHERE username = $3) AS trust_unlocked`,
+      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken, autoHidden]
     );
-    if (pendingImage) {
+    if (pendingImage && !autoHidden) {
       await queueImage(client, 'comment', result.rows[0].id, pendingImage);
     }
     return result.rows[0];
   });
 
-  await query(`UPDATE posts SET last_bumped_at = NOW() WHERE id = $1 AND archived = FALSE`, [params.id]);
+  if (!inserted.is_hidden) {
+    await query(`UPDATE posts SET last_bumped_at = NOW() WHERE id = $1 AND archived = FALSE`, [params.id]);
+  }
   const comment = publicOwnedRow(inserted, ownerToken) as unknown as Comment;
-  emitFeed({ type: 'comment:new', postId: params.id, comment: { ...comment, is_owner: false } });
+  if (!comment.is_hidden) {
+    emitFeed({ type: 'comment:new', postId: params.id, comment: { ...comment, is_owner: false } });
+  }
 
-  const response = NextResponse.json({ comment, image_status: pendingImage ? 'pending' : null }, {
+  const response = NextResponse.json({ comment, image_status: pendingImage && !comment.is_hidden ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
   return response;

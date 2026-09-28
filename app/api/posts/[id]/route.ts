@@ -21,11 +21,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   // Hidden posts require either the persistent owner token or a valid signed share link:
   const result = await query(
-    `SELECT p.*,
+    `SELECT p.*, u.trust_score, u.trust_unlocked,
       (SELECT COUNT(*) FROM comments c
        WHERE c.post_id = p.id AND c.is_hidden = false
          AND (c.owner_hidden = false OR c.owner_token = $2::uuid))::int AS comment_count
      FROM posts p
+     LEFT JOIN users u ON u.username = p.anon_id
      WHERE p.id = $1 AND p.is_hidden = false`,
     [params.id, ownerToken]
   );

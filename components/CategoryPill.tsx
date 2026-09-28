@@ -14,8 +14,11 @@ export function CategoryPill({ category, className: extraClassName = '' }: { cat
     className: 'border border-sky-500/30 text-sky-600 dark:text-sky-300 bg-sky-500/10',
   };
   return (
-    <span className={`inline-flex max-w-full whitespace-normal break-words rounded-full px-2 py-0.5 text-xs font-medium leading-snug [overflow-wrap:anywhere] ${className} ${extraClassName}`}>
-      {label}
+    <span
+      title={label}
+      className={`inline-flex max-w-[9.5rem] items-center rounded-full px-2 py-0.5 text-xs font-medium leading-snug ${className} ${extraClassName}`}
+    >
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }
