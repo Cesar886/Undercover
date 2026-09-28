@@ -34,6 +34,7 @@ export function createDevPost(input: {
   ownerToken: string;
   content: string;
   category: PostCategory;
+  isHidden?: boolean;
 }): Post {
   const now = new Date().toISOString();
   const post: StoredPost = {
@@ -44,7 +45,7 @@ export function createDevPost(input: {
     upvotes: 0,
     downvotes: 0,
     report_count: 0,
-    is_hidden: false,
+    is_hidden: Boolean(input.isHidden),
     owner_hidden: false,
     owner_token: input.ownerToken,
     is_owner: true,

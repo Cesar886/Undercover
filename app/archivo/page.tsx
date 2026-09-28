@@ -170,7 +170,6 @@ export default function ArchivoPage() {
                 <PostCard
                   post={post}
                   currentUsername=""
-                  allowOwnerVisibilityToggle={false}
                   onVoted={() => showToast('Voto guardado')}
                   onVoteError={(msg) => showToast(msg)}
                   onActionError={(msg) => showToast(msg)}

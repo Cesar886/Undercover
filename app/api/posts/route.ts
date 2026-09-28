@@ -13,6 +13,7 @@ import { categoryExists } from '@/lib/categories';
 import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost, publicPoll } from '@/lib/polls';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
 import { createDevPost, devMemoryEnabled, listDevPosts } from '@/lib/devMemoryStore';
+import { shouldHideContent } from '@/lib/keywordModeration';
 
 export const dynamic = 'force-dynamic';
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
@@ -96,7 +97,6 @@ export async function GET(request: NextRequest) {
     const posts = await attachPollsToPosts(safeRows, viewerAnonId);
     return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    console.error('[GET /api/posts]', error);
     if (devMemoryEnabled()) {
       const ownerToken = ownerTokenFromRequest(request);
       const { searchParams } = new URL(request.url);
@@ -127,7 +127,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Error de identidad anónima' }, { status: 500 });
   }
 
-  const suspended = await communitySuspension(anonId);
+  let suspended = null;
+  try {
+    suspended = await communitySuspension(anonId);
+  } catch (error) {
+    if (!devMemoryEnabled()) throw error;
+  }
   if (suspended) return suspended;
 
   const rl = checkRateLimit(`posts:anon:${anonId}`, RATE_LIMITS.posts);
@@ -147,6 +152,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
   }
 
+  const autoHidden = shouldHideContent(validated.value.content);
+
   let pendingImage: string | null = null;
   if (validated.value.image) {
     const image = await validateAndConvertImage(validated.value.image, validated.value.category);
@@ -160,19 +167,19 @@ export async function POST(request: NextRequest) {
     created = await withTransaction(async (client) => {
       await ensurePollSchema(client);
       const inserted = await client.query<Post>(
-        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token)
-         VALUES ($1, $2, $3, $4, $5::uuid) RETURNING *`,
-        [anonId, validated.value.content, validated.value.category, null, ownerToken]
+        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token, is_hidden)
+         VALUES ($1, $2, $3, $4, $5::uuid, $6) RETURNING *`,
+        [anonId, validated.value.content, validated.value.category, null, ownerToken, autoHidden]
       );
       let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
-      if (pendingImage) {
+      if (pendingImage && !autoHidden) {
         await queueImage(client, 'post', post.id, pendingImage);
       }
-      if (validated.value.poll_options?.length) {
+      if (validated.value.poll_options?.length && !autoHidden) {
         await createPollForPost(client, post.id, validated.value.poll_options, validated.value.poll_question ?? '');
         post = { ...post, poll: await getPollForPost(post.id, anonId, client) };
       }
-      await pruneCategory(validated.value.category, client);
+      if (!autoHidden) await pruneCategory(validated.value.category, client);
       return post;
     });
   } catch (error) {
@@ -183,8 +190,9 @@ export async function POST(request: NextRequest) {
         ownerToken,
         content: validated.value.content,
         category: validated.value.category,
+        isHidden: autoHidden,
       });
-      emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
+      if (!autoHidden) emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
       return NextResponse.json(
         { post: fallbackPost, image_status: null, devMemoryFallback: true },
         { status: 201, headers: { 'Cache-Control': 'no-store' } }
@@ -195,7 +203,9 @@ export async function POST(request: NextRequest) {
 
   if (!created) return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   const post = publicOwnedRow(created as unknown as Record<string, unknown>, ownerToken) as unknown as Post;
-  emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  if (!post.is_hidden) {
+    emitFeed({ type: 'post:new', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  }
 
   const response = NextResponse.json({ post, image_status: pendingImage ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },

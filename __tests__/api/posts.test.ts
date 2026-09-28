@@ -103,4 +103,20 @@ describe('POST /api/posts', () => {
     const body = await res.json();
     expect(body.post.id).toBe('uuid');
   });
+
+  it('stores posts containing blocked keywords as hidden', async () => {
+    const fakePost = { id: 'hidden-uuid', anon_id: 'tester', content: 'Hola123', category: 'general', is_hidden: true };
+    mockQuery.mockResolvedValue({ rows: [fakePost] });
+    const req = new NextRequest('http://localhost/api/posts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: 'Hola123', category: 'general' }),
+    });
+
+    const res = await POST(req);
+    const insertCall = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO posts'));
+
+    expect(res.status).toBe(201);
+    expect(insertCall?.[1]?.[5]).toBe(true);
+  });
 });

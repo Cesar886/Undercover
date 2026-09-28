@@ -21,7 +21,7 @@ ASUNTO = "QuemonesUM"
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_TEST_FILE = "prueba.txt"
-DEFAULT_PROD_FILE = "correosum_parte_01.txt"
+DEFAULT_PROD_FILE = "correosum_parte_02.txt"
 
 DELAY = 0.8
 RECONECTAR_C = 80

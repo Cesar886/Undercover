@@ -7,6 +7,7 @@ import { getAnonId } from '@/lib/anon';
 import { attachPollsToPosts, getPollForPost, publicPoll } from '@/lib/polls';
 import { Post } from '@/types';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
+import { shouldHideContent } from '@/lib/keywordModeration';
 import { shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -63,13 +64,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (owner.rows[0].anon_id !== anonId) return NextResponse.json({ error: 'No eres el autor' }, { status: 403 });
 
   const result = await query(
-    `UPDATE posts SET content = $1, updated_at = NOW() WHERE id = $2 AND is_hidden = false RETURNING *`,
-    [validated.value.content, params.id]
+    `UPDATE posts SET content = $1, updated_at = NOW(), is_hidden = $3 WHERE id = $2 AND is_hidden = false RETURNING *`,
+    [validated.value.content, params.id, shouldHideContent(validated.value.content)]
   );
   if (!result.rows.length) return NextResponse.json({ error: 'Post no encontrado' }, { status: 404 });
   const safe = publicOwnedRow(result.rows[0], ownerToken) as unknown as Post;
   const post: Post = { ...safe, poll: await getPollForPost(params.id, anonId) };
-  if (!post.owner_hidden) emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
+  if (post.is_hidden) emitFeed({ type: 'post:hidden', postId: params.id });
+  else if (!post.owner_hidden) emitFeed({ type: 'post:edited', post: { ...post, is_owner: false, poll: post.poll ? publicPoll(post.poll) : null } });
   return NextResponse.json({ post }, { headers: { 'Cache-Control': 'no-store' } });
 }
 

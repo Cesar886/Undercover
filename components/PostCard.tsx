@@ -48,7 +48,6 @@ interface PostCardProps {
   onDeleted?: (id: string) => void;
   onActionError?: (msg: string) => void;
   onReported?: () => void;
-  allowOwnerVisibilityToggle?: boolean;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -61,7 +60,6 @@ export function PostCard({
   onDeleted,
   onActionError,
   onReported,
-  allowOwnerVisibilityToggle = true,
   style,
   className,
 }: PostCardProps) {
@@ -111,16 +109,6 @@ export function PostCard({
       setEditing(false);
     } else {
       onActionError?.(r.error);
-    }
-  }
-
-  async function handleToggleHidden() {
-    const result = await apiPatch<{ post: Post }>(`/api/posts/${post.id}/visibility`, { hidden: !post.owner_hidden });
-    if (result.ok) {
-      setPost((current) => ({ ...current, ...result.data.post }));
-      onActionError?.(result.data.post.owner_hidden ? 'Post oculto: solo tú y quienes tengan el enlace directo pueden verlo.' : 'Post visible de nuevo.');
-    } else {
-      onActionError?.(result.error);
     }
   }
 
@@ -196,7 +184,6 @@ export function PostCard({
             <AnonAvatar name={post.anon_id} size={28} className="ring-2 ring-white shadow-sm flex-shrink-0" />
             <span className="min-w-0 max-w-[8.5rem] truncate text-stone-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
             <CategoryPill category={post.category} className="shrink-0" />
-            {post.owner_hidden && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
           </div>
           <div className="relative z-[2] flex shrink-0 items-center gap-1.5 whitespace-nowrap">
             <span className="text-stone-400 dark:text-[#4a4870] text-[11px]">
@@ -226,8 +213,6 @@ export function PostCard({
                 size="sm"
                 onEdit={isAuthor ? () => setEditing(true) : undefined}
                 onDelete={isAuthor ? () => setConfirmDelete(true) : undefined}
-                onToggleHidden={post.is_owner && allowOwnerVisibilityToggle ? handleToggleHidden : undefined}
-                hidden={post.owner_hidden}
               />
             )}
           </div>

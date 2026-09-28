@@ -23,6 +23,9 @@ export async function ensureVisibilitySchema(): Promise<void> {
       globalVisibility.__visibilitySchema = undefined;
       throw error;
     });
+    if (process.env.NODE_ENV === 'development') {
+      globalVisibility.__visibilitySchema = globalVisibility.__visibilitySchema.catch(() => undefined);
+    }
   }
   return globalVisibility.__visibilitySchema;
 }

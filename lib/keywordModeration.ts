@@ -1,4 +1,4 @@
-const BLOCKED_COMMENT_KEYWORDS = [
+export const BLOCKED_CONTENT_KEYWORDS = [
   'daniel110a',
   'telegram',
   'amayrani',
@@ -23,11 +23,11 @@ function spaced(value: string): string {
   return normalizeForModeration(value).replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-export function shouldHideCommentContent(content: string): boolean {
+export function shouldHideContent(content: string): boolean {
   const compactContent = compact(content);
   const spacedContent = ` ${spaced(content)} `;
 
-  return BLOCKED_COMMENT_KEYWORDS.some((keyword) => {
+  return BLOCKED_CONTENT_KEYWORDS.some((keyword) => {
     const compactKeyword = compact(keyword);
     if (compactKeyword && compactContent.includes(compactKeyword)) return true;
 
@@ -35,3 +35,5 @@ export function shouldHideCommentContent(content: string): boolean {
     return Boolean(spacedKeyword && spacedContent.includes(` ${spacedKeyword} `));
   });
 }
+
+export const shouldHideCommentContent = shouldHideContent;

@@ -185,16 +185,6 @@ export default function PostPage() {
     }
   }
 
-  async function handleToggleHidden() {
-    const result = await apiPatch<{ post: Post }>(`/api/posts/${post.id}/visibility`, { hidden: !post.owner_hidden });
-    if (result.ok) {
-      setState({ kind: 'ok', post: { ...post, ...result.data.post } });
-      showToast(result.data.post.owner_hidden ? 'Post oculto: solo tú y quienes tengan el enlace directo pueden verlo.' : 'Post visible de nuevo.');
-    } else {
-      showToast(result.error);
-    }
-  }
-
   async function handleDelete() {
     setDeleting(true);
     const r = await apiDelete<{ success: boolean }>(`/api/posts/${post.id}`);
@@ -254,7 +244,6 @@ export default function PostPage() {
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
               <span className="min-w-0 max-w-[8.5rem] truncate text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
               <CategoryPill category={post.category} className="shrink-0" />
-              {post.owner_hidden && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
             </div>
             <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
               <span className="text-gray-400 text-[11px]">
@@ -284,8 +273,6 @@ export default function PostPage() {
                   size="sm"
                   onEdit={isAuthor ? () => setEditing(true) : undefined}
                   onDelete={isAuthor ? () => setConfirmDelete(true) : undefined}
-                  onToggleHidden={post.is_owner ? handleToggleHidden : undefined}
-                  hidden={post.owner_hidden}
                 />
               )}
             </div>
