@@ -6,6 +6,23 @@ NAME=quemonesum-test
 RELEASE="${1:?Falta identificador}"
 [[ "$RELEASE" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$ ]] || exit 2
 mkdir -p "$BASE/releases" "$BASE/shared" "$BASE/backups"
+
+prune_old_deploy_artifacts() {
+  local keep_current="${1:-}"
+  local keep_previous="${2:-}"
+  local keep_archive="${3:-}"
+  local dir archive
+
+  while IFS= read -r dir; do
+    [[ "$dir" == "$keep_current" || "$dir" == "$keep_previous" ]] && continue
+    rm -rf -- "$dir"
+  done < <(find "$BASE/releases" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  while IFS= read -r archive; do
+    [[ "$archive" == "$keep_archive" ]] && continue
+    rm -f -- "$archive"
+  done < <(find "$BASE/incoming" -mindepth 1 -maxdepth 1 -type f -name '*.tar.gz' | sort)
+}
 exec 9>"$BASE/deploy.lock"
 flock -n 9 || { echo 'Ya hay otro despliegue remoto en curso.' >&2; exit 1; }
 ARCHIVE="$BASE/incoming/$RELEASE.tar.gz"
@@ -14,6 +31,7 @@ PREVIOUS="$(readlink -f "$BASE/current" 2>/dev/null || true)"
 if [[ ! -d "$PREVIOUS" ]]; then PREVIOUS="$BASE/app"; fi
 [[ "$PREVIOUS" == "$BASE/app" || "$PREVIOUS" == "$BASE/releases/"* ]] || exit 2
 [[ -s "$ARCHIVE" && ! -e "$TARGET" ]]
+prune_old_deploy_artifacts "$PREVIOUS" "" "$ARCHIVE"
 mkdir "$TARGET"
 tar -xzf "$ARCHIVE" -C "$TARGET"
 
@@ -113,6 +131,7 @@ systemctl is-enabled --quiet quemonesum-cleanup.timer
 systemctl is-active --quiet quemonesum-cleanup.timer
 systemctl list-timers --no-pager quemonesum-cleanup.timer
 pm2 save
+prune_old_deploy_artifacts "$TARGET" "$PREVIOUS" "$ARCHIVE"
 trap - ERR
 echo "Versión activa: $RELEASE"
 echo "Anterior conservada: $PREVIOUS"
