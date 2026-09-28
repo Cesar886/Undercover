@@ -12,6 +12,7 @@ import { pruneCategory } from '@/lib/ephemeral';
 import { categoryExists } from '@/lib/categories';
 import { attachPollsToPosts, createPollForPost, ensurePollSchema, getPollForPost, publicPoll } from '@/lib/polls';
 import { ensureVisibilitySchema, ownerTokenFromRequest, publicOwnedRow } from '@/lib/visibility';
+import { createDevPost, devMemoryEnabled, listDevPosts } from '@/lib/devMemoryStore';
 
 export const dynamic = 'force-dynamic';
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
@@ -96,6 +97,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ posts, page, limit }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('[GET /api/posts]', error);
+    if (devMemoryEnabled()) {
+      const ownerToken = ownerTokenFromRequest(request);
+      const { searchParams } = new URL(request.url);
+      const category = searchParams.get('category') as PostCategory;
+      return NextResponse.json(
+        { posts: listDevPosts(ownerToken, category), page: 1, limit: 10, databaseUnavailable: true, devMemoryFallback: true },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
     return NextResponse.json(
       { posts: [], page: 1, limit: 10, databaseUnavailable: true },
       { headers: { 'Cache-Control': 'no-store' } }
@@ -167,6 +177,19 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[POST /api/posts] DB error:', error);
+    if (devMemoryEnabled() && !pendingImage && !validated.value.poll_options?.length) {
+      const fallbackPost = createDevPost({
+        anonId,
+        ownerToken,
+        content: validated.value.content,
+        category: validated.value.category,
+      });
+      emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
+      return NextResponse.json(
+        { post: fallbackPost, image_status: null, devMemoryFallback: true },
+        { status: 201, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
     return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   }
 

@@ -90,9 +90,16 @@ export async function listCategories(): Promise<Category[]> {
 
 export async function categoryExists(slug: string): Promise<boolean> {
   if (!isCategoryAvailable(slug)) return false;
-  await ensureCategoriesSchema();
-  const result = await query('SELECT 1 FROM categories WHERE slug = $1 LIMIT 1', [slug]);
-  return result.rowCount === 1;
+  try {
+    await ensureCategoriesSchema();
+    const result = await query('SELECT 1 FROM categories WHERE slug =  LIMIT 1', [slug]);
+    return result.rowCount === 1;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      return fallbackCategories().some((category) => category.slug === slug);
+    }
+    throw error;
+  }
 }
 
 export function categorySlug(name: string): string {
