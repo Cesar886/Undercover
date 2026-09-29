@@ -23,7 +23,7 @@ function parsePage(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   if (!await hasImageAdminSession()) return NextResponse.json({ error: 'No autorizado' }, { status: 401, headers });
-  if (!isImageAdminOrigin(request)) return NextResponse.json({ error: 'Origen inválido' }, { status: 403, headers });
+  if (!isImageAdminOrigin(request, { allowMissingOrigin: true })) return NextResponse.json({ error: 'Origen inválido' }, { status: 403, headers });
   await ensureSchemas();
 
   const page = parsePage(request);

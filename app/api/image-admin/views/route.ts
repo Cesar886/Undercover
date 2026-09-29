@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!await hasImageAdminSession()) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
-  if (!isImageAdminOrigin(request)) {
+  if (!isImageAdminOrigin(request, { allowMissingOrigin: true })) {
     return NextResponse.json({ error: 'Origen no permitido' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
   }
 

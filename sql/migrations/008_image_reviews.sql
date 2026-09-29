@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS image_reviews (
   post_id UUID UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
   comment_id UUID UNIQUE REFERENCES comments(id) ON DELETE CASCADE,
   image_data TEXT,
-  image_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ,

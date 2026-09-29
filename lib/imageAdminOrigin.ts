@@ -1,8 +1,11 @@
 import type { NextRequest } from 'next/server';
 
-export function isImageAdminOrigin(request: NextRequest): boolean {
+export function isImageAdminOrigin(
+  request: NextRequest,
+  options: { allowMissingOrigin?: boolean } = {}
+): boolean {
   const origin = request.headers.get('origin');
-  if (!origin) return false;
+  if (!origin) return Boolean(options.allowMissingOrigin);
   try {
     // ProxyPreserveHost retains the public host even when Next runs on localhost.
     const host = request.headers.get('host') ?? new URL(request.url).host;

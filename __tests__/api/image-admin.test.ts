@@ -31,6 +31,14 @@ it('accepts the public HTTPS origin behind the production reverse proxy', () => 
   expect(isImageAdminOrigin(request)).toBe(false);
 });
 
+it('can allow missing Origin only for same-origin admin reads', () => {
+  const request = new NextRequest('https://quemonesum.site/api/image-admin/views', {
+    headers: { host: 'quemonesum.site', 'x-forwarded-proto': 'https' },
+  });
+  expect(isImageAdminOrigin(request)).toBe(false);
+  expect(isImageAdminOrigin(request, { allowMissingOrigin: true })).toBe(true);
+});
+
 it('requires authentication for queue, preview and decisions', async () => {
   (hasImageAdminSession as jest.Mock).mockResolvedValue(false);
   expect((await GET(req())).status).toBe(401);
