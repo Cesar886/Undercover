@@ -13,6 +13,7 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   X,
 } from 'lucide-react';
 
@@ -132,6 +133,29 @@ export function ImageReviewQueue() {
     } finally { setBusy(null); }
   }
 
+  async function removeImage(item: Review) {
+    if (item.status !== 'approved' && item.status !== 'rejected') return;
+    setBusy(item.id); setError(''); setNotice('');
+    try {
+      const res = await fetch('/api/image-admin?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
+      if (res.status === 401) { window.location.replace(ADMIN + '/login'); return; }
+      if (!res.ok) {
+        const response = await res.json().catch(() => null) as { error?: string } | null;
+        setError(response?.error ?? 'No se pudo eliminar la imagen.');
+        return;
+      }
+      setCounts((current) => ({
+        ...current,
+        all: Math.max(0, current.all - 1),
+        [item.status]: Math.max(0, current[item.status] - 1),
+      }));
+      setImages((current) => current.filter((image) => image.id !== item.id));
+      setNotice('Imagen eliminada de la base de datos y del servidor.');
+    } catch {
+      setError('No se pudo eliminar la imagen. Intenta nuevamente.');
+    } finally { setBusy(null); }
+  }
+
   async function logout() {
     setError('');
     try {
@@ -146,7 +170,7 @@ export function ImageReviewQueue() {
     <div className="mx-auto w-full max-w-6xl">
       <header className="mb-6 overflow-hidden rounded-[24px] border border-black/[0.06] bg-white shadow-[0_16px_50px_rgba(60,42,86,0.08)] dark:border-violet-400/15 dark:bg-[#0b0916]">
         <div className="relative flex flex-col gap-5 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve-600 to-violet-700 text-white"><ShieldCheck size={23} /></div><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-mauve-600 dark:text-violet-400">Archivo privado</p><h1 className="font-display text-2xl font-semibold text-stone-900 dark:text-[#f0edff] sm:text-3xl">Moderación visual</h1><p className="mt-1.5 text-sm text-stone-500 dark:text-[#777294]">Administra pendientes e historial sin perder las imágenes revisadas.</p></div></div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve-600 to-violet-700 text-white"><ShieldCheck size={23} /></div>
           <div className="flex items-center gap-2 pl-16 sm:pl-0">
             <button onClick={() => void load()} disabled={loading || !!busy} className="inline-flex h-10 items-center gap-2 rounded-xl border border-stone-200 px-3.5 text-xs font-semibold text-stone-600 disabled:opacity-50 dark:border-violet-400/15 dark:text-[#a7a1c2]"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />Actualizar</button>
             <button onClick={logout} disabled={!!busy} className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-stone-400 hover:text-red-600 dark:text-[#5f5b80]"><LogOut size={15} />Salir</button>
@@ -182,6 +206,7 @@ export function ImageReviewQueue() {
                 {item.status !== 'approved' && <button disabled={!!busy || !item.has_image} onClick={() => review(item, 'approved')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-bold text-white disabled:opacity-40"><Check size={14} />{item.status === 'hidden' ? 'Desocultar' : 'Aprobar'}</button>}
                 {item.status !== 'rejected' && <button disabled={!!busy} onClick={() => review(item, 'rejected')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-red-50 text-[11px] font-bold text-red-700 dark:bg-red-400/10 dark:text-red-300"><X size={14} />Rechazar</button>}
                 {item.status !== 'hidden' && <button disabled={!!busy} onClick={() => review(item, 'hidden')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-stone-100 text-[11px] font-bold text-stone-600 dark:bg-white/10 dark:text-stone-300"><EyeOff size={14} />Ocultar</button>}
+                {(item.status === 'approved' || item.status === 'rejected') && <button disabled={!!busy} onClick={() => removeImage(item)} className="col-span-3 inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-white text-[11px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40 dark:border-red-400/20 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-400/10"><Trash2 size={14} />Eliminar</button>}
               </div>
             </div>
           </article>;

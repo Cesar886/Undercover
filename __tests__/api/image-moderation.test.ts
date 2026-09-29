@@ -126,16 +126,28 @@ it('supports a reversible hidden status while retaining bytes', async () => {
   expect(client.query.mock.calls[3][1]).toEqual([ID, 'hidden', IMAGE, false, true]);
 });
 
-it('legacy delete hides the public attachment while retaining the private review', async () => {
+it('permanently deletes accepted or rejected review images and clears the public attachment', async () => {
   const target = { id: ID, post_id: ID, content: 'texto', image_webp: IMAGE, is_deleted: false };
   client.query
-    .mockResolvedValueOnce({ rows: [{ id: ID, post_id: null, comment_id: ID, image_data: IMAGE }] })
+    .mockResolvedValueOnce({ rows: [{ id: ID, status: 'rejected', post_id: null, comment_id: ID, image_data: IMAGE }] })
     .mockResolvedValueOnce({ rows: [target] })
     .mockResolvedValueOnce({ rows: [{ ...target, image_webp: null }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] });
 
   expect(await deleteImageReview(ID)).toBe(true);
+  expect(client.query.mock.calls[0][0]).toContain("status IN ('approved', 'rejected')");
   expect(client.query.mock.calls[2][0]).toContain('image_webp = NULL');
-  expect(client.query.mock.calls[3][1][1]).toBe('hidden');
+  expect(client.query.mock.calls[3][0]).toContain('DISABLE TRIGGER protect_image_bytes');
+  expect(client.query.mock.calls[4][0]).toContain('DELETE FROM image_reviews');
+  expect(client.query.mock.calls[5][0]).toContain('ENABLE TRIGGER protect_image_bytes');
+});
+
+it('does not permanently delete pending or hidden review images', async () => {
+  client.query.mockResolvedValueOnce({ rows: [] });
+
+  expect(await deleteImageReview(ID)).toBe(false);
+  expect(client.query.mock.calls[0][0]).toContain("status IN ('approved', 'rejected')");
   expect(client.query.mock.calls.some(([sql]) => sql.includes('DELETE FROM'))).toBe(false);
 });

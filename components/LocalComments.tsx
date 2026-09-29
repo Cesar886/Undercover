@@ -23,6 +23,7 @@ import { useAnonId } from '@/hooks/useAnonId';
 import { containsUrl } from '@/lib/linkDetection';
 import { ensureOwnerToken } from '@/lib/ownerToken';
 import { ExpiringShareButton } from '@/components/ExpiringShareButton';
+import { trackCommentViewOnce } from '@/lib/viewTracking';
 
 interface Comment {
   id: string;
@@ -470,6 +471,12 @@ export function LocalComments({ postId, archived, onCountChange }: {
   useEffect(() => {
     onCountChange?.(comments.filter((c) => !c.is_deleted).length);
   }, [comments, onCountChange]);
+
+  useEffect(() => {
+    comments.forEach((comment) => {
+      if (!comment.is_deleted) trackCommentViewOnce(postId, comment.id);
+    });
+  }, [comments, postId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

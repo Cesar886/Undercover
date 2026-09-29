@@ -84,7 +84,7 @@ it('revokes the session and removes its cookie on logout', async () => {
   expect(res.cookies.get('image_admin_session')?.maxAge).toBe(0);
 });
 
-it('accepts legacy hide requests only after an authenticated same-origin request', async () => {
+it('accepts permanent delete requests only after an authenticated same-origin request', async () => {
   (hasImageAdminSession as jest.Mock).mockResolvedValue(true);
   (deleteImageReview as jest.Mock).mockResolvedValue(true);
   const request = new NextRequest('http://localhost/api/image-admin?id=' + ID, {

@@ -154,7 +154,53 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
   return true;
 }
 
-// Compatibility for old clients: DELETE now means hide, never destroy bytes.
 export async function deleteImageReview(id: string): Promise<boolean> {
-  return reviewImage(id, 'hidden');
+  await ensureImageReviewSchema();
+  const outcome = await withTransaction(async (client) => {
+    const result = await client.query(
+      `SELECT * FROM image_reviews
+       WHERE id = $1 AND status IN ('approved', 'rejected')
+       FOR UPDATE`,
+      [id]
+    );
+    const review = result.rows[0];
+    if (!review) return null;
+
+    const kind = review.post_id ? 'post' as const : 'comment' as const;
+    const targetId = review.post_id ?? review.comment_id;
+    const targetResult = await client.query(
+      kind === 'post'
+        ? 'SELECT * FROM posts WHERE id = $1 FOR UPDATE'
+        : 'SELECT * FROM comments WHERE id = $1 FOR UPDATE',
+      [targetId]
+    );
+    const target = targetResult.rows[0] ?? null;
+    let changedTarget: Record<string, unknown> | null = null;
+
+    if (target?.image_webp) {
+      const updated = kind === 'post'
+        ? await client.query('UPDATE posts SET image_webp = NULL WHERE id = $1 RETURNING *', [targetId])
+        : await client.query('UPDATE comments SET image_webp = NULL WHERE id = $1 RETURNING *', [targetId]);
+      changedTarget = updated.rows[0] ?? null;
+    }
+
+    await client.query('ALTER TABLE image_reviews DISABLE TRIGGER protect_image_bytes');
+    try {
+      await client.query('DELETE FROM image_reviews WHERE id = $1', [id]);
+    } finally {
+      await client.query('ALTER TABLE image_reviews ENABLE TRIGGER protect_image_bytes');
+    }
+    return { kind, targetId, changedTarget };
+  });
+
+  if (!outcome) return false;
+  if (outcome.changedTarget && !outcome.changedTarget.owner_hidden) {
+    const safe = publicRow(outcome.changedTarget);
+    if (outcome.kind === 'post') {
+      emitFeed({ type: 'post:edited', post: safe as never });
+    } else {
+      emitFeed({ type: 'comment:edited', postId: String(safe.post_id), comment: safe as never });
+    }
+  }
+  return true;
 }

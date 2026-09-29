@@ -27,6 +27,7 @@ import { AnonAvatar } from '@/components/AnonAvatar';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
 import { isCategoryAvailable } from '@/lib/categoryAvailability';
+import { trackPostViewOnce } from '@/lib/viewTracking';
 
 function timeAgoCompact(date: Date): string {
   const secs = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -106,6 +107,10 @@ export default function PostPage() {
   }, [id]);
 
   useEffect(() => { loadPost(); }, [loadPost]);
+
+  useEffect(() => {
+    if (state.kind === 'ok') trackPostViewOnce(state.post.id);
+  }, [state]);
 
   const handleCommentCount = useCallback((n: number) => setCommentCount(n), []);
 
