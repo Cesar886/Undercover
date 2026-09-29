@@ -165,7 +165,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 ring-2 ring-white shadow-sm dark:bg-violet-500/15 dark:text-violet-200"
             aria-hidden="true"
           >
-            DA
+            UM
           </div>
 
           <div className="flex-1 min-w-0">
