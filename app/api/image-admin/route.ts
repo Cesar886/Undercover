@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
          COALESCE(p.content, c.content, '') AS content,
          (COALESCE(r.image_data, p.image_webp, c.image_webp) IS NOT NULL) AS has_image,
          jsonb_strip_nulls(jsonb_build_object(
+           'extracted_image_metadata', r.image_metadata,
            'review_id', r.id,
            'post_id', r.post_id,
            'comment_id', r.comment_id,

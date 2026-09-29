@@ -28,7 +28,7 @@ export default function TerminosPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">1. Uso de la plataforma</h2>
           <p>
-            DeepUM es una plataforma de publicación anónima dirigida a estudiantes de la Universidad de Montemorelos.
+            DeepUM es una plataforma de publicación anónima.
             Al usar este sitio, aceptas publicar contenido de forma responsable y respetuosa. No se permite publicar
             contenido que sea ilegal, difamatorio, obsceno, amenazante o que viole los derechos de terceros.
           </p>

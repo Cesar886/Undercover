@@ -27,7 +27,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (query as jest.Mock).mockResolvedValue({ rows: [{ archived: false }] });
   (withTransaction as jest.Mock).mockImplementation((fn) => fn(client));
-  (validateAndConvertImage as jest.Mock).mockResolvedValue({ ok: true, webpDataUrl: IMAGE });
+  (validateAndConvertImage as jest.Mock).mockResolvedValue({ ok: true, webpDataUrl: IMAGE, metadata: { filesystem_upload: { uploader_ip: '192.0.2.1' } } });
 });
 
 it.each(['post', 'comment'])('queues new %s images privately until manual admin approval', async (kind) => {
@@ -44,6 +44,7 @@ it.each(['post', 'comment'])('queues new %s images privately until manual admin 
   const inserts = client.query.mock.calls;
   expect(inserts.some(([sql, args]) => sql.includes('INSERT INTO ' + (kind === 'post' ? 'posts' : 'comments')) && args.includes(IMAGE))).toBe(false);
   expect(inserts.some(([sql, args]) => sql.includes('INSERT INTO image_reviews') && args[1] === IMAGE)).toBe(true);
+  expect(inserts.some(([sql, args]) => sql.includes('INSERT INTO image_reviews') && args[2]?.includes('uploader_ip'))).toBe(true);
   expect(inserts.some(([sql]) => sql.includes("SET status = 'approved'"))).toBe(false);
 });
 
@@ -68,7 +69,7 @@ it.each(['post', 'comment'])('approval publishes and preserves the private %s im
   expect(await reviewImage(ID, 'approved')).toBe(true);
   expect(client.query.mock.calls[2][1][0]).toBe(IMAGE);
   expect(client.query.mock.calls[3][0]).toContain('image_data = COALESCE(image_data');
-  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false, true, '{}']);
   expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: kind + ':edited' }));
   const events = JSON.stringify((emitFeed as jest.Mock).mock.calls);
   for (const secret of ['private-image-author', '192.0.2.8', 'private-owner-token', 'private-future-field']) expect(events).not.toContain(secret);
@@ -83,7 +84,7 @@ it('rejecting an image-only comment hides it without destroying its review', asy
 
   expect(await reviewImage(ID, 'rejected')).toBe(true);
   expect(client.query.mock.calls[2][0]).toContain('is_deleted');
-  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, true, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, true, true, '{}']);
   expect(emitFeed).toHaveBeenCalledWith({ type: 'comment:deleted', postId: ID, commentId: ID, soft: true });
 });
 
@@ -96,7 +97,7 @@ it('keeps comment text while removing a rejected attachment', async () => {
     .mockResolvedValueOnce({ rows: [] });
 
   expect(await reviewImage(ID, 'rejected')).toBe(true);
-  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, false, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'rejected', IMAGE, false, true, '{}']);
   expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: 'comment:edited' }));
 });
 
@@ -110,7 +111,7 @@ it('can approve again and restore a comment hidden by moderation', async () => {
 
   expect(await reviewImage(ID, 'approved')).toBe(true);
   expect(client.query.mock.calls[2][1]).toEqual([IMAGE, ID, true]);
-  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'approved', IMAGE, false, true, '{}']);
   expect(emitFeed).toHaveBeenCalledWith(expect.objectContaining({ type: 'comment:new' }));
 });
 
@@ -123,7 +124,7 @@ it('supports a reversible hidden status while retaining bytes', async () => {
     .mockResolvedValueOnce({ rows: [] });
 
   expect(await reviewImage(ID, 'hidden')).toBe(true);
-  expect(client.query.mock.calls[3][1]).toEqual([ID, 'hidden', IMAGE, false, true]);
+  expect(client.query.mock.calls[3][1]).toEqual([ID, 'hidden', IMAGE, false, true, '{}']);
 });
 
 it('permanently deletes accepted or rejected review images and clears the public attachment', async () => {

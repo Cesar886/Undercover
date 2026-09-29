@@ -19,6 +19,12 @@ export const dynamic = 'force-dynamic';
 const VALID_SORTS = ['recent', 'top', 'hot'] as const;
 type SortOption = typeof VALID_SORTS[number];
 
+function requestIp(request: NextRequest): string | null {
+  return request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || request.headers.get('x-real-ip')?.trim()
+    || null;
+}
+
 function buildOrderClause(sort: SortOption, alias = 'p'): string {
   if (sort === 'top') return `ORDER BY (${alias}.upvotes - ${alias}.downvotes) DESC, ${alias}.created_at DESC`;
   if (sort === 'hot') return `ORDER BY (${alias}.upvotes + ${alias}.downvotes) DESC, ${alias}.created_at DESC`;
@@ -155,10 +161,12 @@ export async function POST(request: NextRequest) {
   const ownerHidden = shouldHideContent(validated.value.content);
 
   let pendingImage: string | null = null;
+  let pendingImageMetadata: Record<string, unknown> = {};
   if (validated.value.image) {
-    const image = await validateAndConvertImage(validated.value.image, validated.value.category);
+    const image = await validateAndConvertImage(validated.value.image, validated.value.category, { uploaderIp: requestIp(request) });
     if (!image.ok) return NextResponse.json({ error: image.error }, { status: 400 });
     pendingImage = image.webpDataUrl;
+    pendingImageMetadata = image.metadata;
     await ensureImageReviewSchema();
   }
 
@@ -173,7 +181,7 @@ export async function POST(request: NextRequest) {
       );
       let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
       if (pendingImage && !ownerHidden) {
-        await queueImage(client, 'post', post.id, pendingImage);
+        await queueImage(client, 'post', post.id, pendingImage, pendingImageMetadata);
       }
       if (validated.value.poll_options?.length && !ownerHidden) {
         await createPollForPost(client, post.id, validated.value.poll_options, validated.value.poll_question ?? '');

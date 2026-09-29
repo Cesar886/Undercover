@@ -12,6 +12,12 @@ import type { Comment } from '@/types';
 import { shareGrantCoversComment, shareGrantCoversPost, verifyShareToken } from '@/lib/shareLinks';
 import { shouldHideCommentContent } from '@/lib/keywordModeration';
 
+function requestIp(request: NextRequest): string | null {
+  return request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || request.headers.get('x-real-ip')?.trim()
+    || null;
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   await ensureVisibilitySchema();
@@ -84,10 +90,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   let pendingImage: string | null = null;
+  let pendingImageMetadata: Record<string, unknown> = {};
   if (validated.value.image) {
-    const image = await validateAndConvertImage(validated.value.image);
+    const image = await validateAndConvertImage(validated.value.image, undefined, { uploaderIp: requestIp(request) });
     if (!image.ok) return NextResponse.json({ error: image.error }, { status: 400 });
     pendingImage = image.webpDataUrl;
+    pendingImageMetadata = image.metadata;
     await ensureImageReviewSchema();
   }
 
@@ -102,7 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken, ownerHidden]
     );
     if (pendingImage && !ownerHidden) {
-      await queueImage(client, 'comment', result.rows[0].id, pendingImage);
+      await queueImage(client, 'comment', result.rows[0].id, pendingImage, pendingImageMetadata);
     }
     return result.rows[0];
   });

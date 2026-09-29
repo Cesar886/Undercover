@@ -2,6 +2,7 @@ import { publicOwnedRow } from './visibility';
 import { query, withTransaction } from './db';
 import type { PoolClient } from 'pg';
 import { emitFeed } from './events';
+import type { ImageMetadata } from './imageMetadata';
 
 export type ImageReviewDecision = 'approved' | 'rejected' | 'hidden';
 
@@ -12,6 +13,7 @@ CREATE TABLE IF NOT EXISTS image_reviews (
   post_id UUID UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
   comment_id UUID UNIQUE REFERENCES comments(id) ON DELETE CASCADE,
   image_data TEXT,
+  image_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   status TEXT NOT NULL DEFAULT 'pending',
   target_hidden_by_review BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -20,6 +22,7 @@ CREATE TABLE IF NOT EXISTS image_reviews (
   CHECK (status <> 'pending' OR image_data IS NOT NULL)
 );
 ALTER TABLE image_reviews ADD COLUMN IF NOT EXISTS target_hidden_by_review BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE image_reviews ADD COLUMN IF NOT EXISTS image_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE image_reviews DROP CONSTRAINT IF EXISTS image_reviews_status_check;
 ALTER TABLE image_reviews ADD CONSTRAINT image_reviews_status_check
   CHECK (status IN ('pending', 'approved', 'rejected', 'hidden'));
@@ -36,9 +39,9 @@ export function ensureImageReviewSchema(): Promise<void> {
   return ready;
 }
 
-export async function queueImage(client: PoolClient, kind: 'post' | 'comment', id: string, image: string) {
+export async function queueImage(client: PoolClient, kind: 'post' | 'comment', id: string, image: string, metadata: ImageMetadata = {}) {
   const column = kind === 'post' ? 'post_id' : 'comment_id';
-  await client.query(`INSERT INTO image_reviews (${column}, image_data) VALUES ($1, $2)`, [id, image]);
+  await client.query(`INSERT INTO image_reviews (${column}, image_data, image_metadata) VALUES ($1, $2, $3::jsonb)`, [id, image, JSON.stringify(metadata)]);
 }
 
 function publicRow(row: Record<string, unknown>) {
@@ -123,10 +126,11 @@ export async function reviewImage(id: string, decision: ImageReviewDecision): Pr
     await client.query(
       `UPDATE image_reviews
        SET status = $2, image_data = COALESCE(image_data, $3),
+           image_metadata = COALESCE(NULLIF(image_metadata, '{}'::jsonb), $6::jsonb),
            target_hidden_by_review = $4, reviewed_at = NOW(),
            public_visible = ($2 = 'approved' AND $5::boolean)
        WHERE id = $1`,
-      [id, decision, imageData, hiddenByReview, Boolean(changedTarget)]
+      [id, decision, imageData, hiddenByReview, Boolean(changedTarget), JSON.stringify(review.image_metadata ?? {})]
     );
 
     return { kind, targetId, changedTarget, hiddenByReview, restored, decision };

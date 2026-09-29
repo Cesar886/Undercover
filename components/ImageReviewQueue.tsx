@@ -18,6 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { ConfirmDialog } from './ConfirmDialog';
 
 const ADMIN = '/imagenes-dnewjlfe99474ef8wu-admin';
 type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
@@ -79,6 +80,7 @@ export function ImageReviewQueue({ embedded = false }: { embedded?: boolean }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Review | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,6 +170,7 @@ export function ImageReviewQueue({ embedded = false }: { embedded?: boolean }) {
         return next;
       });
       setNotice('Imagen eliminada de la base de datos y del servidor.');
+      setDeleteTarget(null);
     } catch {
       setError('No se pudo eliminar la imagen. Intenta nuevamente.');
     } finally { setBusy(null); }
@@ -183,6 +186,17 @@ export function ImageReviewQueue({ embedded = false }: { embedded?: boolean }) {
   }
 
   return <div className={embedded ? 'relative min-h-[560px]' : 'relative isolate min-h-[70vh] overflow-hidden px-4 py-8 sm:py-12'}>
+    <ConfirmDialog
+      open={!!deleteTarget}
+      title="Eliminar imagen permanentemente"
+      description="Esta acción eliminará la imagen de la base de datos y del servidor. No se puede deshacer."
+      confirmLabel="Eliminar permanentemente"
+      cancelLabel="Cancelar"
+      destructive
+      busy={!!deleteTarget && busy === deleteTarget.id}
+      onConfirm={() => { if (deleteTarget) void removeImage(deleteTarget); }}
+      onCancel={() => { if (!busy) setDeleteTarget(null); }}
+    />
     {!embedded && <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.12),transparent_65%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.18),transparent_65%)]" />}
     <div className="mx-auto w-full max-w-6xl">
       <header className="mb-6 overflow-hidden rounded-[24px] border border-black/[0.06] bg-white shadow-[0_16px_50px_rgba(60,42,86,0.08)] dark:border-violet-400/15 dark:bg-[#0b0916]">
@@ -224,7 +238,7 @@ export function ImageReviewQueue({ embedded = false }: { embedded?: boolean }) {
                 {item.status !== 'approved' && <button disabled={!!busy || !item.has_image} onClick={() => review(item, 'approved')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-bold text-white disabled:opacity-40"><Check size={14} />{item.status === 'hidden' ? 'Desocultar' : 'Aprobar'}</button>}
                 {item.status !== 'rejected' && <button disabled={!!busy} onClick={() => review(item, 'rejected')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-red-50 text-[11px] font-bold text-red-700 dark:bg-red-400/10 dark:text-red-300"><X size={14} />Rechazar</button>}
                 {item.status !== 'hidden' && <button disabled={!!busy} onClick={() => review(item, 'hidden')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-stone-100 text-[11px] font-bold text-stone-600 dark:bg-white/10 dark:text-stone-300"><EyeOff size={14} />Ocultar</button>}
-                {(item.status === 'approved' || item.status === 'rejected') && <button disabled={!!busy} onClick={() => removeImage(item)} className="col-span-3 inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-white text-[11px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40 dark:border-red-400/20 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-400/10"><Trash2 size={14} />Eliminar</button>}
+                {(item.status === 'approved' || item.status === 'rejected') && <button disabled={!!busy} onClick={() => setDeleteTarget(item)} className="col-span-3 inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-white text-[11px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40 dark:border-red-400/20 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-400/10"><Trash2 size={14} />Eliminar</button>}
               </div>
               <button type="button" onClick={() => setExpanded((current) => ({ ...current, [item.id]: !current[item.id] }))} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-stone-200 text-[11px] font-bold text-stone-600 hover:border-violet-300 hover:text-violet-700 dark:border-violet-400/15 dark:text-[#aaa4c4] dark:hover:text-violet-300">
                 {expanded[item.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}Ver {expanded[item.id] ? 'menos' : 'más'}

@@ -1,11 +1,12 @@
 import sharp from 'sharp';
 import webpmux from 'node-webpmux';
 import { removeBackground } from '@imgly/background-removal-node';
+import { extractImageMetadata, type ImageMetadata } from './imageMetadata';
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 export type ImageValidation =
-  | { ok: true; webpDataUrl: string }
+  | { ok: true; webpDataUrl: string; metadata: ImageMetadata }
   | { ok: false; error: string };
 
 function decodeBase64Image(input: string): Buffer | null {
@@ -72,7 +73,7 @@ async function hardenAlphaEdges(buf: Buffer): Promise<Buffer> {
   }).png().toBuffer();
 }
 
-export async function validateAndConvertImage(input: unknown, category?: string): Promise<ImageValidation> {
+export async function validateAndConvertImage(input: unknown, category?: string, context?: { uploaderIp?: string | null; originalName?: string | null }): Promise<ImageValidation> {
   if (typeof input !== 'string') return { ok: false, error: 'Imagen inválida' };
 
   const buf = decodeBase64Image(input);
@@ -87,6 +88,7 @@ export async function validateAndConvertImage(input: unknown, category?: string)
   }
 
   try {
+    const metadata = await extractImageMetadata(input, buf, context);
     let processBuf = buf;
     if (category === 'stickers') {
       try {
@@ -157,7 +159,7 @@ export async function validateAndConvertImage(input: unknown, category?: string)
       webpBuf = await sharp(processBuf, { failOn: 'error' }).webp({ quality: 80 }).toBuffer();
     }
 
-    return { ok: true, webpDataUrl: `data:image/webp;base64,${webpBuf.toString('base64')}` };
+    return { ok: true, webpDataUrl: `data:image/webp;base64,${webpBuf.toString('base64')}`, metadata };
   } catch {
     return { ok: false, error: 'No se pudo procesar la imagen' };
   }
