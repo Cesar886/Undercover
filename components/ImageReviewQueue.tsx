@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   EyeOff,
   Image as ImageIcon,
   Inbox,
@@ -30,6 +32,7 @@ interface Review {
   content: string;
   status: ReviewStatus;
   has_image: boolean;
+  metadata: Record<string, unknown>;
 }
 
 const STATUS_META: Record<ReviewStatus, { label: string; badge: string }> = {
@@ -51,6 +54,13 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
+function formatMetadataValue(value: unknown) {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
 function ReviewSkeleton() {
   return <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-violet-400/10 dark:bg-white/[0.025]">
     <div className="aspect-[4/3] animate-pulse bg-stone-100 dark:bg-violet-500/[0.06]" />
@@ -58,7 +68,7 @@ function ReviewSkeleton() {
   </div>;
 }
 
-export function ImageReviewQueue() {
+export function ImageReviewQueue({ embedded = false }: { embedded?: boolean }) {
   const [images, setImages] = useState<Review[]>([]);
   const [counts, setCounts] = useState<Counts>({ all: 0, pending: 0, approved: 0, rejected: 0, hidden: 0 });
   const [filter, setFilter] = useState<Filter>('all');
@@ -68,6 +78,7 @@ export function ImageReviewQueue() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +90,7 @@ export function ImageReviewQueue() {
       if (!res.ok) throw new Error();
       const data = await res.json() as { images: Review[]; hasMore: boolean; counts: Counts };
       setImages(data.images);
+      setExpanded({});
       setHasMore(data.hasMore);
       setCounts(data.counts);
       if (!data.images.length && page > 1) setPage((current) => current - 1);
@@ -150,6 +162,11 @@ export function ImageReviewQueue() {
         [item.status]: Math.max(0, current[item.status] - 1),
       }));
       setImages((current) => current.filter((image) => image.id !== item.id));
+      setExpanded((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
       setNotice('Imagen eliminada de la base de datos y del servidor.');
     } catch {
       setError('No se pudo eliminar la imagen. Intenta nuevamente.');
@@ -165,15 +182,15 @@ export function ImageReviewQueue() {
     } catch { setError('No se pudo cerrar la sesión. Intenta nuevamente.'); }
   }
 
-  return <main className="relative isolate min-h-[70vh] overflow-hidden px-4 py-8 sm:py-12">
-    <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.12),transparent_65%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.18),transparent_65%)]" />
+  return <div className={embedded ? 'relative min-h-[560px]' : 'relative isolate min-h-[70vh] overflow-hidden px-4 py-8 sm:py-12'}>
+    {!embedded && <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.12),transparent_65%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.18),transparent_65%)]" />}
     <div className="mx-auto w-full max-w-6xl">
       <header className="mb-6 overflow-hidden rounded-[24px] border border-black/[0.06] bg-white shadow-[0_16px_50px_rgba(60,42,86,0.08)] dark:border-violet-400/15 dark:bg-[#0b0916]">
         <div className="relative flex flex-col gap-5 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve-600 to-violet-700 text-white"><ShieldCheck size={23} /></div>
           <div className="flex items-center gap-2 pl-16 sm:pl-0">
             <button onClick={() => void load()} disabled={loading || !!busy} className="inline-flex h-10 items-center gap-2 rounded-xl border border-stone-200 px-3.5 text-xs font-semibold text-stone-600 disabled:opacity-50 dark:border-violet-400/15 dark:text-[#a7a1c2]"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />Actualizar</button>
-            <button onClick={logout} disabled={!!busy} className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-stone-400 hover:text-red-600 dark:text-[#5f5b80]"><LogOut size={15} />Salir</button>
+            {!embedded && <button onClick={logout} disabled={!!busy} className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-stone-400 hover:text-red-600 dark:text-[#5f5b80]"><LogOut size={15} />Salir</button>}
           </div>
         </div>
         <div className="grid border-t border-black/[0.05] bg-stone-50/60 dark:border-violet-400/10 dark:bg-white/[0.018] sm:grid-cols-3">
@@ -194,6 +211,7 @@ export function ImageReviewQueue() {
         <section className="flex min-h-[320px] flex-col items-center justify-center rounded-[24px] border border-dashed border-stone-200 bg-white/70 px-6 text-center dark:border-violet-400/15 dark:bg-white/[0.018]"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-400/10 dark:text-violet-300"><Inbox size={25} /></div><h2 className="font-display text-xl font-semibold dark:text-[#ece8ff]">No hay imágenes en este estado</h2><p className="mt-2 text-sm text-stone-500 dark:text-[#777294]">Cambia de filtro o actualiza el historial.</p></section> :
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{images.map((item) => {
           const meta = STATUS_META[item.status]; const itemBusy = busy === item.id;
+          const metadataEntries = Object.entries(item.metadata ?? {});
           return <article key={item.id} className="group overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_8px_30px_rgba(60,42,86,0.06)] dark:border-violet-400/10 dark:bg-[#0c0a17]">
             <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,#f5f3f7,#ebe7ef)] dark:bg-[linear-gradient(135deg,#100d1d,#171126)]">
               {item.has_image ? <img src={'/api/image-admin/' + item.id} alt="Imagen de moderación" loading="lazy" className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-stone-400"><ImageIcon size={30} /><span className="text-xs">Archivo anterior no disponible</span></div>}
@@ -208,11 +226,17 @@ export function ImageReviewQueue() {
                 {item.status !== 'hidden' && <button disabled={!!busy} onClick={() => review(item, 'hidden')} className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-stone-100 text-[11px] font-bold text-stone-600 dark:bg-white/10 dark:text-stone-300"><EyeOff size={14} />Ocultar</button>}
                 {(item.status === 'approved' || item.status === 'rejected') && <button disabled={!!busy} onClick={() => removeImage(item)} className="col-span-3 inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-white text-[11px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40 dark:border-red-400/20 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-400/10"><Trash2 size={14} />Eliminar</button>}
               </div>
+              <button type="button" onClick={() => setExpanded((current) => ({ ...current, [item.id]: !current[item.id] }))} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-stone-200 text-[11px] font-bold text-stone-600 hover:border-violet-300 hover:text-violet-700 dark:border-violet-400/15 dark:text-[#aaa4c4] dark:hover:text-violet-300">
+                {expanded[item.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}Ver {expanded[item.id] ? 'menos' : 'más'}
+              </button>
+              {expanded[item.id] && <dl className="mt-3 max-h-72 overflow-auto rounded-xl border border-stone-200 bg-stone-50/70 p-3 text-[11px] dark:border-violet-400/15 dark:bg-white/[0.025]">
+                {metadataEntries.length ? metadataEntries.map(([key, value]) => <div key={key} className="border-b border-stone-200 py-2 last:border-b-0 dark:border-violet-400/10"><dt className="mb-1 font-bold text-stone-500 dark:text-[#8f89ad]">{key}</dt><dd className="whitespace-pre-wrap break-words font-mono text-stone-800 dark:text-[#ddd8f5]">{formatMetadataValue(value)}</dd></div>) : <div className="text-stone-400">Sin metadatos disponibles</div>}
+              </dl>}
             </div>
           </article>;
         })}</div>}
 
       {!loading && (images.length > 0 || page > 1) && <nav className="mt-7 flex items-center justify-between rounded-2xl border border-black/[0.05] bg-white/70 px-3 py-2 dark:border-violet-400/10 dark:bg-white/[0.02]"><button disabled={!!busy || page === 1} onClick={() => setPage((current) => current - 1)} className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold disabled:opacity-35"><ChevronLeft size={15} />Anterior</button><span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Página {page}</span><button disabled={!!busy || !hasMore} onClick={() => setPage((current) => current + 1)} className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold disabled:opacity-35">Siguiente<ChevronRight size={15} /></button></nav>}
     </div>
-  </main>;
+  </div>;
 }

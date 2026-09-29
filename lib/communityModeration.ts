@@ -19,10 +19,14 @@ CREATE TABLE IF NOT EXISTS community_reports (
  reporter_id TEXT NOT NULL,
  reason TEXT NOT NULL,
  detail TEXT,
+ review_status TEXT NOT NULL DEFAULT 'pending' CHECK (review_status IN ('pending', 'reviewed', 'dismissed')),
+ reviewed_at TIMESTAMPTZ,
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  PRIMARY KEY (target_type, target_id, reporter_id)
 );
 CREATE INDEX IF NOT EXISTS community_reports_rate_idx ON community_reports (reporter_id, created_at);
+CREATE INDEX IF NOT EXISTS community_reports_review_status_idx ON community_reports (review_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_reports_target_created_idx ON community_reports (target_type, target_id, created_at DESC);
 -- Stop recording network identifiers without deleting historical report data.
 -- NULL values do not conflict with the legacy unique network constraint.
 DO $$
