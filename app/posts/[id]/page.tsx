@@ -138,7 +138,7 @@ export default function PostPage() {
     return (
       <main className="max-w-[600px] mx-auto px-6 pt-32 text-center space-y-4 animate-fade-in">
         <p className="text-2xl mb-2">🔥</p>
-        <p className="text-xl font-semibold text-gray-700">Este quemón ya no existe.</p>
+        <p className="text-xl font-semibold text-gray-700">Este post ya no existe.</p>
         <p className="text-sm text-gray-400">Quizá fue reportado, quizá nunca estuvo aquí.</p>
         <BackLink className="mt-4" />
       </main>

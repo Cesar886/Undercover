@@ -27,22 +27,15 @@ const SITE_URL = 'https://quemonesum.site';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'DeepUM – Confesiones Anónimas de la UM',
+    default: 'DeepUM – Anonimo',
     template: '%s | DeepUM',
   },
   description:
-    'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos, Nuevo León, México.',
+    'El foro anónimo de los estudiantes de la UM.',
   keywords: [
     'quemones',
     'quemones UM',
-    'quemones universidad de montemorelos',
-    'quemones montemorelos',
-    'confesiones universidad montemorelos',
-    'stickers UM Nuevo León',
-    'foro estudiantes montemorelos',
-    'Universidad de Montemorelos',
     'quemonesum',
-    'anécdotas universitarias montemorelos',
   ],
   authors: [{ name: 'DeepUM', url: SITE_URL }],
   creator: 'DeepUM',
@@ -78,23 +71,23 @@ export const metadata: Metadata = {
     locale: 'es_MX',
     url: SITE_URL,
     siteName: 'DeepUM',
-    title: 'DeepUM – Confesiones Anónimas de la Universidad de Montemorelos',
+    title: 'DeepUM – Anonimo',
     description:
-      'El foro anónimo de los estudiantes de la UM. Lee y comparte quemones, confesiones e infieles de la Universidad de Montemorelos.',
+      'El foro anónimo de los estudiantes de la UM.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'DeepUM – Foro anónimo de la Universidad de Montemorelos',
+        alt: 'DeepUM – Anonimo',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DeepUM – Confesiones Anónimas de la UM',
+    title: 'DeepUM – Anonimo',
     description:
-      'El foro anónimo de los estudiantes de la Universidad de Montemorelos, Nuevo León.',
+      'El foro anónimo.',
     images: ['/og-image.png'],
   },
   alternates: {

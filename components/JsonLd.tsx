@@ -16,7 +16,7 @@ export function WebSiteJsonLd() {
     name: SITE_NAME,
     url: SITE_URL,
     description:
-      'El foro anónimo de los estudiantes de la Universidad de Montemorelos, Nuevo León, México.',
+      'El foro anónimo.',
     inLanguage: 'es-MX',
     potentialAction: {
       '@type': 'SearchAction',
@@ -69,7 +69,7 @@ export function PostJsonLd({
     text: content,
     datePublished: createdAt,
     inLanguage: 'es-MX',
-    keywords: `quemones, ${category}, Universidad de Montemorelos, UM, Montemorelos`,
+    keywords: `quemones, ${category}, ${SITE_NAME}`,
     isPartOf: {
       '@type': 'WebSite',
       name: SITE_NAME,
