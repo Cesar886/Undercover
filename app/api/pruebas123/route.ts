@@ -24,7 +24,7 @@ function schema() {
     CREATE INDEX IF NOT EXISTS pruebas123_entries_created_idx ON pruebas123_entries(created_at DESC, id DESC);
   `).then(() => {}).catch(error => { ready = null; throw error; });
 }
-export async function GET(request?: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const identity = testIdentity(request);
     let entries;
