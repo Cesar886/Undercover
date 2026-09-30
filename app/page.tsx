@@ -1,4 +1,6 @@
 'use client';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { anonDisplayName } from '@/lib/anonDisplay';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { PostForm } from '@/components/PostForm';
@@ -131,6 +133,7 @@ export default function Home() {
                     </p>
                   ) : preview.posts.map((post) => (
                     <Link key={post.id} href={`/posts/${post.id}`} className="block px-4 py-3 transition-colors hover:bg-gray-50/80 dark:hover:bg-violet-500/5">
+                      {post.verified && <div className="mb-1 flex items-center gap-1 text-xs text-stone-500"><span>{anonDisplayName(post.anon_id)}</span><VerifiedBadge /></div>}
                       <p className="line-clamp-2 text-sm leading-snug text-gray-700 dark:text-[#c8c4ee]">{post.content || '📎 imagen'}</p>
                       <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400 dark:text-[#4a4870]">
                         <span>↑{post.upvotes}</span><span>💬 {post.comment_count ?? 0}</span>
