@@ -1,29 +1,17 @@
 import { randomUUID } from 'crypto';
-
 export interface Pruebas123Entry {
-  id: string;
-  content: string;
-  created_at: string;
+  id: string; content: string; created_at: string;
+  thread_id?: string | null; alias?: string; verified?: boolean;
 }
-
 declare global {
   // eslint-disable-next-line no-var
   var __pruebas123Entries: Pruebas123Entry[] | undefined;
 }
-
-function entries(): Pruebas123Entry[] {
-  if (!global.__pruebas123Entries) global.__pruebas123Entries = [];
-  return global.__pruebas123Entries;
-}
-
 export function listPruebas123Memory(): Pruebas123Entry[] {
-  return [...entries()]
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
-    .slice(0, 100);
+  return [...(global.__pruebas123Entries ?? [])].reverse();
 }
-
-export function createPruebas123Memory(content: string): Pruebas123Entry {
-  const entry = { id: randomUUID(), content, created_at: new Date().toISOString() };
-  entries().push(entry);
+export function createPruebas123Memory(content: string, fields: Partial<Pruebas123Entry> = {}): Pruebas123Entry {
+  const entry = { id: randomUUID(), content, created_at: new Date().toISOString(), ...fields };
+  (global.__pruebas123Entries ??= []).push(entry);
   return entry;
 }

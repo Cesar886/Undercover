@@ -1,126 +1,99 @@
 'use client';
-
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Beaker, Loader2, LockKeyhole, Send } from 'lucide-react';
+import { BadgeCheck, RefreshCw } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/apiClient';
 
-interface PruebaEntry {
-  id: string;
-  content: string;
-  created_at: string;
+interface Entry {
+  id: string; content: string; created_at: string;
+  thread_id?: string | null; alias?: string; verified?: boolean;
 }
-
-const MAX_CHARS = 500;
+function Check() {
+  return <BadgeCheck size={19} fill="#1d9bf0" color="white" aria-label="Verificado" className="inline-block shrink-0" />;
+}
+const button = 'rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40';
+const inputStyle = 'w-full rounded-xl border border-stone-200 bg-transparent p-3 text-sm dark:border-violet-500/25';
 
 export function Pruebas123Wall() {
-  const [entries, setEntries] = useState<PruebaEntry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [content, setContent] = useState('');
+  const [secret, setSecret] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [thread, setThread] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  const loadEntries = useCallback(async () => {
-    setLoading(true);
-    const result = await apiGet<{ entries: PruebaEntry[] }>('/api/pruebas123');
-    if (result.ok) {
-      setEntries(result.data.entries ?? []);
-      setError('');
-    } else {
-      setError(result.error);
-    }
+  const [notice, setNotice] = useState('');
+  const load = useCallback(async () => {
+    const result = await apiGet<{ entries: Entry[]; verified: boolean }>('/api/pruebas123');
+    if (result.ok) { setEntries(result.data.entries); setVerified(result.data.verified); }
+    else setError(result.error);
     setLoading(false);
   }, []);
+  useEffect(() => { void load(); }, [load]);
 
-  useEffect(() => {
-    void loadEntries();
-  }, [loadEntries]);
-
+  async function identityAction(action: 'verify' | 'reset') {
+    if (busy || loading) return;
+    setBusy(true); setError(''); setNotice('');
+    const result = await apiPost<{ verified: boolean }>('/api/pruebas123', { action, secret });
+    if (result.ok) {
+      setVerified(result.data.verified); setSecret('');
+      setNotice(action === 'reset' ? 'Nuevo usuario: tu próximo comentario tendrá otro nombre, sin palomita.' : 'Palomita activada para tus próximos comentarios.');
+    } else setError(result.error);
+    setBusy(false);
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const text = content.trim();
-    if (!text || sending) return;
-
-    setSending(true);
-    setError('');
-    const result = await apiPost<{ entry: PruebaEntry }>('/api/pruebas123', { content: text });
-    if (result.ok) {
-      setEntries((current) => [result.data.entry, ...current].slice(0, 100));
-      setContent('');
-    } else {
-      setError(result.error);
-    }
-    setSending(false);
+    if (busy || loading || !content.trim()) return;
+    setBusy(true); setError(''); setNotice('');
+    const result = await apiPost<{ entry: Entry }>('/api/pruebas123', { content: content.trim(), thread_id: thread });
+    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setContent(''); }
+    else setError(result.error);
+    setBusy(false);
   }
-
-  return (
-    <main className="mx-auto min-h-[calc(100vh-5rem)] max-w-[680px] px-4 py-7">
-      <Link href="/" className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-stone-400 transition-colors hover:text-violet-600 dark:hover:text-violet-300">
-        <ArrowLeft size={14} /> Volver al inicio
-      </Link>
-
-      <section className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_18px_55px_rgba(76,29,149,0.08)] dark:border-violet-500/15 dark:bg-[#0d0b1a]">
-        <header className="border-b border-violet-100 bg-gradient-to-br from-violet-50 to-white px-5 py-6 dark:border-violet-500/10 dark:from-violet-950/30 dark:to-[#0d0b1a] sm:px-7">
-          <div className="flex items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
-              <Beaker size={21} />
-            </span>
-            <div>
-              <h1 className="font-display text-2xl font-semibold text-stone-900 dark:text-violet-50">Pruebas 123</h1>
-              <p className="mt-1 text-sm leading-6 text-stone-500 dark:text-[#8f89ad]">
-                Espacio aislado. Lo publicado aqui solamente aparece en esta pantalla.
-              </p>
-              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
-                <LockKeyhole size={11} /> Fuera del feed y del panel admin
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <form onSubmit={submit} className="border-b border-stone-100 p-5 dark:border-violet-500/10 sm:p-7">
-          <textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value.slice(0, MAX_CHARS))}
-            placeholder="Escribe algo para probar..."
-            rows={4}
-            disabled={sending}
-            maxLength={MAX_CHARS}
-            className="w-full resize-none rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:opacity-60 dark:border-violet-500/15 dark:bg-white/[0.025] dark:text-violet-50 dark:placeholder:text-[#4a4765] dark:focus:border-violet-500 dark:focus:ring-violet-500/10"
-          />
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-[11px] tabular-nums text-stone-400">{content.length}/{MAX_CHARS}</span>
-            <button
-              type="submit"
-              disabled={sending || !content.trim()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-              Publicar aqui
-            </button>
-          </div>
-          {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
-        </form>
-
-        <div className="divide-y divide-stone-100 dark:divide-violet-500/10">
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 px-5 py-12 text-sm text-stone-400">
-              <Loader2 size={17} className="animate-spin" /> Cargando pruebas...
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="px-5 py-14 text-center">
-              <p className="text-sm font-medium text-stone-500 dark:text-[#8f89ad]">Todavia no hay nada aqui.</p>
-              <p className="mt-1 text-xs text-stone-400 dark:text-[#4a4765]">Lo primero que publiques permanecera dentro de esta pantalla.</p>
-            </div>
-          ) : entries.map((entry) => (
-            <article key={entry.id} className="px-5 py-4 sm:px-7">
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-stone-700 dark:text-[#d7d2ee]">{entry.content}</p>
-              <time className="mt-2 block text-[10px] text-stone-400" dateTime={entry.created_at}>
-                {new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.created_at))}
-              </time>
-            </article>
-          ))}
+  function renderEntry(entry: Entry) {
+    return <div className="space-y-2">
+      <div className="flex items-center gap-1 text-sm font-bold">
+        <span>{entry.alias || `Anónimo ${entry.id.slice(0, 8).toUpperCase()}`}</span>
+        {entry.verified && <Check />}
+      </div>
+      <p className="whitespace-pre-wrap break-words text-sm leading-6">{entry.content}</p>
+      <time className="text-xs text-stone-400" dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString('es-MX')}</time>
+    </div>;
+  }
+  const selected = entries.find(e => e.id === thread);
+  return <main className="mx-auto max-w-[720px] space-y-5 px-4 py-7">
+    <Link href="/" className="text-sm text-violet-500">← Volver al inicio</Link>
+    <section className="space-y-5 rounded-3xl border border-violet-200 bg-white p-5 dark:border-violet-500/20 dark:bg-[#0d0b1a] sm:p-7">
+      <header><h1 className="font-display text-2xl font-semibold">Pruebas 123</h1>
+        <p className="mt-2 text-sm text-stone-500">Lo que escribes aquí permanece en este espacio, fuera del feed y del panel administrativo.</p>
+      </header>
+      <div className="space-y-3 rounded-2xl bg-violet-50 p-4 dark:bg-violet-500/10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="flex items-center gap-1 text-sm font-semibold">{verified ? 'Usuario verificado' : 'Usuario anónimo'}{verified && <Check />}</span>
+          <button className={button} disabled={busy || loading} onClick={() => void identityAction('reset')}><RefreshCw size={14} className="mr-2 inline" />Cambiar usuario</button>
         </div>
-      </section>
-    </main>
-  );
+        <p className="text-xs text-stone-500">Tu nombre se conserva dentro del hilo y cambia en cada hilo nuevo.</p>
+        {!verified && <form className="flex gap-2" onSubmit={e => { e.preventDefault(); void identityAction('verify'); }}>
+          <input type="password" aria-label="Palabra secreta" placeholder="Palabra secreta" autoComplete="off" className={inputStyle} value={secret} onChange={e => setSecret(e.target.value)} disabled={busy || loading} />
+          <button className={button} disabled={busy || loading || !secret}>Activar</button>
+        </form>}
+      </div>
+      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+      {notice && <p role="status" className="text-sm text-violet-500">{notice}</p>}
+      <form onSubmit={submit} className="space-y-3">
+        <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">{selected ? `Responder a ${selected.alias || 'Anónimo'}` : 'Nuevo hilo'}</h2>
+          {thread && <button type="button" className="text-sm text-violet-500" disabled={busy} onClick={() => setThread(null)}>Cancelar respuesta</button>}
+        </div>
+        {selected && <p className="line-clamp-2 text-xs text-stone-500">{selected.content}</p>}
+        <textarea aria-label="Comentario" className={inputStyle} rows={3} maxLength={500} placeholder="Escribe aquí…" value={content} disabled={busy || loading} onChange={e => setContent(e.target.value)} />
+        <div className="flex items-center justify-between"><span className="text-xs text-stone-400">{content.length}/500</span><button className={button} disabled={busy || loading || !content.trim()}>{busy ? 'Guardando…' : thread ? 'Responder' : 'Crear hilo'}</button></div>
+      </form>
+    </section>
+    {loading ? <p>Cargando…</p> : entries.length === 0 ? <p className="text-center text-sm text-stone-400">Todavía no hay hilos.</p> : entries.filter(e => !e.thread_id).map(entry => <article key={entry.id} className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 dark:border-violet-500/20 dark:bg-[#0d0b1a]">
+      {renderEntry(entry)}
+      <button className="text-sm font-semibold text-violet-500" disabled={busy} onClick={() => { setThread(entry.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Responder en este hilo</button>
+      {entries.filter(e => e.thread_id === entry.id).reverse().map(reply => <div key={reply.id} className="border-l-2 border-violet-200 pl-4 dark:border-violet-500/25">{renderEntry(reply)}</div>)}
+    </article>)}
+  </main>;
 }
