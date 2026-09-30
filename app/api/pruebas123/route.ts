@@ -52,18 +52,15 @@ export async function POST(request: NextRequest) {
     try { input = await request.json(); } catch { return json({ error: 'Solicitud inválida.' }, 400); }
     if (!input || typeof input !== 'object') return json({ error: 'Solicitud inválida.' }, 400);
     let identity = testIdentity(request);
-    if (input.action === 'verify' || input.action === 'reset') {
-      if (input.action === 'reset') identity = { id: randomUUID(), verified: false };
-      else {
-        if (input.secret !== 'deepum') return json({ error: 'Palabra incorrecta.' }, 403);
-        identity = { ...identity, verified: true };
-      }
-      return setTestIdentity(json({ verified: identity.verified }), identity);
+    if (input.action === 'reset') {
+      identity = { id: randomUUID(), verified: false };
+      return setTestIdentity(json({ verified: false }), identity);
     }
     const content = sanitize(typeof input.content === 'string' ? input.content : '');
     if (!content || content.length > 500) return json({ error: 'Escribe entre 1 y 500 caracteres.' }, 400);
     const thread = input.thread_id ?? null;
     if (thread !== null && (typeof thread !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(thread))) return json({ error: 'Hilo inválido.' }, 400);
+    if (/(?:^|[^\p{L}\p{N}_])deepum(?=$|[^\p{L}\p{N}_])/iu.test(content)) identity = { ...identity, verified: true };
     const id = randomUUID();
     const alias = testAlias(identity, thread ?? id);
     let entry;

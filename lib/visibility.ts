@@ -13,6 +13,8 @@ export function ownerTokenFromRequest(request: NextRequest): string | null {
 export async function ensureVisibilitySchema(): Promise<void> {
   if (!globalVisibility.__visibilitySchema) {
     globalVisibility.__visibilitySchema = query(`
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE comments ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS owner_token UUID;
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE;
       ALTER TABLE comments ADD COLUMN IF NOT EXISTS owner_token UUID;
@@ -32,7 +34,7 @@ export async function ensureVisibilitySchema(): Promise<void> {
 
 // Explicit public contract. New database columns are private by default.
 const PUBLIC_FIELDS = [
-  'id', 'post_id', 'parent_id', 'content', 'category', 'upvotes', 'downvotes',
+  'verified', 'id', 'post_id', 'parent_id', 'content', 'category', 'upvotes', 'downvotes',
   'report_count', 'is_hidden', 'image_webp', 'created_at', 'updated_at',
   'last_bumped_at', 'archived', 'comment_count', 'reaction_count', 'net_votes', 'top_score', 'is_deleted', 'trust_score', 'trust_unlocked',
 ] as const;

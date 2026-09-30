@@ -10,7 +10,11 @@ export function Navbar() {
   const pathname = usePathname();
   const { categories } = useCategories();
 
+  if (pathname === '/pruebas123' || pathname === '/prueba123') return null;
+
   return (
+    <>
+    <div className="h-20" aria-hidden="true" />
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#06050f]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-violet-500/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_0_rgba(124,58,237,0.08)]">
       {/* Main bar */}
       <div className="max-w-[600px] mx-auto px-4 flex items-center justify-between h-12">
@@ -80,5 +84,6 @@ export function Navbar() {
         })}
       </div>
     </nav>
+    </>
   );
 }

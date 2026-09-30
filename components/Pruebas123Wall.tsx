@@ -1,5 +1,5 @@
 'use client';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, RefreshCw } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/apiClient';
@@ -11,13 +11,13 @@ interface Entry {
 function Check() {
   return <BadgeCheck size={19} fill="#1d9bf0" color="white" aria-label="Verificado" className="inline-block shrink-0" />;
 }
-const button = 'rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40';
-const inputStyle = 'w-full rounded-xl border border-stone-200 bg-transparent p-3 text-sm dark:border-violet-500/25';
+const button = 'rounded-full bg-gradient-to-br from-violet-600 to-violet-800 px-4 py-1.5 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40';
+const actionStyle = 'inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-violet-600 disabled:opacity-40 dark:hover:bg-violet-500/10 dark:hover:text-violet-200';
 
 export function Pruebas123Wall() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [content, setContent] = useState('');
-  const [secret, setSecret] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [verified, setVerified] = useState(false);
   const [thread, setThread] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,14 +31,18 @@ export function Pruebas123Wall() {
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const field = textareaRef.current;
+    if (field) { field.style.height = 'auto'; field.style.height = `${field.scrollHeight}px`; }
+  }, [content]);
 
-  async function identityAction(action: 'verify' | 'reset') {
+  async function identityAction() {
     if (busy || loading) return;
     setBusy(true); setError(''); setNotice('');
-    const result = await apiPost<{ verified: boolean }>('/api/pruebas123', { action, secret });
+    const result = await apiPost<{ verified: boolean }>('/api/pruebas123', { action: 'reset' });
     if (result.ok) {
-      setVerified(result.data.verified); setSecret('');
-      setNotice(action === 'reset' ? 'Nuevo usuario: tu próximo comentario tendrá otro nombre, sin palomita.' : 'Palomita activada para tus próximos comentarios.');
+      setVerified(result.data.verified);
+      setNotice('Nuevo usuario: tu próximo comentario tendrá otro nombre, sin palomita.');
     } else setError(result.error);
     setBusy(false);
   }
@@ -47,7 +51,7 @@ export function Pruebas123Wall() {
     if (busy || loading || !content.trim()) return;
     setBusy(true); setError(''); setNotice('');
     const result = await apiPost<{ entry: Entry }>('/api/pruebas123', { content: content.trim(), thread_id: thread });
-    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setContent(''); }
+    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setVerified(Boolean(result.data.entry.verified)); setContent(''); }
     else setError(result.error);
     setBusy(false);
   }
@@ -62,33 +66,34 @@ export function Pruebas123Wall() {
     </div>;
   }
   const selected = entries.find(e => e.id === thread);
-  return <main className="mx-auto max-w-[720px] space-y-5 px-4 py-7">
-    <Link href="/" className="text-sm text-violet-500">← Volver al inicio</Link>
-    <section className="space-y-5 rounded-3xl border border-violet-200 bg-white p-5 dark:border-violet-500/20 dark:bg-[#0d0b1a] sm:p-7">
-      <header><h1 className="font-display text-2xl font-semibold">Pruebas 123</h1>
-        <p className="mt-2 text-sm text-stone-500">Lo que escribes aquí permanece en este espacio, fuera del feed y del panel administrativo.</p>
-      </header>
-      <div className="space-y-3 rounded-2xl bg-violet-50 p-4 dark:bg-violet-500/10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="flex items-center gap-1 text-sm font-semibold">{verified ? 'Usuario verificado' : 'Usuario anónimo'}{verified && <Check />}</span>
-          <button className={button} disabled={busy || loading} onClick={() => void identityAction('reset')}><RefreshCw size={14} className="mr-2 inline" />Cambiar usuario</button>
+  return <main className="mx-auto max-w-[600px] space-y-4 px-4 py-6">
+    <Link href="/" className="inline-block text-xs text-stone-400 hover:text-violet-500">← Volver al inicio</Link>
+    <section className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-violet-500/15 dark:bg-[#0d0b1a] dark:shadow-[0_2px_20px_rgba(124,58,237,0.08)]">
+      <form onSubmit={submit} aria-busy={busy}>
+        <div className="flex gap-3 px-4 pb-3 pt-4">
+          <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 shadow-sm ring-2 ring-white dark:bg-violet-500/15 dark:text-violet-200">UM</div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-[#6b668c]">
+              <span>Anónimo</span>{verified && <Check />}
+            </div>
+            {selected && <div className="mb-2 flex items-start justify-between gap-2 rounded-lg bg-violet-50 p-2 text-xs text-violet-500 dark:bg-violet-500/10">
+              <span className="line-clamp-2">Respondiendo a {selected.alias || 'Anónimo'}: {selected.content}</span>
+              <button type="button" className="shrink-0 underline" disabled={busy} onClick={() => setThread(null)}>Cancelar</button>
+            </div>}
+            <textarea ref={textareaRef} aria-label="Comentario" className="w-full resize-none overflow-hidden bg-transparent text-[15px] leading-relaxed text-zinc-800 outline-none placeholder:text-zinc-300 disabled:opacity-50 dark:text-[#e9e5ff] dark:placeholder:text-[#4a4765]" rows={2} maxLength={500} placeholder={thread ? 'Escribe una respuesta…' : '¿Qué está pasando en la U?'} value={content} disabled={busy || loading} onChange={e => setContent(e.target.value)} />
+          </div>
         </div>
-        <p className="text-xs text-stone-500">Tu nombre se conserva dentro del hilo y cambia en cada hilo nuevo.</p>
-        {!verified && <form className="flex gap-2" onSubmit={e => { e.preventDefault(); void identityAction('verify'); }}>
-          <input type="password" aria-label="Palabra secreta" placeholder="Palabra secreta" autoComplete="off" className={inputStyle} value={secret} onChange={e => setSecret(e.target.value)} disabled={busy || loading} />
-          <button className={button} disabled={busy || loading || !secret}>Activar</button>
-        </form>}
-      </div>
-      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
-      {notice && <p role="status" className="text-sm text-violet-500">{notice}</p>}
-      <form onSubmit={submit} className="space-y-3">
-        <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">{selected ? `Responder a ${selected.alias || 'Anónimo'}` : 'Nuevo hilo'}</h2>
-          {thread && <button type="button" className="text-sm text-violet-500" disabled={busy} onClick={() => setThread(null)}>Cancelar respuesta</button>}
+        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-violet-500/20" />
+        <div className="flex flex-wrap items-center gap-1 px-3 pb-2.5 pt-2">
+          <button type="button" className={actionStyle} disabled={busy || loading} onClick={() => void identityAction()}><RefreshCw size={14} />Cambiar usuario</button>
+          <div className="ml-auto flex items-center gap-2">
+            {content.length > 400 && <span className="text-xs tabular-nums text-stone-400">{500 - content.length}</span>}
+            <button className={button} disabled={busy || loading || !content.trim()}>{busy ? '…' : thread ? 'Responder' : 'Publicar'}</button>
+          </div>
         </div>
-        {selected && <p className="line-clamp-2 text-xs text-stone-500">{selected.content}</p>}
-        <textarea aria-label="Comentario" className={inputStyle} rows={3} maxLength={500} placeholder="Escribe aquí…" value={content} disabled={busy || loading} onChange={e => setContent(e.target.value)} />
-        <div className="flex items-center justify-between"><span className="text-xs text-stone-400">{content.length}/500</span><button className={button} disabled={busy || loading || !content.trim()}>{busy ? 'Guardando…' : thread ? 'Responder' : 'Crear hilo'}</button></div>
       </form>
+      {error && <p role="alert" className="px-4 pb-3 text-xs text-red-500">{error}</p>}
+      {notice && <p role="status" className="px-4 pb-3 text-xs text-violet-500">{notice}</p>}
     </section>
     {loading ? <p>Cargando…</p> : entries.length === 0 ? <p className="text-center text-sm text-stone-400">Todavía no hay hilos.</p> : entries.filter(e => !e.thread_id).map(entry => <article key={entry.id} className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 dark:border-violet-500/20 dark:bg-[#0d0b1a]">
       {renderEntry(entry)}

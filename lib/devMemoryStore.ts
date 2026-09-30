@@ -36,12 +36,14 @@ export function createDevPost(input: {
   category: PostCategory;
   isHidden?: boolean;
   ownerHidden?: boolean;
+  verified?: boolean;
 }): Post {
   const now = new Date().toISOString();
   const post: StoredPost = {
     id: randomUUID(),
     anon_id: input.anonId,
     content: input.content,
+    verified: Boolean(input.verified),
     category: input.category,
     upvotes: 0,
     downvotes: 0,

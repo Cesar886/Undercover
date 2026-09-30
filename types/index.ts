@@ -23,6 +23,7 @@ export interface Post {
   id: string;
   /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
+  verified?: boolean;
   content: string;
   category: PostCategory;
   upvotes: number;
@@ -48,6 +49,7 @@ export interface Comment {
   parent_id?: string | null;
   /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
+  verified?: boolean;
   content: string;
   image_webp: string | null;
   created_at: string;

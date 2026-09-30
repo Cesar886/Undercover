@@ -1,3 +1,4 @@
+import { feedVerified, persistFeedVerification } from '@/lib/feedVerification';
 import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { posts: listDevPosts(ownerToken, category), page: 1, limit: 10, databaseUnavailable: true, devMemoryFallback: true },
         { headers: { 'Cache-Control': 'no-store' } }
-      );
+      ), anonId, verified);
     }
     return NextResponse.json(
       { posts: [], page: 1, limit: 10, databaseUnavailable: true },
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 });
   }
 
+  const verified = feedVerified(request, anonId, validated.value.content);
   const ownerHidden = shouldHideContent(validated.value.content);
 
   let pendingImage: string | null = null;
@@ -175,9 +177,9 @@ export async function POST(request: NextRequest) {
     created = await withTransaction(async (client) => {
       await ensurePollSchema(client);
       const inserted = await client.query<Post>(
-        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token, owner_hidden)
-         VALUES ($1, $2, $3, $4, $5::uuid, $6) RETURNING *`,
-        [anonId, validated.value.content, validated.value.category, null, ownerToken, ownerHidden]
+        `INSERT INTO posts (anon_id, content, category, image_webp, owner_token, owner_hidden, verified)
+         VALUES ($1, $2, $3, $4, $5::uuid, $6, $7) RETURNING *`,
+        [anonId, validated.value.content, validated.value.category, null, ownerToken, ownerHidden, verified]
       );
       let post: Post = { ...inserted.rows[0], comment_count: 0, poll: null };
       if (pendingImage && !ownerHidden) {
@@ -199,9 +201,10 @@ export async function POST(request: NextRequest) {
         content: validated.value.content,
         category: validated.value.category,
         ownerHidden,
+        verified,
       });
       if (!ownerHidden) emitFeed({ type: 'post:new', post: { ...fallbackPost, is_owner: false, poll: null } });
-      return NextResponse.json(
+      return persistFeedVerification(NextResponse.json(
         { post: fallbackPost, image_status: null, devMemoryFallback: true },
         { status: 201, headers: { 'Cache-Control': 'no-store' } }
       );
@@ -218,5 +221,5 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({ post, image_status: pendingImage && !post.owner_hidden ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
-  return response;
+  return persistFeedVerification(response, anonId, verified);
 }
