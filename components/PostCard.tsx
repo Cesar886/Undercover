@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,6 +31,7 @@ import { apiDelete, apiPatch, apiPost } from '@/lib/apiClient';
 import { ShareImageButton } from './ShareImageButton';
 import { PollView } from './PollView';
 import { ExpiringShareButton } from './ExpiringShareButton';
+import { trackPostViewOnce } from '@/lib/viewTracking';
 
 const accentBar: Record<string, string> = {
   general:     'bg-zinc-400 dark:bg-violet-900',
@@ -72,6 +73,24 @@ export function PostCard({
   const [reportOpen, setReportOpen] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const articleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article) return;
+
+    // Una impresion cuenta cuando una parte significativa de la tarjeta entra
+    // en pantalla, sin obligar al visitante a abrir el detalle del post.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.15)) return;
+        trackPostViewOnce(post.id);
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(article);
+    return () => observer.disconnect();
+  }, [post.id]);
 
   const isAuthor = Boolean(post.is_owner);
 

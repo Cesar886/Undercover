@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -27,7 +27,7 @@ import { AnonAvatar } from '@/components/AnonAvatar';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
 import { isCategoryAvailable } from '@/lib/categoryAvailability';
-import { trackPostViewOnce } from '@/lib/viewTracking';
+import { createPostVisitTracker } from '@/lib/viewTracking';
 
 function timeAgoCompact(date: Date): string {
   const secs = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -76,6 +76,7 @@ type LoadState = { kind: 'loading' } | { kind: 'ok'; post: Post } | { kind: 'not
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const trackVisit = useMemo(() => createPostVisitTracker(), [id]);
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [commentCount, setCommentCount] = useState(0);
   const { anonId: username } = useAnonId(id);
@@ -109,8 +110,8 @@ export default function PostPage() {
   useEffect(() => { loadPost(); }, [loadPost]);
 
   useEffect(() => {
-    if (state.kind === 'ok') trackPostViewOnce(state.post.id);
-  }, [state]);
+    if (state.kind === 'ok' && state.post.id === id) void trackVisit(id);
+  }, [state, id, trackVisit]);
 
   const handleCommentCount = useCallback((n: number) => setCommentCount(n), []);
 

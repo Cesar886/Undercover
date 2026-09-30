@@ -43,6 +43,9 @@ export const metadata: Metadata = {
   applicationName: 'DeepUM',
   category: 'community',
   manifest: '/manifest.json',
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   appleWebApp: {
     capable: true,
     title: 'DeepUM',
