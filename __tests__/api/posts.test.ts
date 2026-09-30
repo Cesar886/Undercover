@@ -122,3 +122,17 @@ describe('POST /api/posts', () => {
     expect(String(insertCall?.[0])).not.toContain('is_hidden)');
   });
 });
+
+it('activates the badge in the stored post and persists the verified identity', async () => {
+  const req = new NextRequest('http://localhost/api/posts', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ content: 'hola deepum', category: 'general', verified: false }),
+  });
+  mockQuery.mockResolvedValue({ rows: [{ id: 'new-post', content: 'hola deepum', verified: true }] });
+  const res = await POST(req);
+  expect(res.status).toBe(201);
+  const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO posts'));
+  expect(insert?.[1]?.[6]).toBe(true);
+  expect((await res.json()).post.verified).toBe(true);
+  expect(res.headers.get('set-cookie')).toContain('deepum_feed_verified=');
+});

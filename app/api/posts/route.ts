@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { posts: listDevPosts(ownerToken, category), page: 1, limit: 10, databaseUnavailable: true, devMemoryFallback: true },
         { headers: { 'Cache-Control': 'no-store' } }
-      ), anonId, verified);
+      );
     }
     return NextResponse.json(
       { posts: [], page: 1, limit: 10, databaseUnavailable: true },
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       return persistFeedVerification(NextResponse.json(
         { post: fallbackPost, image_status: null, devMemoryFallback: true },
         { status: 201, headers: { 'Cache-Control': 'no-store' } }
-      );
+      ), anonId, verified);
     }
     return NextResponse.json({ error: 'Error al guardar el post' }, { status: 500 });
   }

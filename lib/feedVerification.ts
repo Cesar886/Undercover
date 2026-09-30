@@ -10,7 +10,7 @@ function signature(anonId: string) {
 export function feedVerified(request: NextRequest, anonId: string, content: string): boolean {
   if (/(?:^|[^\p{L}\p{N}_])deepum(?=$|[^\p{L}\p{N}_])/iu.test(content)) return true;
   const token = request.cookies.get(COOKIE)?.value;
-  if (!token) return false;
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) return false;
   const expected = signature(anonId);
   return token.length === expected.length && timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
