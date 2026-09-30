@@ -25,9 +25,9 @@ it('reads exclusively from the isolated pruebas123 table', async () => {
       : { rows: [] }
   ));
 
-  const response = await GET();
+  const response = await GET(new NextRequest('http://localhost/api/pruebas123'));
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({
+  expect(await response.json()).toEqual({ verified: false,
     entries: [{ id: 'entry-1', content: 'solo aqui', created_at: '2026-09-30T00:00:00.000Z' }],
   });
   expect(mockQuery).not.toHaveBeenCalledWith(expect.stringContaining('FROM posts'), expect.anything());
@@ -49,7 +49,7 @@ it('stores text only in pruebas123_entries', async () => {
   const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO pruebas123_entries'));
 
   expect(response.status).toBe(201);
-  expect(insert?.[1]).toEqual(['texto de prueba']);
+  expect(insert?.[1]).toEqual(['texto de prueba', expect.any(String), null, expect.any(String), false]);
   expect(mockQuery.mock.calls.some(([sql]) => /INSERT INTO (posts|comments)/.test(String(sql)))).toBe(false);
 });
 
