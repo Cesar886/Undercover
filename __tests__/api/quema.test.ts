@@ -22,7 +22,7 @@ it('requires authorization even for simulation', async () => {
 it('defaults to simulation and allows it outside scheduled time without feed events', async () => {
   (isQuemaTime as jest.Mock).mockReturnValue(false);
   expect((await POST(request())).status).toBe(200);
-  expect(runQuema).toHaveBeenCalledWith({ dryRun: true });
+  expect(runQuema).toHaveBeenCalledWith({ dryRun: true, allowRepeatTest: false });
   expect(emitFeed).not.toHaveBeenCalled();
 });
 it('requires explicit activation for destructive runs', async () => {
@@ -38,7 +38,7 @@ it('never deletes outside Monterrey schedule', async () => {
 it('only emits feed reset after a successful real run', async () => {
   process.env.WEEKLY_CLEANUP_ENABLED = 'true';
   await POST(request('?dryRun=false'));
-  expect(runQuema).toHaveBeenCalledWith({ dryRun: false });
+  expect(runQuema).toHaveBeenCalledWith({ dryRun: false, allowRepeatTest: false });
   expect(emitFeed).toHaveBeenCalledTimes(1);
   (runQuema as jest.Mock).mockResolvedValue({ skipped: true });
   await POST(request('?dryRun=false'));
