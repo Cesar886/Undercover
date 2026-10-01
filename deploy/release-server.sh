@@ -55,6 +55,23 @@ docker exec -i marketplace-um-postgres-1 pg_restore --list < "$BACKUP" >/dev/nul
 
 # Suspend scheduling while migrating/switching. A failed deploy must not leave an
 # old application executing the newly authorized deletion policy.
+TIMER_WAS_ENABLED=0
+TIMER_WAS_ACTIVE=0
+systemctl is-enabled --quiet quemonesum-cleanup.timer && TIMER_WAS_ENABLED=1 || true
+systemctl is-active --quiet quemonesum-cleanup.timer && TIMER_WAS_ACTIVE=1 || true
+rollback_before_switch() {
+  local code=$?
+  trap - ERR
+  if [[ "$TIMER_WAS_ENABLED" == 1 ]]; then
+    systemctl enable quemonesum-cleanup.timer >/dev/null 2>&1 || true
+  fi
+  if [[ "$TIMER_WAS_ACTIVE" == 1 ]]; then
+    systemctl start quemonesum-cleanup.timer >/dev/null 2>&1 || true
+  fi
+  echo "Despliegue fallido antes de activar la nueva versión. La versión anterior sigue activa. Respaldo: $BACKUP" >&2
+  exit "$code"
+}
+trap rollback_before_switch ERR
 if systemctl cat quemonesum-cleanup.timer >/dev/null 2>&1; then
   systemctl disable --now quemonesum-cleanup.timer
 fi
