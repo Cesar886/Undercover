@@ -14,9 +14,13 @@ export async function ensureVisibilitySchema(): Promise<void> {
   if (!globalVisibility.__visibilitySchema) {
     globalVisibility.__visibilitySchema = query(`
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;
-      ALTER TABLE posts ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle'));
+      ALTER TABLE posts ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
+      ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_badge_type_check;
+      ALTER TABLE posts ADD CONSTRAINT posts_badge_type_check CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
       ALTER TABLE comments ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;
-      ALTER TABLE comments ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle'));
+      ALTER TABLE comments ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
+      ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_badge_type_check;
+      ALTER TABLE comments ADD CONSTRAINT comments_badge_type_check CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS owner_token UUID;
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS owner_hidden BOOLEAN NOT NULL DEFAULT FALSE;
       ALTER TABLE comments ADD COLUMN IF NOT EXISTS owner_token UUID;

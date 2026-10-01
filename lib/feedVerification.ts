@@ -3,7 +3,7 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 const COOKIE = 'deepum_feed_verified';
 const TIMEZONE = 'America/Monterrey';
-export type FeedBadge = 'trophy' | 'sparkle';
+export type FeedBadge = 'trophy' | 'sparkle' | 'aura';
 
 function monterreyWallClock(now: Date): Date {
   return new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }));
@@ -26,6 +26,7 @@ export function feedVerificationWindow(now = new Date()): { period: string; expi
 
 export function badgeTriggeredBy(content: string): FeedBadge | null {
   if (/(?:^|[^\p{L}\p{N}_])deepum(?=$|[^\p{L}\p{N}_])/iu.test(content)) return 'trophy';
+  if (/(?:^|[^\p{L}\p{N}_])aura(?=$|[^\p{L}\p{N}_])/iu.test(content)) return 'aura';
   if (/(?:^|[^\p{L}\p{N}_])an[o\u00f3]nimo(?=$|[^\p{L}\p{N}_])/iu.test(content)) return 'sparkle';
   return null;
 }
@@ -42,7 +43,7 @@ export function feedBadge(request: NextRequest, anonId: string, content: string)
   const token = request.cookies.get(COOKIE)?.value;
   if (!token) return null;
   const [period, badge, supplied] = token.split('.');
-  if (badge !== 'trophy' && badge !== 'sparkle') return null;
+  if (badge !== 'trophy' && badge !== 'sparkle' && badge !== 'aura') return null;
   const current = feedVerificationWindow().period;
   if (period !== current || !/^[0-9a-f]{64}$/.test(supplied ?? '')) return null;
   const expected = signature(anonId, current, badge);

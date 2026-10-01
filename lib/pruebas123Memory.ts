@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 export interface Pruebas123Entry {
   id: string; content: string; created_at: string;
-  thread_id?: string | null; alias?: string; verified?: boolean; badge_type?: 'trophy' | 'sparkle' | null;
+  thread_id?: string | null; alias?: string; verified?: boolean; badge_type?: 'trophy' | 'sparkle' | 'aura' | null;
 }
 declare global {
   // eslint-disable-next-line no-var

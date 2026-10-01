@@ -22,7 +22,9 @@ function schema() {
     ALTER TABLE pruebas123_entries ADD COLUMN IF NOT EXISTS thread_id UUID;
     ALTER TABLE pruebas123_entries ADD COLUMN IF NOT EXISTS alias TEXT;
     ALTER TABLE pruebas123_entries ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;
-    ALTER TABLE pruebas123_entries ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle'));
+    ALTER TABLE pruebas123_entries ADD COLUMN IF NOT EXISTS badge_type TEXT CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
+    ALTER TABLE pruebas123_entries DROP CONSTRAINT IF EXISTS pruebas123_entries_badge_type_check;
+    ALTER TABLE pruebas123_entries ADD CONSTRAINT pruebas123_entries_badge_type_check CHECK (badge_type IN ('trophy', 'sparkle', 'aura'));
     CREATE INDEX IF NOT EXISTS pruebas123_entries_created_idx ON pruebas123_entries(created_at DESC, id DESC);
   `).then(() => {}).catch(error => { ready = null; throw error; });
 }

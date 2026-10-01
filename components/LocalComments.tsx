@@ -30,7 +30,7 @@ interface Comment {
   id: string;
   anon_id: string;
   verified?: boolean;
-  badge_type?: 'trophy' | 'sparkle' | null;
+  badge_type?: 'trophy' | 'sparkle' | 'aura' | null;
   content: string;
   image_webp?: string | null;
   created_at: string;

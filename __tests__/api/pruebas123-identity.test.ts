@@ -26,6 +26,8 @@ it('keeps aliases per thread, verifies with the secret, and resets identity with
   expect((await sparklePlain.json()).entry).toMatchObject({ verified: true, badge_type: 'sparkle' });
   const sparkleAccent = await POST(request({ content: 'anónimo', thread_id: thread }, cookie));
   expect((await sparkleAccent.json()).entry).toMatchObject({ verified: true, badge_type: 'sparkle' });
+  const aura = await POST(request({ content: 'aura', thread_id: thread }, cookie));
+  expect((await aura.json()).entry).toMatchObject({ verified: true, badge_type: 'aura' });
   const verify = await POST(request({ content: 'Hola, deepum!', thread_id: thread }, cookie));
   expect((await verify.json()).entry).toMatchObject({ verified: true, badge_type: 'trophy', alias: initial.alias });
   const verifiedCookie = verify.headers.get('set-cookie')!.split(';')[0];

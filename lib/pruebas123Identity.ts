@@ -18,7 +18,7 @@ export function testIdentity(request?: NextRequest): TestIdentity {
       try {
         const value = JSON.parse(Buffer.from(payload, 'base64url').toString());
         if (typeof value.id === 'string' && typeof value.verified === 'boolean') {
-          const badge = value.badge === 'trophy' || value.badge === 'sparkle'
+          const badge = value.badge === 'trophy' || value.badge === 'sparkle' || value.badge === 'aura'
             ? value.badge : value.verified ? 'sparkle' : null;
           return { id: value.id, verified: Boolean(badge), badge };
         }

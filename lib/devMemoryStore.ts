@@ -37,7 +37,7 @@ export function createDevPost(input: {
   isHidden?: boolean;
   ownerHidden?: boolean;
   verified?: boolean;
-  badge?: 'trophy' | 'sparkle' | null;
+  badge?: 'trophy' | 'sparkle' | 'aura' | null;
 }): Post {
   const now = new Date().toISOString();
   const post: StoredPost = {

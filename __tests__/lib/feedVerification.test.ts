@@ -6,10 +6,12 @@ const request = (cookie = '') => new NextRequest('http://localhost/api/posts', {
 it('assigns each secret word its badge and requires a whole word', () => {
   expect(badgeTriggeredBy('Hola, DEEPUM!')).toBe('trophy');
   expect(badgeTriggeredBy('anonimo')).toBe('sparkle');
+  expect(badgeTriggeredBy('AURA')).toBe('aura');
   expect(badgeTriggeredBy('an\u00f3nimo')).toBe('sparkle');
   expect(badgeTriggeredBy('anonimos')).toBeNull();
+  expect(badgeTriggeredBy('auras')).toBeNull();
   expect(badgeTriggeredBy('nodeepum123')).toBeNull();
-  expect(badgeTriggeredBy('deepum anonimo')).toBe('trophy');
+  expect(badgeTriggeredBy('deepum aura anonimo')).toBe('trophy');
   expect(feedVerified(request(), 'one', 'hola')).toBe(false);
 });
 

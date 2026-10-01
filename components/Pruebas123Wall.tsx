@@ -4,14 +4,17 @@ import Link from 'next/link';
 import { RefreshCw } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/apiClient';
 
-type SecretBadge = 'trophy' | 'sparkle';
+type SecretBadge = 'trophy' | 'sparkle' | 'aura';
 interface Entry {
   id: string; content: string; created_at: string;
   thread_id?: string | null; alias?: string; verified?: boolean; badge_type?: SecretBadge | null;
 }
 function Check({ badge }: { badge: SecretBadge }) {
-  const trophy = badge === 'trophy';
-  return <span role="img" aria-label={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} title={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} className="inline-block shrink-0 text-[17px] leading-none">{trophy ? '🏆' : '✨'}</span>;
+  const special = badge === 'trophy';
+  const fire = badge === 'aura';
+  const label = special ? 'Secreto deepum descubierto' : fire ? 'Aura descubierta' : 'Secreto an\u00f3nimo descubierto';
+  const icon = special ? '\u{1F531}' : fire ? '\u{1F525}' : '\u{2728}';
+  return <span role="img" aria-label={label} title={label} className="inline-block shrink-0 text-[17px] leading-none">{icon}</span>;
 }
 const button = 'rounded-full bg-gradient-to-br from-violet-600 to-violet-800 px-4 py-1.5 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40';
 const actionStyle = 'inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-violet-600 disabled:opacity-40 dark:hover:bg-violet-500/10 dark:hover:text-violet-200';
