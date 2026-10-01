@@ -10,6 +10,7 @@ import { apiPost } from '@/lib/apiClient';
 import { useAnonId } from '@/hooks/useAnonId';
 import { containsUrl } from '@/lib/linkDetection';
 import { ensureOwnerToken } from '@/lib/ownerToken';
+import { lluviaDeepum } from '@/lib/deepumRain';
 
 import { BOARDS, Board } from '@/lib/boards';
 
@@ -107,6 +108,7 @@ export function PostForm({ onPostCreated, defaultCategory = 'general', lockedCat
     });
 
     if (result.ok) {
+      lluviaDeepum(text);
       const sentImage = !!image;
       setContent('');
       setImage(null);

@@ -3,6 +3,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { RefreshCw } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/apiClient';
+import { lluviaDeepum } from '@/lib/deepumRain';
 
 type SecretBadge = 'trophy' | 'sparkle' | 'aura';
 interface Entry {
@@ -56,7 +57,7 @@ export function Pruebas123Wall() {
     if (busy || loading || !content.trim()) return;
     setBusy(true); setError(''); setNotice('');
     const result = await apiPost<{ entry: Entry }>('/api/pruebas123', { content: content.trim(), thread_id: thread });
-    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setBadge(result.data.entry.badge_type ?? (result.data.entry.verified ? 'sparkle' : null)); setContent(''); }
+    if (result.ok) { lluviaDeepum(content.trim()); setEntries(current => [result.data.entry, ...current]); setBadge(result.data.entry.badge_type ?? (result.data.entry.verified ? 'sparkle' : null)); setContent(''); }
     else setError(result.error);
     setBusy(false);
   }

@@ -18,6 +18,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ReportDialog } from '@/components/ReportDialog';
 import { useToast } from '@/hooks/useToast';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import { lluviaDeepum } from '@/lib/deepumRain';
 import { ReportReason } from '@/types';
 import { anonDisplayName } from '@/lib/anonDisplay';
 import { useAnonId } from '@/hooks/useAnonId';
@@ -501,6 +502,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: image ?? undefined,
     });
     if (result.ok) {
+      lluviaDeepum(text);
       if (image && !result.data.comment.is_hidden) setImageReviewOpen(true);
       if (!result.data.comment.is_hidden) {
         setComments((prev) => [...prev, result.data.comment]);
@@ -538,6 +540,7 @@ export function LocalComments({ postId, archived, onCountChange }: {
       image: img ?? undefined,
     });
     if (result.ok) {
+      lluviaDeepum(text);
       if (img && !result.data.comment.is_hidden) setImageReviewOpen(true);
       if (!result.data.comment.is_hidden) {
         setComments((prev) => [...prev, result.data.comment]);
