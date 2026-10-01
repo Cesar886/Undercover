@@ -3,7 +3,7 @@
 Se aplica la autorización del pedido: posts y comentarios visibles y hidden se
 borran permanentemente los lunes a las 05:00 en America/Monterrey.
 
-Inventario verificado en sql/schema.sql, sql/migrations, sql/notifications.sql y lib:
+Inventario verificado en sql/schema.sql, sql/migrations y lib:
 
 | Tablas | Política |
 | --- | --- |
@@ -11,9 +11,9 @@ Inventario verificado en sql/schema.sql, sql/migrations, sql/notifications.sql y
 | image_reviews; posts.image_webp, comments.image_webp | Imágenes; conservar bytes permanentemente en image_reviews, incluso al eliminar el origen. |
 | votes, comment_votes, post_reactions, comment_reactions | Dependencias del contenido eliminado; borrar por cascada. |
 | post_polls, post_poll_options, post_poll_votes | Encuestas dependientes; borrar por cascada. |
-| reports, notifications | Borrar únicamente referencias al contenido eliminado. |
+| reports | Borrar únicamente referencias al contenido eliminado. |
 | categories | Borrar las creadas por usuarios (`is_system=false`); conservar las oficiales `is_system=true`: general, quemones, infieles, confesiones, stickers. |
-| users, ip_bans, community_reports, community_sanctions | Conservar cuentas y datos de seguridad/moderación. |
+| users, ip_bans, community_reports, community_sanctions | Conservar perfiles históricos de confianza y datos de seguridad/moderación. |
 | image_admin_sessions, deploy_migrations | Conservar sesiones y metadatos de despliegue. |
 
 No hay posts/comentarios semilla en los scripts de esquema revisados. Se añade
@@ -56,7 +56,7 @@ Para recuperar contenido, seleccionar el respaldo por `id`/`created_at`, extraer
 `payload` y restaurar primero en una base aislada con el mismo esquema. Cada clave
 contiene filas completas (compatibles con `jsonb_populate_recordset`). Restaurar
 posts, comentarios padres antes que respuestas, encuestas/opciones, votos,
-reacciones, reportes y notificaciones; verificar conflictos de IDs antes de copiar
+reacciones y reportes; verificar conflictos de IDs antes de copiar
 hacia producción. Las imágenes originales siguen en el archivo privado. No hay
 restauración automática ni endpoint público para consultar respaldos.
 

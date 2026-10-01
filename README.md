@@ -133,8 +133,8 @@ sudo certbot --apache -d yourdomain.com
 
 ## Architecture Notes
 
-- **Anonymous identity:** `deepum_owner_token` in localStorage, sent as `X-Owner-Token`. No IP or anonymous cookies. Clearing storage creates a new identity; quotas and sanctions are evadable. Existing optional account/admin sessions are separate.
-- **Voter tokens:** SHA-256 hash of `IP + postId + ANON_SALT`. Raw IPs never stored.
+- **Anonymous identity:** `deepum_owner_token` in localStorage, sent as `X-Owner-Token`. The public site has no accounts or login. No IP or anonymous cookies are used. Clearing storage creates a new identity; quotas and sanctions are evadable. The image-administration session is separate and remains protected.
+- **Voter tokens:** SHA-256 hash derived from the anonymous browser identity, content ID and `ANON_SALT`.
 - **Temporary links:** HMAC-signed URLs expire after `SHARE_LINK_TTL_SECONDS` (two hours by default).
 - **Rate limiting:** Reports: 10 accepted/hour per browser ID, persisted in PostgreSQL. Other browser quotas are in memory and reset on restart. None uses IP. See `docs/community-moderation.md`.
 - **Auto-moderation:** Posts hidden automatically at 10 reports.
