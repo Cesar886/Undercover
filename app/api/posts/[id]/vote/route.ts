@@ -5,10 +5,8 @@ import { emitFeed } from '@/lib/events';
 import { isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
-import { getVoterKey } from '@/lib/auth';
-import { createNotification } from '@/lib/notifications';
+import { getVoterKey } from '@/lib/anon';
 import { PoolClient } from 'pg';
-import type { Notification } from '@/types';
 
 type VoteType = 'up' | 'down';
 
@@ -18,7 +16,7 @@ export async function GET(
 ) {
   if (!isUuid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
 
-  const { key: voterKey } = await getVoterKey(request);
+  const { key: voterKey } = getVoterKey(request);
   const salt = process.env.ANON_SALT ?? 'default-salt';
   const voterToken = hashVoterToken(voterKey, params.id, salt);
 
@@ -49,7 +47,7 @@ export async function PATCH(
   }
   const next: VoteType | null = vt;
 
-  const { key: voterKey, username: voterUsername } = await getVoterKey(request);
+  const { key: voterKey, username: voterUsername } = getVoterKey(request);
 
   const rl = checkRateLimit(`votes:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {
@@ -63,7 +61,7 @@ export async function PATCH(
   const salt = process.env.ANON_SALT ?? 'default-salt';
   const voterToken = hashVoterToken(voterKey, postId, salt);
 
-  const { votes, postLikeNotif } = await withTransaction(async (client: PoolClient) => {
+  const { votes } = await withTransaction(async (client: PoolClient) => {
     const existing = await client.query<{ vote_type: VoteType }>(
       'SELECT vote_type FROM votes WHERE post_id = $1 AND voter_token = $2 FOR UPDATE',
       [postId, voterToken]
@@ -81,7 +79,7 @@ export async function PATCH(
         'SELECT upvotes, downvotes FROM posts WHERE id = $1',
         [postId]
       );
-      return { votes: res.rows[0], postLikeNotif: null };
+      return { votes: res.rows[0] };
     }
 
     if (next === null) {
@@ -111,7 +109,6 @@ export async function PATCH(
       if (trustDelta !== 0) await applyTrustDelta(postAuthor, trustDelta, client);
     }
 
-    let postLikeNotif: Notification | null = null;
     if (next === 'up' && prev !== 'up' && postAuthor) {
       const milestoneRes = await client.query<{
         upvotes: number;
@@ -129,11 +126,9 @@ export async function PATCH(
         );
         await applyTrustDelta(postAuthor, 10, client);
       }
-
-      postLikeNotif = await createNotification(postAuthor, 'post_like', postId, null, voterUsername, client);
     }
 
-    return { votes: res.rows[0], postLikeNotif };
+    return { votes: res.rows[0] };
   });
 
   emitFeed({
@@ -142,10 +137,6 @@ export async function PATCH(
     upvotes: votes.upvotes,
     downvotes: votes.downvotes,
   });
-
-  if (postLikeNotif) {
-    emitFeed({ type: 'notification:new', recipient: postLikeNotif.recipient_username, notification: postLikeNotif });
-  }
 
   return NextResponse.json({ votes });
 }

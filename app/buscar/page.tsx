@@ -7,7 +7,6 @@ import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
-import { useAnonId } from '@/hooks/useAnonId';
 import { Post } from '@/types';
 
 export default function BuscarPage() {
@@ -17,7 +16,6 @@ export default function BuscarPage() {
   const [loading, setLoading]     = useState(false);
   const [searched, setSearched]   = useState(false);
   const { message, showToast } = useToast();
-  const { anonId: username }   = useAnonId();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -112,7 +110,6 @@ export default function BuscarPage() {
               <PostCard
                 key={post.id}
                 post={post}
-                currentUsername={username}
                 onVoted={() => showToast('Voto guardado')}
                 onVoteError={(msg) => showToast(msg)}
                 onDeleted={handleDeleted}

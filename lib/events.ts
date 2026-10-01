@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Comment, Notification, Post, PostPoll, ReactionCounts } from '@/types';
+import { Comment, Post, PostPoll, ReactionCounts } from '@/types';
 
 export type FeedEvent =
   | { type: 'post:new'; post: Post }
@@ -18,7 +18,6 @@ export type FeedEvent =
   | { type: 'comment:deleted'; postId: string; commentId: string; soft: boolean }
   | { type: 'comment:visibility'; postId: string; commentId: string; hidden: boolean }
   | { type: 'comment:reaction'; postId: string; commentId: string; counts: ReactionCounts }
-  | { type: 'notification:new'; recipient: string; notification: Notification }
   | { type: 'quema:total' };
 
 const globalForBus = globalThis as unknown as { __feedBus?: EventEmitter };

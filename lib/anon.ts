@@ -11,3 +11,11 @@ export function getAnonId(request: NextRequest): { anonId: string } {
   if (!salt) throw new Error('ANON_SALT env var is required');
   return { anonId: crypto.createHash('sha256').update(`${token}:${salt}`).digest('hex') };
 }
+
+export function getVoterKey(request: NextRequest): { key: string; username: null } {
+  return { key: `anon:${getAnonId(request).anonId}`, username: null };
+}
+
+export function getReporterId(request: NextRequest): string {
+  return `anon:${getAnonId(request).anonId}`;
+}

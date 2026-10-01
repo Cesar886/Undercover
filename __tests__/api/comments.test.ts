@@ -6,14 +6,6 @@ jest.mock('@/lib/visibility', () => ({
   ownerTokenFromRequest: () => '12345678-1234-4234-8234-123456789012',
   publicOwnedRow: (row: unknown) => row,
 }));
-jest.mock('next/headers', () => ({
-  cookies: jest.fn(() => ({
-    get: (name: string) =>
-      name === 'session_user'
-        ? { value: JSON.stringify({ id: 'u1', username: 'tester' }) }
-        : undefined,
-  })),
-}));
 jest.mock('@/lib/rateLimit', () => ({
   checkRateLimit: jest.fn().mockReturnValue({ ok: true, retryAfter: 0 }),
   RATE_LIMITS: { comments: { windowMs: 1000, max: 60 } },

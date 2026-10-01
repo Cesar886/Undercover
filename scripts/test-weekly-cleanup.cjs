@@ -24,7 +24,6 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
   for (const name of fs.readdirSync(path.join(__dirname, '../sql/migrations')).sort()) {
     await db.exec(fs.readFileSync(path.join(__dirname, '../sql/migrations', name), 'utf8').replace('CREATE EXTENSION IF NOT EXISTS pgcrypto;', ''));
   }
-  await db.exec(fs.readFileSync(path.join(__dirname, '../sql/notifications.sql'), 'utf8'));
   assert(isQuemaTime(monday));
   assert(!isQuemaTime(new Date('2026-09-28T05:00:00Z')));
   assert(!isQuemaTime(new Date('2026-09-28T11:01:00Z')));
@@ -41,7 +40,6 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
   await query(`INSERT INTO image_reviews(post_id,image_data,status,public_visible) VALUES($1,'post-visible','approved',true),($2,'post-hidden','rejected',false)`, [visible, hidden]);
   await query(`INSERT INTO votes(post_id,voter_token,vote_type) VALUES($1,'v','up')`, [visible]);
   await query(`INSERT INTO reports(target_type,target_id,reason,reporter_id) VALUES('comment',$1,'spam','u')`, [comment]);
-  await query(`INSERT INTO notifications(recipient_username,type,post_id,comment_id) VALUES('u','post_comment',$1,$2)`, [visible, comment]);
   const before = await scalar('SELECT jsonb_agg(to_jsonb(p))::text FROM posts p');
   const dry = await runQuema({ dryRun: true, now: monday });
   assert.equal(dry.counts.posts, 2); assert.equal(dry.counts.comments, 1); assert.equal(dry.counts.categories, 1); assert.equal(dry.counts.images_hidden, 2);
@@ -67,7 +65,7 @@ const scalar = async sql => Object.values((await query(sql)).rows[0])[0];
   const backup = (await query('SELECT * FROM weekly_cleanup_backups')).rows[0];
   assert.equal(backup.payload.posts.length, 2); assert.equal(backup.payload.comments.length, 1);
   assert.equal(backup.payload.categories.length, 1);
-  assert.equal(backup.payload.votes.length, 1); assert.equal(backup.payload.notifications.length, 1);
+  assert.equal(backup.payload.votes.length, 1);
   assert.equal(new Date(backup.expires_at) - new Date(backup.created_at), 21 * 86400000);
   const imageId = (await query('SELECT id FROM image_reviews WHERE post_id=$1', [visible])).rows[0].id;
   for (const decision of ['approved','rejected','approved','hidden']) assert(await reviewImage(imageId, decision));

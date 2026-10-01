@@ -59,7 +59,6 @@ async function test(name, fn) {
   assert.equal((await pool.query("SELECT to_regclass('public.posts') AS existing")).rows[0].existing,null,'Database must be empty');
   await pool.query(fs.readFileSync(path.join(root,'sql/schema.sql'),'utf8'));
   for(const file of fs.readdirSync(path.join(root,'sql/migrations')).sort()) await pool.query(fs.readFileSync(path.join(root,'sql/migrations',file),'utf8'));
-  await pool.query(`CREATE TABLE notifications(id UUID PRIMARY KEY DEFAULT gen_random_uuid(), post_id UUID, comment_id UUID, recipient_username TEXT, type TEXT, actor_username TEXT)`);
   await ensureCommunitySchema();
   const postRoutes = load('app/api/posts/[id]/route.ts');
   const createPost = load('app/api/posts/route.ts').POST;

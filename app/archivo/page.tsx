@@ -162,7 +162,6 @@ export default function ArchivoPage() {
                 </div>
                 <PostCard
                   post={post}
-                  currentUsername=""
                   onVoted={() => showToast('Voto guardado')}
                   onVoteError={(msg) => showToast(msg)}
                   onActionError={(msg) => showToast(msg)}

@@ -4,11 +4,8 @@ import { hashVoterToken } from '@/lib/hash';
 import { isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import { applyTrustDelta, shouldApplyTrustForVote } from '@/lib/trust';
-import { getVoterKey } from '@/lib/auth';
-import { createNotification } from '@/lib/notifications';
-import { emitFeed } from '@/lib/events';
+import { getVoterKey } from '@/lib/anon';
 import { PoolClient } from 'pg';
-import type { Notification } from '@/types';
 
 type VoteType = 'up' | 'down';
 
@@ -20,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const { key: voterKey } = await getVoterKey(request);
+  const { key: voterKey } = getVoterKey(request);
   const salt = process.env.ANON_SALT ?? 'default-salt';
   const voterToken = hashVoterToken(voterKey, params.commentId, salt);
 
@@ -53,7 +50,7 @@ export async function PATCH(
   }
   const next: VoteType | null = vt;
 
-  const { key: voterKey, username: voterUsername } = await getVoterKey(request);
+  const { key: voterKey, username: voterUsername } = getVoterKey(request);
 
   const rl = checkRateLimit(`votes:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {
@@ -67,9 +64,8 @@ export async function PATCH(
   const voterToken = hashVoterToken(voterKey, params.commentId, salt);
 
   let votes: { upvotes: number; downvotes: number };
-  let commentLikeNotif: Notification | null = null;
   try {
-    ({ votes, commentLikeNotif } = await withTransaction(async (client: PoolClient) => {
+    ({ votes } = await withTransaction(async (client: PoolClient) => {
       const existing = await client.query<{ vote_type: VoteType }>(
         'SELECT vote_type FROM comment_votes WHERE comment_id = $1 AND voter_token = $2 FOR UPDATE',
         [params.commentId, voterToken]
@@ -92,7 +88,6 @@ export async function PATCH(
         );
         return {
           votes: { upvotes: res.rows[0].upvotes, downvotes: res.rows[0].downvotes },
-          commentLikeNotif: null,
         };
       }
 
@@ -126,23 +121,14 @@ export async function PATCH(
         if (trustDelta !== 0) await applyTrustDelta(commentAuthor, trustDelta, client);
       }
 
-      const notif = next === 'up' && prev !== 'up'
-        ? await createNotification(commentAuthor, 'comment_like', params.id, params.commentId, voterUsername, client)
-        : null;
-
       return {
         votes: { upvotes: res.rows[0].upvotes, downvotes: res.rows[0].downvotes },
-        commentLikeNotif: notif,
       };
     }));
   } catch (err) {
     const e = err as Error & { status?: number };
     const status = e.status ?? 500;
     return NextResponse.json({ error: e.message }, { status });
-  }
-
-  if (commentLikeNotif) {
-    emitFeed({ type: 'notification:new', recipient: commentLikeNotif.recipient_username, notification: commentLikeNotif });
   }
 
   return NextResponse.json({ votes });

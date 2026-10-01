@@ -11,7 +11,6 @@ require('@next/env').loadEnvConfig(process.cwd(), false);
     for (const name of fs.readdirSync('sql/migrations').filter(x => x.endsWith('.sql')).sort()) {
       await client.query(fs.readFileSync(path.join('sql/migrations', name), 'utf8'));
     }
-    await client.query(fs.readFileSync('sql/notifications.sql', 'utf8'));
     await client.query('COMMIT');
     console.log('Database schema initialized.');
   } catch (error) {

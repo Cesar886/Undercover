@@ -1,7 +1,6 @@
 jest.mock('@/lib/db', () => ({ query: jest.fn() }));
 import { NextRequest } from 'next/server';
-import { getAnonId } from '@/lib/anon';
-import { getVoterKey, getReporterId } from '@/lib/auth';
+import { getAnonId, getReporterId, getVoterKey } from '@/lib/anon';
 import { checkRateLimit, RATE_LIMITS, _resetForTesting } from '@/lib/rateLimit';
 import { middleware } from '@/middleware';
 const first = '12345678-1234-4234-8234-123456789012';
@@ -15,8 +14,8 @@ function request(id: string, ip = '192.0.2.1', cookie = 'same-old-cookie') {
 beforeEach(() => { process.env.ANON_SALT = 'test-only'; _resetForTesting(); });
 it('separates browser IDs sharing both IP and legacy cookies', async () => {
   expect(getAnonId(request(first))).not.toEqual(getAnonId(request(second)));
-  expect(await getVoterKey(request(first))).not.toEqual(await getVoterKey(request(second)));
-  expect(await getReporterId(request(first))).not.toEqual(await getReporterId(request(second)));
+  expect(getVoterKey(request(first))).not.toEqual(getVoterKey(request(second)));
+  expect(getReporterId(request(first))).not.toEqual(getReporterId(request(second)));
 });
 it('changing IP or cookies cannot reset the same browser identity', () => {
   expect(getAnonId(request(first))).toEqual(getAnonId(request(first, '203.0.113.4', 'new-cookie')));

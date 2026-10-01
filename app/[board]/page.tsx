@@ -10,7 +10,6 @@ import { Toast } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { useFeedEvents } from '@/components/FeedStreamProvider';
 import { apiGet } from '@/lib/apiClient';
-import { useAnonId } from '@/hooks/useAnonId';
 import { getBoard } from '@/lib/boards';
 import { useCategories } from '@/hooks/useCategories';
 import { Post, PostCategory } from '@/types';
@@ -41,7 +40,6 @@ export default function BoardPage({ params }: { params: { board: string } }) {
   const [hasMore, setHasMore]       = useState(true);
   const [loading, setLoading]       = useState(true);
   const { message, showToast }      = useToast();
-  const { anonId: username }        = useAnonId();
 
   const fetchPosts = useCallback(
     async (pg: number, replace: boolean) => {
@@ -179,7 +177,6 @@ export default function BoardPage({ params }: { params: { board: string } }) {
                 <PostCard
                   key={post.id}
                   post={post}
-                  currentUsername={username}
                   onVoted={() => showToast('Voto guardado')}
                   onVoteError={(msg) => showToast(msg)}
                   onDeleted={handleDeleted}

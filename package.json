@@ -15,7 +15,6 @@
     "@imgly/background-removal-node": "^1.4.5",
     "@mantine/core": "^7.17.8",
     "@mantine/hooks": "^7.17.8",
-    "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "exifr": "^7.1.3",

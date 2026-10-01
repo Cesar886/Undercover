@@ -44,7 +44,6 @@ const accentBar: Record<string, string> = {
 
 interface PostCardProps {
   post: Post;
-  currentUsername?: string;
   onVoted?: () => void;
   onVoteError?: (msg: string) => void;
   onDeleted?: (id: string) => void;
@@ -56,7 +55,6 @@ interface PostCardProps {
 
 export function PostCard({
   post: initialPost,
-  currentUsername,
   onVoted,
   onVoteError,
   onDeleted,

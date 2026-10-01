@@ -38,7 +38,7 @@ export default function PrivacidadPage() {
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">Finalidad del tratamiento</h2>
           <p>Los datos se usan exclusivamente para:</p>
           <ul className="list-disc list-inside mt-2 space-y-1 text-zinc-500 dark:text-zinc-500">
-            <li>Gestionar tu cuenta y sesión</li>
+            <li>Mantener una identidad anónima local para moderación y autoría</li>
             <li>Moderar el contenido de la plataforma</li>
             <li>Prevenir el abuso y garantizar el cumplimiento de los términos de uso</li>
           </ul>
@@ -47,7 +47,8 @@ export default function PrivacidadPage() {
         <section>
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">Cookies y almacenamiento local</h2>
           <p>
-            Utilizamos cookies de sesión estrictamente necesarias para mantener tu sesión activa.
+            La plataforma pública no requiere una cuenta ni una sesión de usuario. Utilizamos almacenamiento local
+            para conservar un identificador anónimo del navegador y cookies técnicas para funciones puntuales.
             No utilizamos cookies de seguimiento ni publicidad.
           </p>
         </section>
@@ -56,8 +57,7 @@ export default function PrivacidadPage() {
           <h2 className="text-zinc-800 dark:text-zinc-200 font-semibold text-base mb-2">Derechos ARCO</h2>
           <p>
             Tienes derecho a Acceder, Rectificar, Cancelar u Oponerte al tratamiento de tus datos.
-            Para ejercer estos derechos, puedes usar el ícono de reporte en cualquier publicación
-            o eliminar tu cuenta desde tu perfil.
+            Para señalar contenido puedes usar el ícono de reporte disponible en cada publicación.
           </p>
         </section>
 

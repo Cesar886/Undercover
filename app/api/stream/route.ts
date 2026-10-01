@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
       };
 
       const sendEvent = (ev: FeedEvent) => {
-        if (ev.type === 'notification:new') return;
         safeEnqueue(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`);
       };
 

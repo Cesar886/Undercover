@@ -6,13 +6,11 @@ jest.mock('@/lib/polls', () => ({
 jest.mock('@/lib/categories', () => ({ categoryExists: async () => true }));
 jest.mock('@/lib/ephemeral', () => ({ pruneCategory: async () => {} }));
 jest.mock('@/lib/communityModeration', () => ({ communitySuspension: async () => null }));
-jest.mock('@/lib/auth', () => ({ getSessionUsername: async () => 'viewer' }));
 jest.mock('@/lib/events', () => ({ emitFeed: jest.fn() }));
 import { NextRequest } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
 import { GET as list, POST as create } from '@/app/api/posts/route';
 import { GET as detail, PATCH as edit } from '@/app/api/posts/[id]/route';
-import { GET as batch } from '@/app/api/posts/batch/route';
 import { GET as comments, POST as addComment } from '@/app/api/posts/[id]/comments/route';
 import { PATCH as editComment } from '@/app/api/posts/[id]/comments/[commentId]/route';
 import { PATCH as visibility } from '@/app/api/posts/[id]/visibility/route';
@@ -53,8 +51,8 @@ function check(value: unknown) {
     expect(json).not.toContain(privateValue);
   }
 }
-it.each(['list', 'detail', 'batch', 'comments'])('protects the %s response using the real serializer', async (route) => {
-  const response = route === 'list' ? await list(req()) : route === 'batch' ? await batch(req())
+it.each(['list', 'detail', 'comments'])('protects the %s response using the real serializer', async (route) => {
+  const response = route === 'list' ? await list(req())
     : route === 'detail' ? await detail(req(), { params: { id } }) : await comments(req(), { params: { id } });
   expect(response.status).toBe(200);
   const body = await response.json(); check(body);

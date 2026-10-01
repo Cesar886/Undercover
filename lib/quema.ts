@@ -33,7 +33,7 @@ export async function runQuema({ dryRun = true, now = new Date(), allowRepeatTes
         // Freeze candidate rows and dependencies until snapshot + deletion commit together.
         await client.query(`LOCK TABLE posts, comments, categories, image_reviews, votes, comment_votes,
           post_reactions, comment_reactions, post_polls, post_poll_options, post_poll_votes,
-          reports, notifications IN SHARE ROW EXCLUSIVE MODE`);
+          reports IN SHARE ROW EXCLUSIVE MODE`);
       }
       const posts = await client.query(`SELECT p.* FROM posts p WHERE NOT p.is_seed
         AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.post_id=p.id AND c.is_seed)`);
@@ -56,8 +56,6 @@ export async function runQuema({ dryRun = true, now = new Date(), allowRepeatTes
       snapshot.reports = (await client.query(`SELECT * FROM reports WHERE
         (target_type='post' AND target_id=ANY($1::uuid[])) OR
         (target_type='comment' AND target_id=ANY($2::uuid[]))`, [postIds, commentIds])).rows;
-      snapshot.notifications = (await client.query(`SELECT * FROM notifications WHERE
-        post_id=ANY($1::uuid[]) OR comment_id=ANY($2::uuid[])`, [postIds, commentIds])).rows;
       // User-created boards are ephemeral too; system categories are permanent.
       snapshot.categories = (await client.query('SELECT * FROM categories WHERE NOT is_system')).rows;
       for (const [table, rows] of Object.entries(snapshot)) counts[table] = rows.length;
@@ -81,7 +79,6 @@ export async function runQuema({ dryRun = true, now = new Date(), allowRepeatTes
         (post_id=ANY($1::uuid[]) OR comment_id=ANY($2::uuid[]))`, [postIds, commentIds]);
       // Triggers archive legacy bytes before deleting sources. Seed rows remain intact.
       await client.query('DELETE FROM reports WHERE id=ANY($1::uuid[])', [snapshot.reports.map(r => (r as { id: string }).id)]);
-      await client.query('DELETE FROM notifications WHERE id=ANY($1::uuid[])', [snapshot.notifications.map(r => (r as { id: string }).id)]);
       await client.query('DELETE FROM posts WHERE id=ANY($1::uuid[])', [postIds]);
       await client.query('DELETE FROM categories WHERE NOT is_system');
       // Test repetitions remain auditable without weakening the one-success-per-day rule.

@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 import { emitFeed } from '@/lib/events';
 import { isUuid } from '@/lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
-import { getVoterKey } from '@/lib/auth';
+import { getVoterKey } from '@/lib/anon';
 import { hashVoterToken } from '@/lib/hash';
 import { ReactionCounts, ReactionEmoji } from '@/types';
 
@@ -29,7 +29,7 @@ export async function GET(
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  const { key: voterKey } = await getVoterKey(request);
+  const { key: voterKey } = getVoterKey(request);
   const salt = process.env.ANON_SALT ?? 'default-salt';
   const voterToken = hashVoterToken(voterKey, params.commentId, salt);
 
@@ -64,7 +64,7 @@ export async function POST(
     return NextResponse.json({ error: 'Emoji inválido' }, { status: 400 });
   }
 
-  const { key: voterKey } = await getVoterKey(request);
+  const { key: voterKey } = getVoterKey(request);
 
   const rl = checkRateLimit(`reactions:${voterKey}`, RATE_LIMITS.votes);
   if (!rl.ok) {
