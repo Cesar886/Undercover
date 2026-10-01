@@ -1,4 +1,4 @@
-import { feedVerified, persistFeedVerification } from '@/lib/feedVerification';
+import { feedBadge, persistFeedVerification } from '@/lib/feedVerification';
 import { communitySuspension } from '@/lib/communityModeration';
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
@@ -100,16 +100,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     await ensureImageReviewSchema();
   }
 
-  const verified = feedVerified(request, anonId, validated.value.content);
+  const badge = feedBadge(request, anonId, validated.value.content);
+  const verified = Boolean(badge);
   const inserted = await withTransaction(async (client) => {
     const ownerHidden = shouldHideCommentContent(validated.value.content);
     const result = await client.query(
-      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, owner_token, owner_hidden, verified)
-       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, $8)
+      `INSERT INTO comments (post_id, parent_id, anon_id, content, image_webp, owner_token, owner_hidden, verified, badge_type)
+       VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, $8, $9)
        RETURNING *,
          (SELECT trust_score FROM users WHERE username = $3) AS trust_score,
          (SELECT trust_unlocked FROM users WHERE username = $3) AS trust_unlocked`,
-      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken, ownerHidden, verified]
+      [params.id, validated.value.parent_id, anonId, validated.value.content, null, ownerToken, ownerHidden, verified, badge]
     );
     if (pendingImage && !ownerHidden) {
       await queueImage(client, 'comment', result.rows[0].id, pendingImage, pendingImageMetadata);
@@ -128,5 +129,5 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const response = NextResponse.json({ comment, image_status: pendingImage && !comment.is_hidden && !comment.owner_hidden ? 'pending' : null }, {
     status: 201, headers: { 'Cache-Control': 'no-store' },
   });
-  return persistFeedVerification(response, anonId, verified);
+  return persistFeedVerification(response, anonId, badge);
 }

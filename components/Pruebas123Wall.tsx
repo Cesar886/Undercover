@@ -1,15 +1,17 @@
 'use client';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/apiClient';
 
+type SecretBadge = 'trophy' | 'sparkle';
 interface Entry {
   id: string; content: string; created_at: string;
-  thread_id?: string | null; alias?: string; verified?: boolean;
+  thread_id?: string | null; alias?: string; verified?: boolean; badge_type?: SecretBadge | null;
 }
-function Check() {
-  return <BadgeCheck size={19} fill="#1d9bf0" color="white" aria-label="Verificado" className="inline-block shrink-0" />;
+function Check({ badge }: { badge: SecretBadge }) {
+  const trophy = badge === 'trophy';
+  return <span role="img" aria-label={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} title={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} className="inline-block shrink-0 text-[17px] leading-none">{trophy ? '🏆' : '✨'}</span>;
 }
 const button = 'rounded-full bg-gradient-to-br from-violet-600 to-violet-800 px-4 py-1.5 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40';
 const actionStyle = 'inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-violet-600 disabled:opacity-40 dark:hover:bg-violet-500/10 dark:hover:text-violet-200';
@@ -18,15 +20,15 @@ export function Pruebas123Wall() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [verified, setVerified] = useState(false);
+  const [badge, setBadge] = useState<SecretBadge | null>(null);
   const [thread, setThread] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const load = useCallback(async () => {
-    const result = await apiGet<{ entries: Entry[]; verified: boolean }>('/api/pruebas123');
-    if (result.ok) { setEntries(result.data.entries); setVerified(result.data.verified); }
+    const result = await apiGet<{ entries: Entry[]; verified: boolean; badge: SecretBadge | null }>('/api/pruebas123');
+    if (result.ok) { setEntries(result.data.entries); setBadge(result.data.badge ?? (result.data.verified ? 'sparkle' : null)); }
     else setError(result.error);
     setLoading(false);
   }, []);
@@ -39,10 +41,10 @@ export function Pruebas123Wall() {
   async function identityAction() {
     if (busy || loading) return;
     setBusy(true); setError(''); setNotice('');
-    const result = await apiPost<{ verified: boolean }>('/api/pruebas123', { action: 'reset' });
+    const result = await apiPost<{ verified: boolean; badge: SecretBadge | null }>('/api/pruebas123', { action: 'reset' });
     if (result.ok) {
-      setVerified(result.data.verified);
-      setNotice('Nuevo usuario: tu próximo comentario tendrá otro nombre, sin palomita.');
+      setBadge(result.data.badge ?? (result.data.verified ? 'sparkle' : null));
+      setNotice('Nuevo usuario: tu próximo comentario tendrá otro nombre, sin destello.');
     } else setError(result.error);
     setBusy(false);
   }
@@ -51,7 +53,7 @@ export function Pruebas123Wall() {
     if (busy || loading || !content.trim()) return;
     setBusy(true); setError(''); setNotice('');
     const result = await apiPost<{ entry: Entry }>('/api/pruebas123', { content: content.trim(), thread_id: thread });
-    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setVerified(Boolean(result.data.entry.verified)); setContent(''); }
+    if (result.ok) { setEntries(current => [result.data.entry, ...current]); setBadge(result.data.entry.badge_type ?? (result.data.entry.verified ? 'sparkle' : null)); setContent(''); }
     else setError(result.error);
     setBusy(false);
   }
@@ -59,7 +61,7 @@ export function Pruebas123Wall() {
     return <div className="space-y-2">
       <div className="flex items-center gap-1 text-sm font-bold">
         <span>{entry.alias || `Anónimo ${entry.id.slice(0, 8).toUpperCase()}`}</span>
-        {entry.verified && <Check />}
+        {entry.verified && <Check badge={entry.badge_type ?? 'sparkle'} />}
       </div>
       <p className="whitespace-pre-wrap break-words text-sm leading-6">{entry.content}</p>
       <time className="text-xs text-stone-400" dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString('es-MX')}</time>
@@ -74,7 +76,7 @@ export function Pruebas123Wall() {
           <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 shadow-sm ring-2 ring-white dark:bg-violet-500/15 dark:text-violet-200">UM</div>
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-[#6b668c]">
-              <span>Anónimo</span>{verified && <Check />}
+              <span>Anónimo</span>{badge && <Check badge={badge} />}
             </div>
             {selected && <div className="mb-2 flex items-start justify-between gap-2 rounded-lg bg-violet-50 p-2 text-xs text-violet-500 dark:bg-violet-500/10">
               <span className="line-clamp-2">Respondiendo a {selected.alias || 'Anónimo'}: {selected.content}</span>

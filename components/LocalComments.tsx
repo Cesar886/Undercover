@@ -30,6 +30,7 @@ interface Comment {
   id: string;
   anon_id: string;
   verified?: boolean;
+  badge_type?: 'trophy' | 'sparkle' | null;
   content: string;
   image_webp?: string | null;
   created_at: string;
@@ -285,7 +286,7 @@ function CommentItem({
               <span className={`text-[13px] font-bold leading-none truncate font-mono ${comment.is_deleted ? 'text-stone-400 dark:text-[#3a3860]' : 'text-stone-800 dark:text-[#c4bbff]'}`}>
                 {comment.is_deleted ? '—' : anonDisplayName(comment.anon_id)}
               </span>
-              {comment.verified && !comment.is_deleted && <VerifiedBadge />}
+              {comment.verified && !comment.is_deleted && <VerifiedBadge badge={comment.badge_type} />}
               {ownerHidden && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Oculto</span>}
               <span className="text-[11px] text-stone-400 dark:text-[#4a4870] leading-none flex items-center">
                 {!comment.is_deleted && (

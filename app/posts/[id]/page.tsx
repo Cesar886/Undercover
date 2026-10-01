@@ -250,7 +250,7 @@ export default function PostPage() {
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <AnonAvatar name={post.anon_id} size={28} className="flex-shrink-0" />
               <span className="min-w-0 max-w-[8.5rem] truncate text-gray-500 dark:text-[#6b6a8f] text-xs font-mono">{anonDisplayName(post.anon_id)}</span>
-            {post.verified && <VerifiedBadge />}
+            {post.verified && <VerifiedBadge badge={post.badge_type} />}
               <CategoryPill category={post.category} className="shrink-0" />
             </div>
             <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">

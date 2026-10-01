@@ -1,8 +1,9 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import type { FeedBadge } from '@/lib/feedVerification';
 
 const COOKIE = 'pruebas123_identity';
-export interface TestIdentity { id: string; verified: boolean }
+export interface TestIdentity { id: string; verified: boolean; badge: FeedBadge | null }
 function sign(value: string) {
   const secret = process.env.ANON_SALT;
   if (!secret) throw new Error('ANON_SALT is required');
@@ -16,11 +17,15 @@ export function testIdentity(request?: NextRequest): TestIdentity {
     if (signature?.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
       try {
         const value = JSON.parse(Buffer.from(payload, 'base64url').toString());
-        if (typeof value.id === 'string' && typeof value.verified === 'boolean') return value;
+        if (typeof value.id === 'string' && typeof value.verified === 'boolean') {
+          const badge = value.badge === 'trophy' || value.badge === 'sparkle'
+            ? value.badge : value.verified ? 'sparkle' : null;
+          return { id: value.id, verified: Boolean(badge), badge };
+        }
       } catch { /* Replace invalid cookies. */ }
     }
   }
-  return { id: randomUUID(), verified: false };
+  return { id: randomUUID(), verified: false, badge: null };
 }
 export function setTestIdentity(response: NextResponse, identity: TestIdentity) {
   const payload = Buffer.from(JSON.stringify(identity)).toString('base64url');
@@ -31,5 +36,5 @@ export function setTestIdentity(response: NextResponse, identity: TestIdentity) 
   return response;
 }
 export function testAlias(identity: TestIdentity, thread: string) {
-  return 'Anónimo ' + sign(identity.id + ':' + thread).slice(0, 8).toUpperCase();
+  return 'An\u00f3nimo ' + sign(identity.id + ':' + thread).slice(0, 8).toUpperCase();
 }

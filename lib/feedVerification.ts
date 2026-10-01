@@ -3,6 +3,7 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 const COOKIE = 'deepum_feed_verified';
 const TIMEZONE = 'America/Monterrey';
+export type FeedBadge = 'trophy' | 'sparkle';
 
 function monterreyWallClock(now: Date): Date {
   return new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }));
@@ -23,25 +24,39 @@ export function feedVerificationWindow(now = new Date()): { period: string; expi
   return { period, expiresAt };
 }
 
-function signature(anonId: string, period: string) {
+export function badgeTriggeredBy(content: string): FeedBadge | null {
+  if (/(?:^|[^\p{L}\p{N}_])deepum(?=$|[^\p{L}\p{N}_])/iu.test(content)) return 'trophy';
+  if (/(?:^|[^\p{L}\p{N}_])an[o\u00f3]nimo(?=$|[^\p{L}\p{N}_])/iu.test(content)) return 'sparkle';
+  return null;
+}
+
+function signature(anonId: string, period: string, badge: FeedBadge) {
   const secret = process.env.ANON_SALT;
   if (!secret) throw new Error('ANON_SALT is required');
-  return createHmac('sha256', secret).update(`feed-verification-v2:${period}:${anonId}`).digest('hex');
+  return createHmac('sha256', secret).update(`feed-badge-v3:${period}:${anonId}:${badge}`).digest('hex');
 }
-export function feedVerified(request: NextRequest, anonId: string, content: string): boolean {
-  if (/(?:^|[^\p{L}\p{N}_])deepum(?=$|[^\p{L}\p{N}_])/iu.test(content)) return true;
+
+export function feedBadge(request: NextRequest, anonId: string, content: string): FeedBadge | null {
+  const triggered = badgeTriggeredBy(content);
+  if (triggered) return triggered;
   const token = request.cookies.get(COOKIE)?.value;
-  if (!token) return false;
-  const [period, supplied] = token.split('.');
+  if (!token) return null;
+  const [period, badge, supplied] = token.split('.');
+  if (badge !== 'trophy' && badge !== 'sparkle') return null;
   const current = feedVerificationWindow().period;
-  if (period !== current || !/^[0-9a-f]{64}$/.test(supplied ?? '')) return false;
-  const expected = signature(anonId, current);
-  return supplied.length === expected.length && timingSafeEqual(Buffer.from(supplied), Buffer.from(expected));
+  if (period !== current || !/^[0-9a-f]{64}$/.test(supplied ?? '')) return null;
+  const expected = signature(anonId, current, badge);
+  return supplied.length === expected.length && timingSafeEqual(Buffer.from(supplied), Buffer.from(expected)) ? badge : null;
 }
-export function persistFeedVerification(response: NextResponse, anonId: string, verified: boolean) {
-  if (verified) {
+
+export function feedVerified(request: NextRequest, anonId: string, content: string): boolean {
+  return feedBadge(request, anonId, content) !== null;
+}
+
+export function persistFeedVerification(response: NextResponse, anonId: string, badge: FeedBadge | null) {
+  if (badge) {
     const { period, expiresAt } = feedVerificationWindow();
-    response.cookies.set(COOKIE, `${period}.${signature(anonId, period)}`, {
+    response.cookies.set(COOKIE, `${period}.${badge}.${signature(anonId, period, badge)}`, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict',
       path: '/api', expires: expiresAt,
     });

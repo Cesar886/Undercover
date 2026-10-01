@@ -24,6 +24,7 @@ export interface Post {
   /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
   verified?: boolean;
+  badge_type?: 'trophy' | 'sparkle' | null;
   content: string;
   category: PostCategory;
   upvotes: number;
@@ -50,6 +51,7 @@ export interface Comment {
   /** Public thread-scoped pseudonym; never the database identity. */
   anon_id: string;
   verified?: boolean;
+  badge_type?: 'trophy' | 'sparkle' | null;
   content: string;
   image_webp: string | null;
   created_at: string;

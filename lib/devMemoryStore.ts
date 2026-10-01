@@ -37,6 +37,7 @@ export function createDevPost(input: {
   isHidden?: boolean;
   ownerHidden?: boolean;
   verified?: boolean;
+  badge?: 'trophy' | 'sparkle' | null;
 }): Post {
   const now = new Date().toISOString();
   const post: StoredPost = {
@@ -44,6 +45,7 @@ export function createDevPost(input: {
     anon_id: input.anonId,
     content: input.content,
     verified: Boolean(input.verified),
+    badge_type: input.badge ?? null,
     category: input.category,
     upvotes: 0,
     downvotes: 0,

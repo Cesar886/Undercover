@@ -1,34 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { feedVerified, persistFeedVerification } from '@/lib/feedVerification';
+import { badgeTriggeredBy, feedBadge, feedVerified, persistFeedVerification } from '@/lib/feedVerification';
 
 const request = (cookie = '') => new NextRequest('http://localhost/api/posts', { headers: { cookie } });
 
-it('activates for a whole word in the published text', () => {
-  expect(feedVerified(request(), 'one', 'Hola, DEEPUM!')).toBe(true);
-  expect(feedVerified(request(), 'one', 'deepum')).toBe(true);
-  expect(feedVerified(request(), 'one', 'nodeepum123')).toBe(false);
+it('assigns each secret word its badge and requires a whole word', () => {
+  expect(badgeTriggeredBy('Hola, DEEPUM!')).toBe('trophy');
+  expect(badgeTriggeredBy('anonimo')).toBe('sparkle');
+  expect(badgeTriggeredBy('an\u00f3nimo')).toBe('sparkle');
+  expect(badgeTriggeredBy('anonimos')).toBeNull();
+  expect(badgeTriggeredBy('nodeepum123')).toBeNull();
+  expect(badgeTriggeredBy('deepum anonimo')).toBe('trophy');
   expect(feedVerified(request(), 'one', 'hola')).toBe(false);
 });
 
-it('persists verification across posts and comments, bound to the same identity', () => {
+it('persists the selected badge across posts and comments, bound to the same identity', () => {
   process.env.ANON_SALT = 'verification-test-salt';
-  const response = persistFeedVerification(NextResponse.json({}), 'one', true);
+  const response = persistFeedVerification(NextResponse.json({}), 'one', 'trophy');
   const cookie = response.headers.get('set-cookie')!.split(';')[0];
-  expect(feedVerified(request(cookie), 'one', 'otro post')).toBe(true);
-  expect(feedVerified(request(cookie), 'two', 'otro usuario')).toBe(false);
-  expect(feedVerified(request('deepum_feed_verified=' + 'f'.repeat(64)), 'one', 'hola')).toBe(false);
+  expect(feedBadge(request(cookie), 'one', 'otro post')).toBe('trophy');
+  expect(feedBadge(request(cookie), 'two', 'otro usuario')).toBeNull();
+  expect(feedBadge(request('deepum_feed_verified=' + 'f'.repeat(64)), 'one', 'hola')).toBeNull();
   expect(response.headers.get('set-cookie')).toContain('HttpOnly');
 });
 
-it('expires verification at Monday 05:00 in Monterrey', () => {
+it('expires the badge at Monday 05:00 in Monterrey', () => {
   process.env.ANON_SALT = 'verification-test-salt';
   jest.useFakeTimers().setSystemTime(new Date('2026-10-04T18:00:00Z'));
-  const response = persistFeedVerification(NextResponse.json({}), 'one', true);
+  const response = persistFeedVerification(NextResponse.json({}), 'one', 'sparkle');
   const cookie = response.headers.get('set-cookie')!;
   const value = cookie.split(';')[0];
   expect(cookie).toContain('Expires=Mon, 05 Oct 2026 11:00:00 GMT');
-  expect(feedVerified(request(value), 'one', 'otro post')).toBe(true);
+  expect(feedBadge(request(value), 'one', 'otro post')).toBe('sparkle');
   jest.setSystemTime(new Date('2026-10-05T11:00:01Z'));
-  expect(feedVerified(request(value), 'one', 'otro post')).toBe(false);
+  expect(feedBadge(request(value), 'one', 'otro post')).toBeNull();
   jest.useRealTimers();
 });

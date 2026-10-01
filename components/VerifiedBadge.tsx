@@ -1,5 +1,6 @@
-import { BadgeCheck } from 'lucide-react';
+type SecretBadge = 'trophy' | 'sparkle';
 
-export function VerifiedBadge() {
-  return <span role="img" aria-label="Verificado" title="Verificado" className="inline-flex shrink-0 align-middle"><BadgeCheck size={18} fill="#1d9bf0" color="white" aria-hidden="true" /></span>;
+export function VerifiedBadge({ badge = 'sparkle' }: { badge?: SecretBadge | null }) {
+  const trophy = badge === 'trophy';
+  return <span role="img" aria-label={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} title={trophy ? 'Secreto deepum descubierto' : 'Secreto anónimo descubierto'} className="inline-flex shrink-0 align-middle text-[17px] leading-none">{trophy ? '🏆' : '✨'}</span>;
 }
